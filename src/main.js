@@ -1063,6 +1063,7 @@ function boot() {
 
   const params = new URLSearchParams(location.search);
   if (params.get('noplants') === '1') state.noPlants = true;
+  if (params.get('give') === '1') state.giveStarter = true;
   if (params.get('pitch') !== null) state.startPitch = Number(params.get('pitch'));
   if (params.get('yaw') !== null) state.startYaw = Number(params.get('yaw'));
   if (params.get('debug')) {

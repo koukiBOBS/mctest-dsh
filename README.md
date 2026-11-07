@@ -4,9 +4,7 @@
 
 > ⚠️ 非官方粉丝项目，与 Mojang / Microsoft 无关。仓库内**不包含任何 Mojang 原版素材**，贴图与音效全部由代码程序化生成；想用原版贴图可导入自己的资源包（仅存于本机）。
 
-**在线游玩：<https://koukiBOBS.github.io/mctest-dsh/>**
-
-![screenshot]()
+**在线游玩：<https://koukibobs.github.io/mctest-dsh/>**
 
 ## 功能
 
