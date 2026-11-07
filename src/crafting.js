@@ -1,0 +1,141 @@
+// ============================================================
+// crafting.js — 合成配方与匹配逻辑（纯函数）
+// 槽位内容：物品 id 字符串或 null；输入为扁平数组 + 宽高。
+// ============================================================
+
+// pattern 用字符串行表示，keys 把字符映射到物品 id，' ' 表示空。
+// shapeless: 任意位置、任意形状的无序配方。
+export const RECIPES = [
+  // 木材
+  { id: 'oak_planks', shapeless: ['oak_log'], result: { id: 'oak_planks', count: 4 } },
+  { id: 'stick', pattern: ['P', 'P'], keys: { P: 'oak_planks' }, result: { id: 'stick', count: 4 } },
+  { id: 'crafting_table', pattern: ['PP', 'PP'], keys: { P: 'oak_planks' }, result: { id: 'crafting_table', count: 1 } },
+  { id: 'torch', pattern: ['C', 'S'], keys: { C: 'coal', S: 'stick' }, result: { id: 'torch', count: 4 } },
+
+  // 石砖
+  { id: 'stone_bricks', pattern: ['CC', 'CC'], keys: { C: 'cobblestone' }, result: { id: 'stone_bricks', count: 4 } },
+
+  // 木制工具
+  { id: 'wooden_pickaxe', pattern: ['WWW', ' S ', ' S '], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_pickaxe', count: 1 } },
+  { id: 'wooden_axe', pattern: ['WW', 'WS', ' S'], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_axe', count: 1 } },
+  { id: 'wooden_shovel', pattern: ['W', 'S', 'S'], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_shovel', count: 1 } },
+  { id: 'wooden_sword', pattern: ['W', 'W', 'S'], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_sword', count: 1 } },
+
+  // 石制工具
+  { id: 'stone_pickaxe', pattern: ['CCC', ' S ', ' S '], keys: { C: 'cobblestone', S: 'stick' }, result: { id: 'stone_pickaxe', count: 1 } },
+  { id: 'stone_axe', pattern: ['CC', 'CS', ' S'], keys: { C: 'cobblestone', S: 'stick' }, result: { id: 'stone_axe', count: 1 } },
+  { id: 'stone_shovel', pattern: ['C', 'S', 'S'], keys: { C: 'cobblestone', S: 'stick' }, result: { id: 'stone_shovel', count: 1 } },
+  { id: 'stone_sword', pattern: ['C', 'C', 'S'], keys: { C: 'cobblestone', S: 'stick' }, result: { id: 'stone_sword', count: 1 } },
+
+  // 铁制工具
+  { id: 'iron_pickaxe', pattern: ['III', ' S ', ' S '], keys: { I: 'iron_ingot', S: 'stick' }, result: { id: 'iron_pickaxe', count: 1 } },
+  { id: 'iron_axe', pattern: ['II', 'IS', ' S'], keys: { I: 'iron_ingot', S: 'stick' }, result: { id: 'iron_axe', count: 1 } },
+  { id: 'iron_shovel', pattern: ['I', 'S', 'S'], keys: { I: 'iron_ingot', S: 'stick' }, result: { id: 'iron_shovel', count: 1 } },
+  { id: 'iron_sword', pattern: ['I', 'I', 'S'], keys: { I: 'iron_ingot', S: 'stick' }, result: { id: 'iron_sword', count: 1 } },
+];
+
+// 把 pattern 展开为二维数组，方便比较
+function expandPattern(recipe) {
+  const rows = recipe.pattern.length;
+  let cols = 0;
+  for (const row of recipe.pattern) cols = Math.max(cols, row.length);
+  const grid = [];
+  for (let r = 0; r < rows; r++) {
+    const line = recipe.pattern[r];
+    const rowArr = [];
+    for (let c = 0; c < cols; c++) {
+      const ch = line[c] || ' ';
+      rowArr.push(ch === ' ' ? null : recipe.keys[ch]);
+    }
+    grid.push(rowArr);
+  }
+  return { grid, rows, cols };
+}
+
+function trimGrid(grid, w, h) {
+  let minR = h, maxR = -1, minC = w, maxC = -1, count = 0;
+  for (let r = 0; r < h; r++) {
+    for (let c = 0; c < w; c++) {
+      if (grid[r * w + c]) {
+        count++;
+        if (r < minR) minR = r;
+        if (r > maxR) maxR = r;
+        if (c < minC) minC = c;
+        if (c > maxC) maxC = c;
+      }
+    }
+  }
+  if (count === 0) return null;
+  const tw = maxC - minC + 1;
+  const th = maxR - minR + 1;
+  const out = [];
+  for (let r = 0; r < th; r++) {
+    for (let c = 0; c < tw; c++) out.push(grid[(minR + r) * w + (minC + c)] || null);
+  }
+  return { grid: out, w: tw, h: th, count };
+}
+
+// slots: 长度 w*h 的数组，元素为物品 id 或 null
+export function matchRecipe(slots, w, h) {
+  const trimmed = trimGrid(slots, w, h);
+  if (!trimmed) return null;
+
+  // 无序配方
+  if (trimmed.count === 1) {
+    let only = null;
+    for (const s of slots) if (s) { only = s; break; }
+    for (const recipe of RECIPES) {
+      if (recipe.shapeless && recipe.shapeless[0] === only) {
+        return { ...recipe.result };
+      }
+    }
+  }
+
+  for (const recipe of RECIPES) {
+    if (!recipe.pattern) continue;
+    const { grid, rows, cols } = expandPattern(recipe);
+    let minR = rows, maxR = -1, minC = cols, maxC = -1;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (grid[r][c]) {
+          if (r < minR) minR = r;
+          if (r > maxR) maxR = r;
+          if (c < minC) minC = c;
+          if (c > maxC) maxC = c;
+        }
+      }
+    }
+    if (maxR < 0) continue;
+    const pw = maxC - minC + 1;
+    const ph = maxR - minR + 1;
+    if (pw !== trimmed.w || ph !== trimmed.h) continue;
+    let ok = true;
+    for (let r = 0; r < ph && ok; r++) {
+      for (let c = 0; c < pw; c++) {
+        const want = grid[minR + r][minC + c];
+        if ((trimmed.grid[r * trimmed.w + c] || null) !== want) { ok = false; break; }
+      }
+    }
+    if (ok) return { ...recipe.result };
+  }
+  return null;
+}
+
+// 给「配方书」用：返回某配方需要的材料列表
+export function recipeMaterials(recipe) {
+  const out = [];
+  if (recipe.shapeless) {
+    for (const id of recipe.shapeless) out.push({ id, count: 1 });
+    return out;
+  }
+  const counts = {};
+  for (const row of recipe.pattern) {
+    for (const ch of row) {
+      if (ch === ' ') continue;
+      const id = recipe.keys[ch];
+      counts[id] = (counts[id] || 0) + 1;
+    }
+  }
+  for (const [id, count] of Object.entries(counts)) out.push({ id, count });
+  return out;
+}

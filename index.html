@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#111417">
+<title>Minecraft Web · 体素沙盒（非官方）</title>
+<link rel="stylesheet" href="./styles.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- ================= HUD ================= -->
+<div id="hud" class="hidden">
+  <div id="crosshair"></div>
+  <div id="debug" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+  <div id="hurt-overlay"></div>
+  <div id="water-overlay"></div>
+
+  <div id="stats">
+    <div id="health-row" class="stat-row"></div>
+    <div id="hunger-row" class="stat-row"></div>
+  </div>
+
+  <div id="hud-buttons">
+    <button id="btn-hud-inv" class="hud-btn" title="物品栏">背包</button>
+    <button id="btn-hud-menu" class="hud-btn" title="菜单">☰</button>
+  </div>
+  <div id="hotbar"></div>
+  <div id="held-name"></div>
+</div>
+
+<!-- ================= 触屏控制 ================= -->
+<div id="touch" class="hidden">
+  <div id="joystick"><div id="joystick-knob"></div></div>
+  <div id="touch-buttons">
+    <button id="btn-sprint" class="round-btn small" title="疾跑">»</button>
+    <button id="btn-jump" class="round-btn" title="跳跃">↑</button>
+    <button id="btn-break" class="round-btn action" title="挖掘">⛏</button>
+    <button id="btn-place" class="round-btn action" title="放置">▣</button>
+    <button id="btn-fly" class="round-btn small hidden" title="飞行">✈</button>
+  </div>
+</div>
+
+<div id="rotate-hint" class="hidden">建议横屏游玩</div>
+
+<!-- ================= 标题界面 ================= -->
+<div id="screen-title" class="screen">
+  <div class="title-panel">
+    <div class="logo">
+      <div class="logo-main">MINECRAFT</div>
+      <div class="logo-sub">WEB · 非官方网页版</div>
+    </div>
+    <div class="title-buttons">
+      <button id="btn-continue" class="mc-btn hidden">继续游戏</button>
+      <button id="btn-new-survival" class="mc-btn primary">新的生存世界</button>
+      <button id="btn-new-creative" class="mc-btn">新的创造世界</button>
+      <button id="btn-title-settings" class="mc-btn">设置</button>
+      <button id="btn-help" class="mc-btn">操作说明</button>
+    </div>
+    <div class="title-foot">
+      程序化生成的方块世界 · 无任何 Mojang 素材<br>
+      可在设置里导入你自己的原版资源包（仅存于本机）
+    </div>
+  </div>
+</div>
+
+<!-- ================= 加载界面 ================= -->
+<div id="screen-loading" class="screen hidden">
+  <div class="loading-panel">
+    <div class="loading-title">正在生成世界…</div>
+    <div class="progress"><div id="progress-bar"></div></div>
+    <div id="loading-tip" class="loading-tip"></div>
+  </div>
+</div>
+
+<!-- ================= 暂停界面 ================= -->
+<div id="screen-pause" class="screen hidden">
+  <div class="pause-panel">
+    <div class="screen-title">游戏已暂停</div>
+    <div class="title-buttons">
+      <button id="btn-resume" class="mc-btn primary">继续游戏</button>
+      <button id="btn-pause-settings" class="mc-btn">设置</button>
+      <button id="btn-pause-help" class="mc-btn">操作说明</button>
+      <button id="btn-save-quit" class="mc-btn">保存并回到标题</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 设置 ================= -->
+<div id="screen-settings" class="screen hidden">
+  <div class="settings-panel">
+    <div class="screen-title">设置</div>
+    <div class="setting-row"><span>鼠标/触屏灵敏度</span><input id="set-sens" type="range" min="0.5" max="3" step="0.1" value="1"></div>
+    <div class="setting-row"><span>视距（区块）</span><select id="set-distance">
+      <option value="2">2 · 近（流畅）</option>
+      <option value="3" selected>3 · 中</option>
+      <option value="4">4 · 远</option>
+      <option value="5">5 · 很远（吃性能）</option>
+    </select></div>
+    <div class="setting-row"><span>主音量</span><input id="set-volume" type="range" min="0" max="1" step="0.05" value="0.7"></div>
+    <div class="setting-row"><span>音效</span><label class="switch"><input id="set-mute" type="checkbox"><span></span></label></div>
+    <div class="setting-row"><span>显示 FPS / 调试</span><label class="switch"><input id="set-debug" type="checkbox"><span></span></label></div>
+    <div class="setting-block">
+      <div class="setting-label">原版资源包（可选）</div>
+      <div class="setting-hint">选择 MC Java 版资源包 zip 或若干 PNG，只保存在本机，不会上传。</div>
+      <input id="pack-input" type="file" accept=".zip,.png,image/png" multiple class="hidden">
+      <div class="pack-actions">
+        <button id="btn-import-pack" class="mc-btn small">导入资源包…</button>
+        <button id="btn-clear-pack" class="mc-btn small">清除</button>
+        <button id="btn-reload" class="mc-btn small hidden">应用并刷新</button>
+      </div>
+      <div id="pack-status" class="pack-status">未导入</div>
+    </div>
+    <div class="title-buttons">
+      <button id="btn-settings-close" class="mc-btn primary">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 帮助 ================= -->
+<div id="screen-help" class="screen hidden">
+  <div class="help-panel">
+    <div class="screen-title">操作说明</div>
+    <div class="help-cols">
+      <div>
+        <h3>键鼠</h3>
+        <p>WASD 移动 · 空格 跳跃</p>
+        <p>Shift 潜行 · Ctrl 疾跑</p>
+        <p>左键长按 挖掘 · 右键 放置/使用</p>
+        <p>1-9 选择快捷栏 · 滚轮切换</p>
+        <p>E 物品栏 · Esc 暂停</p>
+        <p>F3 调试信息 · F 飞行（创造）</p>
+      </div>
+      <div>
+        <h3>手机</h3>
+        <p>左下摇杆移动</p>
+        <p>空白处拖动 转视角</p>
+        <p>⛏ 长按挖掘 · ▣ 放置</p>
+        <p>↑ 跳跃 · » 疾跑</p>
+        <p>点快捷栏切换方块</p>
+        <p>物品栏里点物品拿起/放下</p>
+      </div>
+      <div>
+        <h3>生存入门</h3>
+        <p>1. 用手长按树干获得原木</p>
+        <p>2. E 打开物品栏，2×2 合成木板/木棍/工作台</p>
+        <p>3. 放下工作台并右键打开，3×3 合成镐子</p>
+        <p>4. 挖石头 → 圆石 → 石镐 → 铁矿 → 铁镐</p>
+        <p>5. 树叶偶尔掉苹果，可恢复饥饿</p>
+        <p>6. 小心夜晚、洞穴和岩浆</p>
+      </div>
+    </div>
+    <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>
+  </div>
+</div>
+
+<!-- ================= 物品栏 ================= -->
+<div id="screen-inventory" class="screen hidden">
+  <div class="inv-panel">
+    <div class="inv-header"><span id="inv-title">物品栏</span><button id="inv-close" class="mc-btn small">关闭</button></div>
+    <div class="inv-cursor hidden" id="inv-cursor"></div>
+    <div id="inv-body"></div>
+  </div>
+</div>
+
+<!-- ================= 死亡 ================= -->
+<div id="screen-death" class="screen hidden">
+  <div class="death-panel">
+    <div class="death-title">你死了！</div>
+    <div id="death-reason" class="death-reason"></div>
+    <div class="title-buttons">
+      <button id="btn-respawn" class="mc-btn primary">重生</button>
+      <button id="btn-death-quit" class="mc-btn">回到标题</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 错误 ================= -->
+<div id="error-overlay" class="hidden">
+  <div class="error-panel">
+    <div class="error-title">脚本出错了</div>
+    <pre id="error-text"></pre>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

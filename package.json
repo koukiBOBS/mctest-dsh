@@ -1,0 +1,11 @@
+{
+  "name": "mctest-dsh",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Minecraft Java Edition style voxel sandbox in the browser - unofficial fan project",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000"
+  }
+}

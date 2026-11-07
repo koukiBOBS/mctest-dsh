@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贴图自检</title>
+<style>
+  body { background: #202428; color: #eee; font: 12px ui-monospace, monospace; margin: 0; padding: 10px; }
+  h2 { font-size: 14px; margin: 14px 0 6px; color: #a8e08f; }
+  canvas { image-rendering: pixelated; background: #111; display: block; max-width: 100%; }
+  #atlas { width: 512px; height: 512px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cell { text-align: center; width: 64px; font-size: 9px; color: #bbb; }
+  .cell canvas { width: 64px; height: 64px; }
+  .icell { text-align: center; width: 44px; font-size: 8px; color: #bbb; }
+  .icell img { width: 40px; height: 40px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<h2>方块图集（512×512，每格 64px）</h2>
+<canvas id="atlas"></canvas>
+<h2>破坏裂纹（10 阶段）</h2>
+<div class="row" id="breaks"></div>
+<h2>统计</h2><pre id="stats" style="color:#9f9;font-size:11px"></pre>
+<h2>物品图标</h2>
+<div class="row" id="icons"></div>
+<script type="module">
+import { buildAtlas, buildBreakTextures, buildItemIcons, TILE_NAMES, ITEM_ICON_NAMES } from './src/textures.js';
+const atlas = buildAtlas();
+const c = document.getElementById('atlas');
+c.width = 512;
+c.height = 512;
+const ctx = c.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+ctx.drawImage(atlas, 0, 0, 512, 512);
+// 网格线 + 名称
+ctx.strokeStyle = 'rgba(0,255,0,0.35)';
+ctx.font = '9px monospace';
+ctx.fillStyle = '#8f8';
+for (let i = 0; i < TILE_NAMES.length; i++) {
+  const col = i % 8;
+  const row = Math.floor(i / 8);
+  ctx.strokeRect(col * 64, row * 64, 64, 64);
+  ctx.fillText(TILE_NAMES[i], col * 64 + 2, row * 64 + 10);
+}
+const breaks = document.getElementById('breaks');
+for (const b of buildBreakTextures()) {
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+  const cv = document.createElement('canvas');
+  cv.width = 64;
+  cv.height = 64;
+  const bx = cv.getContext('2d');
+  bx.imageSmoothingEnabled = false;
+  bx.drawImage(b, 0, 0, 64, 64);
+  cell.appendChild(cv);
+  breaks.appendChild(cell);
+}
+// 统计关键贴图的平均颜色/alpha
+const statsEl = document.getElementById('stats');
+const actx2 = atlas.getContext('2d');
+const names = ['tall_grass','oak_leaves','grass_top','grass_side','torch','rose','water'];
+let txt = '';
+for (const name of names) {
+  const idx = TILE_NAMES.indexOf(name);
+  if (idx < 0) continue;
+  const col = idx % 8, row = Math.floor(idx / 8);
+  const d = actx2.getImageData(col * 16, row * 16, 16, 16).data;
+  let r = 0, g = 0, b = 0, a = 0, n = 0, minA = 255, maxA = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const al = d[i + 3];
+    if (al > 10) { r += d[i]; g += d[i + 1]; b += d[i + 2]; a += al; n++; }
+    if (al < minA) minA = al;
+    if (al > maxA) maxA = al;
+  }
+  txt += name + ': n=' + n + ' avgRGB=(' + (n ? Math.round(r / n) : 0) + ',' + (n ? Math.round(g / n) : 0) + ',' + (n ? Math.round(b / n) : 0) + ') avgA=' + (n ? Math.round(a / n) : 0) + ' aRange=' + minA + '-' + maxA + '\n';
+}
+statsEl.textContent = txt;
+
+const icons = buildItemIcons();
+const iconBox = document.getElementById('icons');
+for (const name of ITEM_ICON_NAMES) {
+  const cell = document.createElement('div');
+  cell.className = 'icell';
+  const img = document.createElement('img');
+  img.src = icons[name].toDataURL();
+  cell.appendChild(img);
+  const label = document.createElement('div');
+  label.textContent = name;
+  cell.appendChild(label);
+  iconBox.appendChild(cell);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贴图统计</title>
+<style>
+  body { background: #111; color: #9f9; font: 13px/1.45 ui-monospace, monospace; margin: 8px; }
+  #out { white-space: pre-wrap; word-break: break-all; }
+  .bad { color: #f66; }
+</style>
+</head>
+<body>
+<div id="out">计算中…</div>
+<script type="module">
+import { buildAtlas, TILE_NAMES } from './src/textures.js';
+const atlas = buildAtlas();
+const ctx = atlas.getContext('2d');
+let out = '';
+for (const name of TILE_NAMES) {
+  const idx = TILE_NAMES.indexOf(name);
+  const col = idx % 8;
+  const row = Math.floor(idx / 8);
+  const d = ctx.getImageData(col * 16, row * 16, 16, 16).data;
+  let r = 0, g = 0, b = 0, n = 0, minA = 255, maxA = 0;
+  let dark = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const al = d[i + 3];
+    if (al > 10) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+    if (al < minA) minA = al;
+    if (al > maxA) maxA = al;
+    if (al > 200 && d[i] + d[i + 1] + d[i + 2] < 40) dark++;
+  }
+  out += `${name.padEnd(22)} n=${String(n).padStart(3)} a=${minA}-${maxA} rgb=(${n ? Math.round(r / n) : 0},${n ? Math.round(g / n) : 0},${n ? Math.round(b / n) : 0}) dark=${dark}\n`;
+}
+document.getElementById('out').textContent = out;
+</script>
+</body>
+</html>
