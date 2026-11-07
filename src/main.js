@@ -288,6 +288,12 @@ function startGame(opts = {}) {
   }
 
   inventory.mode = mode;
+  if (!save && mode === 'survival' && state.giveStarter) {
+    inventory.add('oak_log', 24);
+    inventory.add('stick', 8);
+    inventory.add('coal', 8);
+    inventory.add('iron_ingot', 4);
+  }
   if (!save && typeof state.startPitch === 'number' && isFinite(state.startPitch)) player.pitch = state.startPitch;
   if (!save && typeof state.startYaw === 'number' && isFinite(state.startYaw)) player.yaw = state.startYaw;
   player.lookSensitivity = 0.0024 * state.settings.sens;
