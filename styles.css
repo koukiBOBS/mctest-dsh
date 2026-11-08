@@ -195,6 +195,41 @@ body {
   pointer-events: auto;
 }
 
+#hand-item {
+  position: absolute;
+  right: 26px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  width: 84px;
+  height: 84px;
+  pointer-events: none;
+  transform-origin: 78% 92%;
+  opacity: 0.96;
+}
+
+#hand-item img {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.45));
+}
+
+#hand-item.swing {
+  animation: hand-swing 0.22s ease-out;
+}
+
+@keyframes hand-swing {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  35% { transform: translate(-12px, 20px) rotate(-26deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+body.touch #hand-item {
+  right: 34%;
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  width: 64px;
+  height: 64px;
+}
+
 #held-name {
   position: absolute;
   left: 50%;
@@ -911,7 +946,8 @@ body {
     height: 15px;
   }
 
-  #held-name {
+  
+#held-name {
     font-size: 11px;
     bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
@@ -1137,7 +1173,8 @@ body {
     bottom: calc(196px + env(safe-area-inset-bottom, 0px));
     transform: none;
   }
-  #held-name {
+  
+#held-name {
     bottom: calc(150px + env(safe-area-inset-bottom, 0px));
   }
   #debug {
@@ -1152,7 +1189,8 @@ body {
     max-height: 12vh;
     font-size: 11px;
   }
-  #held-name {
+  
+#held-name {
     display: none;
   }
 }

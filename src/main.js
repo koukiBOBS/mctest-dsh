@@ -691,7 +691,34 @@ function updateHUD() {
   $('hunger-row').innerHTML = hungerHTML;
   const held = state.inventory && state.inventory.held;
   $('held-name').textContent = held ? itemDisplay(held.id) + (held.count > 1 ? ' ×' + held.count : '') : '';
+  updateHandItem();
   state.invUI?.renderHotbar();
+}
+
+function updateHandItem() {
+  const el = $('hand-item');
+  const img = $('hand-item-img');
+  if (!el || !img) return;
+  const held = state.inventory && state.inventory.held;
+  if (!held || state.thirdPerson || !state.running) {
+    el.classList.add('hidden');
+    return;
+  }
+  const url = state.inventory.iconURL(held.id);
+  if (!url) {
+    el.classList.add('hidden');
+    return;
+  }
+  img.src = url;
+  el.classList.remove('hidden');
+}
+
+function swingHand() {
+  const el = $('hand-item');
+  if (!el || el.classList.contains('hidden')) return;
+  el.classList.remove('swing');
+  void el.offsetWidth;
+  el.classList.add('swing');
 }
 
 function yawDirectionName() {
@@ -797,6 +824,7 @@ function toggleThirdPerson() {
   state.thirdPerson = !state.thirdPerson;
   state.renderer?.setThirdPerson(state.thirdPerson);
   state.playerModel?.setVisible(state.thirdPerson);
+  updateHandItem();
   showToast(state.thirdPerson ? '第三人称视角（F5 切换）' : '第一人称视角（F5 切换）');
 }
 
@@ -1041,6 +1069,7 @@ function bindMouse() {
     if (e.button === 0) {
       state.player.breakHeld = true;
       state.player.primaryAction();
+      swingHand();
       requestLock();
     } else if (e.button === 2) {
       state.player.secondaryAction();
@@ -1221,6 +1250,7 @@ function bindTouchControls() {
       state.sound?.unlock();
       if (!activeGame()) return;
       state.player.secondaryAction();
+      swingHand();
     });
   }
   const fly = $('btn-fly');

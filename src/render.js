@@ -546,6 +546,11 @@ export class Renderer {
     } else {
       this.camera.position.set(player.x, player.eyeY(), player.z);
       this.camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+      if (player.hurtFlash > 0) {
+        const k = player.hurtFlash * 0.07;
+        this.camera.position.x += (Math.random() - 0.5) * k;
+        this.camera.position.y += (Math.random() - 0.5) * k;
+      }
     }
   }
 
@@ -745,6 +750,11 @@ export class Renderer {
   // ---------- 每帧 ----------
   render(player, dt) {
     this._lastPlayer = player;
+    const targetFov = player.sprinting ? (player.flying ? 88 : 82) : this.fov;
+    if (Math.abs(this.camera.fov - targetFov) > 0.05) {
+      this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 8);
+      this.camera.updateProjectionMatrix();
+    }
     this.updateCamera(player);
     this.updateChunks(player.x, player.z);
     this._updateSky(dt, player);
