@@ -73,6 +73,7 @@ export class Player {
     this.witherDmgTimer = 0;
     this.regenTimer = 0;
     this.regenTick = 0;
+    this.hasteTimer = 0;
     this.gliding = false;
     this.kills = 0;
     this.breakTarget = null;
@@ -160,6 +161,7 @@ export class Player {
     } else {
       this.witherDmgTimer = 0;
     }
+    if (this.hasteTimer > 0) this.hasteTimer = Math.max(0, this.hasteTimer - dt);
     if (this.regenTimer > 0) {
       this.regenTimer = Math.max(0, this.regenTimer - dt);
       this.regenTick += dt;
@@ -534,6 +536,7 @@ export class Player {
       this.breakProgress = 0;
     }
     let total = breakTimeSeconds(this.target.id, heldId);
+    if (this.hasteTimer > 0) total *= 0.7;
     const heldStack = this.inventory.held;
     if (heldStack && heldStack.enchant && heldStack.enchant.id === 'efficiency') {
       total /= 1 + 0.35 * heldStack.enchant.level;
@@ -714,6 +717,12 @@ export class Player {
     // 钓竿抛竿
     if (this.inventory.held && this.inventory.held.id === 'fishing_rod') {
       this.game.startFishing?.();
+      return;
+    }
+
+    // 信标
+    if (this.target && this.target.id === BLOCK.BEACON) {
+      this.game.openBeacon?.(this.target.x, this.target.y, this.target.z);
       return;
     }
 

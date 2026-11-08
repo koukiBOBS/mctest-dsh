@@ -91,6 +91,7 @@ export const BLOCK = Object.freeze({
   SOUL_SAND: 83,
   NETHER_WART: 84,
   WITHER_SKULL: 85,
+  BEACON: 86,
 });
 
 export const BLOCK_DEFS = [];
@@ -340,6 +341,9 @@ def(BLOCK.NETHER_WART, 'nether_wart', '下界疣', {
 def(BLOCK.WITHER_SKULL, 'wither_skull', '凋灵骷髅头', {
   tiles: { all: 'wither_skull' }, solid: false, opaque: false, transparent: true,
   cross: true, needsSupport: true, hardness: 1.0, sound: 'grass',
+});
+def(BLOCK.BEACON, 'beacon', '信标', {
+  tiles: { all: 'beacon' }, hardness: 3.0, sound: 'glass', light: 15,
 });
 def(BLOCK.IRON_BLOCK, 'iron_block', '铁块', {
   tiles: { all: 'iron_block' }, hardness: 3.0, sound: 'stone',

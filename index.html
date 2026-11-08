@@ -225,6 +225,7 @@
         <p>43. 凋灵骷髅命中会附加凋零；灵魂沙可种下界疣，酿造再生药水</p>
         <p>44. 击败烈焰人、吃够 6 种食物都有成就；掉落物会自动合并</p>
         <p>45. 4 块灵魂沙 + 3 个凋灵骷髅头可召唤凋灵 Boss，击败掉落的下界之星</p>
+        <p>46. 下界之星可合成信标，右键选择速度/力量/再生/急迫增益</p>
       </div>
     </div>
     <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>
@@ -292,6 +293,20 @@
   <div class="trade-panel">
     <div class="inv-header"><span>讲台</span><button id="lectern-close" class="mc-btn small">关闭</button></div>
     <div id="lectern-text"></div>
+  </div>
+</div>
+
+<!-- ================= 信标 ================= -->
+<div id="screen-beacon" class="screen hidden">
+  <div class="trade-panel">
+    <div class="inv-header"><span>信标</span><button id="beacon-close" class="mc-btn small">关闭</button></div>
+    <div class="trade-hint">选择一项增益效果（激活后持续生效）</div>
+    <div id="beacon-offers">
+      <button class="trade-offer" data-beacon="speed">速度 · 120 秒</button>
+      <button class="trade-offer" data-beacon="strength">力量 · 120 秒</button>
+      <button class="trade-offer" data-beacon="regen">再生 · 60 秒</button>
+      <button class="trade-offer" data-beacon="haste">急迫 · 120 秒（挖掘更快）</button>
+    </div>
   </div>
 </div>
 

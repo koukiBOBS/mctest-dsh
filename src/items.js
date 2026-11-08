@@ -112,6 +112,9 @@ export class ItemEntityManager {
       // 浮动 + 轻微摆动
       const bob = 0.05 + Math.sin(e.age * 2.6 + e.x * 1.7 + e.z) * 0.035;
       e.sprite.position.set(e.x, e.y + bob, e.z);
+      const pdx = player.x - e.x;
+      const pdz = player.z - e.z;
+      e.sprite.visible = pdx * pdx + pdz * pdz < 32 * 32;
       e.sprite.material.rotation = Math.sin(e.age * 1.8 + e.z) * 0.18;
 
       // 拾取

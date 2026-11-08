@@ -54,6 +54,7 @@ const state = {
   enchantTable: null,
   lecternOpen: false,
   campfireTimers: [],
+  beaconOpen: false,
   inNether: false,
   inEnd: false,
   endReturn: null,
@@ -412,6 +413,42 @@ function closeLectern() {
   $('screen-lectern').classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (state.isTouch) hideTouch(false);
+}
+
+function openBeacon() {
+  if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
+  if (state.beaconOpen) return;
+  state.beaconOpen = true;
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-beacon').classList.remove('hidden');
+}
+
+function closeBeacon() {
+  if (!state.beaconOpen) return;
+  state.beaconOpen = false;
+  state.paused = false;
+  $('screen-beacon').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+}
+
+function applyBeaconEffect(effect) {
+  const p = state.player;
+  if (!p) return;
+  const names = { speed: '速度', strength: '力量', regen: '再生', haste: '急迫' };
+  if (effect === 'speed') p.speedTimer = 120;
+  else if (effect === 'strength') p.strengthTimer = 120;
+  else if (effect === 'regen') p.regenTimer = 60;
+  else if (effect === 'haste') p.hasteTimer = 120;
+  state.chat?.log('信标光芒闪耀：获得「' + (names[effect] || effect) + '」效果！');
+  state.achievements?.onEvent('beacon', {});
+  state.sound?.play('craft', { volume: 0.6 });
+  closeBeacon();
+  updateHUD();
 }
 
 function trySummonWither(x, y, z) {
@@ -1145,6 +1182,7 @@ function startGame(opts = {}) {
   game.useCampfire = (hit) => useCampfire(hit);
   game.trySummonGolem = (x, y, z) => trySummonGolem(x, y, z);
   game.trySummonWither = (x, y, z) => trySummonWither(x, y, z);
+  game.openBeacon = () => openBeacon();
   game.ringBell = (hit) => ringBell(hit);
   game.openLectern = (hit) => openLectern(hit);
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
@@ -1419,6 +1457,25 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.beaconDemo && state.player) {
+        state.beaconDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 4);
+            const z = Math.floor(p.z + f.z * 4);
+            const gy = state.world.getSurfaceY(x, z);
+            state.world.setBlock(x, gy + 1, z, BLOCK.BEACON);
+            state.inventory.add('nether_star', 2);
+            state.onInventoryChange?.();
+            openBeacon();
+            setTimeout(() => applyBeaconEffect('speed'), 1800);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.witherBossDemo && state.player) {
         state.witherBossDemo = false;
@@ -2523,6 +2580,10 @@ function handleEscape() {
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
     return;
   }
+  if (state.beaconOpen) {
+    closeBeacon();
+    return;
+  }
   if (state.lecternOpen) {
     closeLectern();
     return;
@@ -3221,6 +3282,7 @@ function loop(now) {
       if (state.player.jumpBoostTimer > 0) eff.push('跳跃 ' + Math.ceil(state.player.jumpBoostTimer) + 's');
       if (state.player.regenTimer > 0) eff.push('再生 ' + Math.ceil(state.player.regenTimer) + 's');
       if (state.player.witherTimer > 0) eff.push('凋零 ' + Math.ceil(state.player.witherTimer) + 's');
+      if (state.player.hasteTimer > 0) eff.push('急迫 ' + Math.ceil(state.player.hasteTimer) + 's');
     }
     if (eff.length) {
       effEl.textContent = eff.join(' · ');
@@ -3356,6 +3418,12 @@ function bindUI() {
   $('brew-close').addEventListener('click', closeBrew);
   $('sign-close').addEventListener('click', () => closeSignEditor(false));
   $('lectern-close').addEventListener('click', closeLectern);
+  $('beacon-close').addEventListener('click', closeBeacon);
+  $('beacon-offers').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-beacon]');
+    if (!btn) return;
+    applyBeaconEffect(btn.dataset.beacon);
+  });
   $('name-close').addEventListener('click', () => closeNameTagEditor(false));
   $('name-save').addEventListener('click', () => closeNameTagEditor(true));
   $('sign-save').addEventListener('click', () => closeSignEditor(true));
@@ -3508,6 +3576,7 @@ function boot() {
   if (params.get('golem') === '1') state.golemDemo = true;
   if (params.get('fortress') === '1') state.fortressDemo = true;
   if (params.get('witherboss') === '1') state.witherBossDemo = true;
+  if (params.get('beacon') === '1') state.beaconDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

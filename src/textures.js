@@ -104,6 +104,7 @@ export const TILE_NAMES = [
   'soul_sand',
   'nether_wart',
   'wither_skull',
+  'beacon',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2420,6 +2421,24 @@ const TILE_PAINTERS = {
     fillRect(b, 6, 13, 2, 2, C('#4a4a4a'));
     fillRect(b, 9, 13, 2, 2, C('#4a4a4a'));
     setPx(b, 8, 12, C('#141414'));
+  },
+
+  beacon(b, rng) {
+    noiseFill(b, rng, [
+      ['#2a2a34', 6],
+      ['#1e1e28', 5],
+      ['#3a3a46', 3],
+    ]);
+    // 中央发光核心
+    fillRect(b, 5, 5, 6, 6, C('#1a6a8a'));
+    fillRect(b, 6, 6, 4, 4, C('#5fd8f0'));
+    setPx(b, 7, 7, C('#e8ffff'));
+    setPx(b, 8, 8, C('#e8ffff'));
+    // 框架
+    for (const x of [4, 10]) vline(b, 4, 11, x, C('#6a6a7a'));
+    hline(b, 4, 11, 4, C('#6a6a7a'));
+    hline(b, 4, 11, 11, C('#6a6a7a'));
+    for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#8a8aa0'));
   },
 
 };

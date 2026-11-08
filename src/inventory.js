@@ -666,7 +666,7 @@ function ITEMS_FOR_CREATIVE() {
     'glass', 'water', 'bedrock', 'clay', 'cactus',
     'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'snow', 'ice',
     'crafting_table', 'furnace', 'chest', 'bed', 'farmland', 'door', 'fence', 'enchanting_table', 'brewing_stand', 'torch', 'tnt', 'rose', 'dandelion', 'tall_grass',
-    'stone_bricks', 'deepslate', 'sculk', 'sculk_sensor', 'trial_spawner', 'campfire', 'bell', 'lectern', 'purpur_block', 'iron_block', 'pumpkin', 'nether_bricks', 'soul_sand', 'wither_skull', 'bookshelf', 'sign', 'prismarine', 'sea_lantern', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
+    'stone_bricks', 'deepslate', 'sculk', 'sculk_sensor', 'trial_spawner', 'campfire', 'bell', 'lectern', 'purpur_block', 'beacon', 'iron_block', 'pumpkin', 'nether_bricks', 'soul_sand', 'wither_skull', 'bookshelf', 'sign', 'prismarine', 'sea_lantern', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
     'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
     'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken', 'wheat_seeds', 'wheat', 'mutton', 'cooked_mutton', 'pumpkin_pie', 'golden_apple', 'blaze_rod', 'nether_wart', 'nether_star',
     'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread', 'bow', 'flint', 'egg', 'shears', 'bucket', 'water_bucket', 'lava_bucket', 'emerald', 'book', 'fishing_rod', 'cod', 'cooked_cod', 'firework_rocket', 'name_tag', 'shulker_shell', 'ink_sac', 'elytra', 'glass_bottle', 'water_bottle', 'potion_healing', 'potion_strength', 'potion_speed', 'potion_fire_resist', 'potion_night_vision', 'potion_jump', 'potion_regen',
