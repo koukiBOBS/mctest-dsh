@@ -77,6 +77,9 @@ export const BLOCK = Object.freeze({
   SEA_LANTERN: 69,
   BOOKSHELF: 70,
   SIGN: 71,
+  DEEPSLATE: 72,
+  SCULK: 73,
+  SCULK_SENSOR: 74,
 });
 
 export const BLOCK_DEFS = [];
@@ -300,6 +303,15 @@ def(BLOCK.BOOKSHELF, 'bookshelf', '书架', {
 def(BLOCK.SIGN, 'sign', '告示牌', {
   tiles: { all: 'sign' }, model: 'sign',
   solid: false, opaque: false, transparent: true, hardness: 0.5, sound: 'wood', drop: 'sign',
+});
+def(BLOCK.DEEPSLATE, 'deepslate', '深板岩', {
+  tiles: { all: 'deepslate' }, hardness: 3, sound: 'stone',
+});
+def(BLOCK.SCULK, 'sculk', '幽匿块', {
+  tiles: { all: 'sculk' }, hardness: 0.6, sound: 'grass',
+});
+def(BLOCK.SCULK_SENSOR, 'sculk_sensor', '幽匿感测体', {
+  tiles: { all: 'sculk_sensor' }, hardness: 0.6, sound: 'grass', light: 2,
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },

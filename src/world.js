@@ -102,6 +102,7 @@ export class World {
     this.strongholdCache = new Map();
     this.mansionCache = new Map();
     this.monumentCache = new Map();
+    this.cityCache = new Map();
     this.ruinCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
@@ -545,6 +546,7 @@ export class World {
     this.stampMansions(chunk);
     this.stampMonuments(chunk);
     this.stampRuinedPortals(chunk);
+    this.stampAncientCities(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
   }
@@ -1608,6 +1610,129 @@ export class World {
     for (let dx = -6; dx <= 6; dx++) {
       for (let dz = -6; dz <= 6; dz++) {
         const m = this.getRuinedPortal(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 远古城市 ----------------
+  getAncientCity(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.cityCache.has(key)) return this.cityCache.get(key);
+    if (this.cityCache.size > 600) this.cityCache.clear();
+    const h = (n) => hash2i(cx * 67 + n, cz * 41 - n, this.seed + 2500 + n);
+    let m = null;
+    if (h(1) < 0.4) {
+      const centerX = Math.round(cx * 512 + 36 + h(2) * 440);
+      const centerZ = Math.round(cz * 512 + 36 + h(3) * 440);
+      const y = 10 + Math.floor(h(4) * 10);
+      m = {
+        centerX,
+        centerZ,
+        y,
+        minX: centerX - 22,
+        maxX: centerX + 22,
+        minZ: centerZ - 22,
+        maxZ: centerZ + 22,
+      };
+    }
+    this.cityCache.set(key, m);
+    return m;
+  }
+
+  stampAncientCities(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 512);
+    const ccz = Math.floor(z0 / 512);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getAncientCity(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampAncientCity(chunk, m);
+      }
+    }
+  }
+
+  stampAncientCity(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const D = BLOCK.DEEPSLATE;
+    const S = BLOCK.SCULK;
+    const baseY = m.y;
+    const half = 17;
+    // 地板、天花板、空气
+    for (let dx = -half - 1; dx <= half + 1; dx++) {
+      for (let dz = -half - 1; dz <= half + 1; dz++) {
+        set(m.centerX + dx, baseY - 2, m.centerZ + dz, D);
+        set(m.centerX + dx, baseY - 1, m.centerZ + dz, D);
+        for (let dy = 0; dy <= 8; dy++) set(m.centerX + dx, baseY + dy, m.centerZ + dz, BLOCK.AIR);
+        set(m.centerX + dx, baseY + 9, m.centerZ + dz, D);
+        // 外墙
+        if (Math.abs(dx) === half || Math.abs(dz) === half) {
+          for (let dy = 0; dy <= 8; dy++) set(m.centerX + dx, baseY + dy, m.centerZ + dz, D);
+        }
+      }
+    }
+    // 幽匿斑块
+    for (let dx = -half; dx <= half; dx++) {
+      for (let dz = -half; dz <= half; dz++) {
+        const wx = m.centerX + dx;
+        const wz = m.centerZ + dz;
+        if (hash2i(wx, wz, this.seed + 3100) < 0.16) set(wx, baseY - 1, wz, S);
+      }
+    }
+    // 立柱与幽匿感测体
+    for (const [px, pz] of [[-9, -9], [9, -9], [-9, 9], [9, 9], [0, 0]]) {
+      for (let dy = 0; dy <= 6; dy++) set(m.centerX + px, baseY + dy, m.centerZ + pz, D);
+      set(m.centerX + px, baseY + 7, m.centerZ + pz, BLOCK.SCULK_SENSOR);
+      set(m.centerX + px, baseY + 8, m.centerZ + pz, S);
+    }
+    // 幽匿灯柱（用海晶灯作为发光装饰）
+    for (const [px, pz] of [[-14, -14], [14, -14], [-14, 14], [14, 14]]) {
+      set(m.centerX + px, baseY + 3, m.centerZ + pz, BLOCK.SEA_LANTERN);
+    }
+    // 宝箱
+    const chests = [
+      [m.centerX - 4, baseY, m.centerZ - 4],
+      [m.centerX + 4, baseY, m.centerZ - 4],
+      [m.centerX - 4, baseY, m.centerZ + 4],
+      [m.centerX + 4, baseY, m.centerZ + 4],
+    ];
+    for (const [cx, cy, cz] of chests) {
+      set(cx, cy, cz, BLOCK.CHEST);
+      const key = cx + ',' + cy + ',' + cz;
+      if (!this.structureChests.has(key)) this.structureChests.set(key, this._cityLoot(cx, cz));
+    }
+  }
+
+  _cityLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 11 + n, cz * 19 - n, this.seed + 3200 + n);
+    const loot = [];
+    loot.push({ id: 'diamond', count: 1 + Math.floor(r(1) * 2) });
+    loot.push({ id: 'emerald', count: 2 + Math.floor(r(2) * 5) });
+    if (r(3) < 0.8) loot.push({ id: 'iron_ingot', count: 3 + Math.floor(r(4) * 5) });
+    if (r(5) < 0.7) loot.push({ id: 'gold_ingot', count: 2 + Math.floor(r(6) * 4) });
+    if (r(7) < 0.6) loot.push({ id: 'book', count: 1 + Math.floor(r(8) * 3) });
+    return loot;
+  }
+
+  findNearestAncientCity(x, z) {
+    const ccx = Math.floor(x / 512);
+    const ccz = Math.floor(z / 512);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -6; dx <= 6; dx++) {
+      for (let dz = -6; dz <= 6; dz++) {
+        const m = this.getAncientCity(ccx + dx, ccz + dz);
         if (!m) continue;
         const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
         if (d < bestD) {

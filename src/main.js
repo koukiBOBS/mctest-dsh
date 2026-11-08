@@ -1627,7 +1627,7 @@ function updateLoading() {
           }
         }, 700);
       }
-      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold || state.tpMansion || state.tpMonument || state.tpRuin) {
+      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold || state.tpMansion || state.tpMonument || state.tpRuin || state.tpCity) {
         setTimeout(() => {
           try {
             const p = state.player;
@@ -1651,6 +1651,10 @@ function updateLoading() {
                 const gy = state.world.getSurfaceY(m.centerX, tz);
                 target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `沙漠神殿 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
               }
+            }
+            if (state.tpCity) {
+              const m = state.world.findNearestAncientCity(p.x, p.z);
+              if (m) target = { x: m.centerX + 0.5, y: m.y + 1.2, z: m.centerZ + 5.5, label: `远古城市 ${m.centerX}, ${m.y}, ${m.centerZ}` };
             }
             if (state.tpMonument) {
               const m = state.world.findNearestMonument(p.x, p.z);
@@ -1704,6 +1708,7 @@ function updateLoading() {
           state.tpMansion = false;
           state.tpMonument = false;
           state.tpRuin = false;
+          state.tpCity = false;
         }, 900);
       }
       if (state.spawnTorches && state.player) {
@@ -1967,6 +1972,16 @@ function checkDiscoveries() {
         const m = w.getIgloo(vcx + dx, vcz + dz);
         if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
           ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
+      }
+    }
+    // 远古城市
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getAncientCity(Math.floor(p.x / 512) + dx, Math.floor(p.z / 512) + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 30) {
+          ach.onEvent('discover', { kind: 'ancient_city' });
           break;
         }
       }
@@ -3028,6 +3043,7 @@ function boot() {
   if (params.get('fish') === '1') state.fishDemo = true;
   if (params.get('breed') === '1') state.breedDemo = true;
   if (params.get('nametag') === '1') state.nameTagDemo = true;
+  if (params.get('city') === '1') state.tpCity = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

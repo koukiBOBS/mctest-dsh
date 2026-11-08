@@ -89,6 +89,9 @@ export const TILE_NAMES = [
   'sea_lantern',
   'bookshelf',
   'sign',
+  'deepslate',
+  'sculk',
+  'sculk_sensor',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2205,6 +2208,41 @@ const TILE_PAINTERS = {
     hline(b, 3, 10, 7, C('#4a2f14'));
     hline(b, 3, 12, 9, C('#4a2f14'));
     hline(b, 3, 8, 11, C('#4a2f14'));
+  },
+
+  deepslate(b, rng) {
+    noiseFill(b, rng, [
+      ['#3a3a42', 6],
+      ['#2e2e36', 5],
+      ['#464650', 3],
+    ]);
+    for (let y = 2; y < 16; y += 4) hline(b, 0, 15, y, C('#26262c'));
+    for (let i = 0; i < 10; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#52525c'));
+  },
+
+  sculk(b, rng) {
+    noiseFill(b, rng, [
+      ['#0e2a2a', 6],
+      ['#123838', 5],
+      ['#0a1e1e', 4],
+    ]);
+    for (let i = 0; i < 12; i++) {
+      const x = (rng() * 16) | 0;
+      const y = (rng() * 16) | 0;
+      setPx(b, x, y, C('#2a8a8a'));
+      if (rng() < 0.4) setPx(b, (x + 1) & 15, y, C('#46c8c0'));
+    }
+  },
+
+  sculk_sensor(b, rng) {
+    noiseFill(b, rng, [
+      ['#123838', 5],
+      ['#0e2a2a', 4],
+    ]);
+    fillRect(b, 5, 8, 6, 6, C('#1f5a5a'));
+    fillRect(b, 6, 10, 4, 2, C('#7cf0e0'));
+    setPx(b, 7, 10, C('#e8fffa'));
+    for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#2a8a8a'));
   },
 
 };
