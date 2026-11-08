@@ -14,6 +14,7 @@ export const RECIPES = [
   { id: 'crafting_table', pattern: ['PP', 'PP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'crafting_table', count: 1 } },
   { id: 'chest', pattern: ['PPP', 'P P', 'PPP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'chest', count: 1 } },
   { id: 'furnace', pattern: ['CCC', 'C C', 'CCC'], keys: { C: 'cobblestone' }, result: { id: 'furnace', count: 1 } },
+  { id: 'bed', pattern: ['WWW', 'PPP'], keys: { W: 'wool_white', P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'bed', count: 1 } },
   { id: 'torch', pattern: ['C', 'S'], keys: { C: 'coal', S: 'stick' }, result: { id: 'torch', count: 4 } },
 
   // 石砖

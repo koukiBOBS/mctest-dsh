@@ -181,6 +181,7 @@ export class Renderer {
     this._lastPlayer = { x: 0, z: 0 };
     this.quads = 0;
     this.underwater = false;
+    this.thirdPerson = false;
     this.weatherFactor = 0;
     this.flashFactor = 0;
     this.dayLight = 1;
@@ -527,9 +528,25 @@ export class Renderer {
   }
 
   // ---------- 相机 / 天空 ----------
+  setThirdPerson(value) {
+    this.thirdPerson = !!value;
+  }
+
   updateCamera(player) {
-    this.camera.position.set(player.x, player.eyeY(), player.z);
-    this.camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+    if (this.thirdPerson) {
+      const f = player.forwardVector();
+      const ex = player.x;
+      const ey = player.eyeY();
+      const ez = player.z;
+      let dist = 3.6;
+      const hit = this.world.raycast(ex, ey, ez, -f.x, -f.y, -f.z, 4.2);
+      if (hit && hit.dist > 0.3) dist = Math.max(1.1, hit.dist - 0.35);
+      this.camera.position.set(ex - f.x * dist, ey - f.y * dist + 0.35, ez - f.z * dist);
+      this.camera.lookAt(ex, ey, ez);
+    } else {
+      this.camera.position.set(player.x, player.eyeY(), player.z);
+      this.camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+    }
   }
 
   _updateSky(dt, player) {

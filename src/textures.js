@@ -68,6 +68,8 @@ export const TILE_NAMES = [
   'cactus_side',
   'cactus_top',
   'clay',
+  'bed_top',
+  'bed_side',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -1864,6 +1866,40 @@ const TILE_PAINTERS = {
       );
     }
   },
+  bed_top(b, rng) {
+    noiseFill(b, rng, [
+      ['#b8353f', 5],
+      ['#a92d36', 3],
+      ['#c94b55', 2],
+    ]);
+    // 白色枕头（头部）
+    fillRect(b, 1, 1, 14, 4, C('#ece7de'));
+    hline(b, 1, 14, 4, C('#cfc7bb'));
+    // 边缘
+    hline(b, 0, 15, 0, C('#7a1f26'));
+    hline(b, 0, 15, 15, C('#7a1f26'));
+    vline(b, 0, 15, 0, C('#7a1f26'));
+    vline(b, 0, 15, 15, C('#7a1f26'));
+    // 被子褶皱
+    for (let i = 0; i < 6; i++) {
+      setPx(b, 2 + Math.floor(rng() * 12), 6 + Math.floor(rng() * 8), C('#8f2830'));
+    }
+  },
+
+  bed_side(b, rng) {
+    noiseFill(b, rng, [
+      ['#b8353f', 5],
+      ['#a92d36', 3],
+      ['#c94b55', 2],
+    ]);
+    // 木床架
+    fillRect(b, 0, 10, 16, 6, C('#8a5a2e'));
+    for (let x = 0; x < 16; x += 4) vline(b, 10, 15, x, C('#6b4522'));
+    hline(b, 0, 15, 10, C('#6b4423'));
+    // 白色床沿
+    hline(b, 0, 15, 9, C('#e8e2d8'));
+  },
+
 };
 
 function paintTile(name) {

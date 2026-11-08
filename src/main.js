@@ -14,6 +14,7 @@ import * as RP from './resourcepack.js';
 import { ChatUI } from './chat.js';
 import { ContainerManager, ContainerUI } from './containers.js';
 import { WeatherManager } from './weather.js';
+import { PlayerModel } from './player-model.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -39,6 +40,8 @@ const state = {
   containers: null,
   containerUI: null,
   weather: null,
+  playerModel: null,
+  thirdPerson: false,
   isTouch: false,
   settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false },
   overlayReturn: 'title',
@@ -321,6 +324,7 @@ function startGame(opts = {}) {
   game.containerUI = containerUI;
   game.onContainerChange = () => containerUI.refreshIfOpen();
   game.openContainer = (hit) => openContainer(hit);
+  game.sleepInBed = (hit) => sleepInBed(hit);
   if (save && save.containers) containers.load(save.containers);
   state.invUI = new InventoryUI(inventory, {
     sound: state.sound,
@@ -333,6 +337,11 @@ function startGame(opts = {}) {
     if (state.isTouch) hideTouch(false);
   };
   state.chat.log('欢迎来到 Minecraft Web！输入 /help 查看命令，T 键打开聊天。');
+
+  const playerModel = new PlayerModel(renderer.scene);
+  state.playerModel = playerModel;
+  renderer.setThirdPerson(state.thirdPerson);
+  playerModel.setVisible(state.thirdPerson);
 
   const weather = new WeatherManager({
     scene: renderer.scene,
@@ -380,6 +389,11 @@ function startGame(opts = {}) {
   if (!save && typeof state.startPitch === 'number' && isFinite(state.startPitch)) player.pitch = state.startPitch;
   if (!save && typeof state.startYaw === 'number' && isFinite(state.startYaw)) player.yaw = state.startYaw;
   player.lookSensitivity = 0.0024 * state.settings.sens;
+  if (state.startThirdPerson) {
+    state.thirdPerson = true;
+    renderer.setThirdPerson(true);
+    playerModel.setVisible(true);
+  }
   state.running = true;
   state.loading = true;
   state.loadingDone = false;
@@ -420,6 +434,11 @@ function stopGame(toTitle = true) {
     try { state.weather.clear(); } catch (e) { /* ignore */ }
     state.weather = null;
   }
+  if (state.playerModel) {
+    try { state.playerModel.group.parent && state.playerModel.group.parent.remove(state.playerModel.group); } catch (e) { /* ignore */ }
+    state.playerModel = null;
+  }
+  state.thirdPerson = false;
   if (state.containerUI) {
     state.containerUI.isOpen = false;
     state.containerUI = null;
@@ -501,6 +520,23 @@ function updateLoading() {
           state.chat?.log('演示掉落物已生成');
         }, 500);
         state.spawnDemoItems = false;
+      }
+      if (state.bedDemo && state.player) {
+        state.bedDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 2.5);
+            const z = Math.floor(p.z + f.z * 2.5);
+            const gy = state.world.getSurfaceY(x, z);
+            state.world.setBlock(x, gy + 1, z, BLOCK.BED);
+            state.chat?.log('已放置测试床');
+            sleepInBed({ x, y: gy + 1, z, id: BLOCK.BED });
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 700);
       }
       if (state.tpVillage || state.tpDungeon) {
         setTimeout(() => {
@@ -690,6 +726,35 @@ function openContainer(hit) {
   state.containerUI.show(open.key, open.type);
 }
 
+function sleepInBed(hit) {
+  const w = state.world;
+  const p = state.player;
+  if (!w || !p || !hit) return;
+  const t = (((w.time % 600) + 600) % 600) / 600;
+  const sunElev = Math.sin(t * Math.PI * 2);
+  if (sunElev > 0.05) {
+    showToast('只能在晚上睡觉');
+    state.chat?.log('现在还不是晚上，睡不着。');
+    return;
+  }
+  p.spawn = { x: hit.x + 0.5, y: hit.y + 1, z: hit.z + 0.5 };
+  w.time = 60;
+  p.health = Math.min(20, p.health + 4);
+  p.hunger = Math.min(20, p.hunger + 2);
+  state.chat?.log('你睡了一觉，天亮了。出生点已设置到床边。');
+  showToast('睡了一觉，天亮了');
+  state.sound?.play('open', { volume: 0.4 });
+  updateHUD();
+}
+
+function toggleThirdPerson() {
+  if (!state.running || !state.player) return;
+  state.thirdPerson = !state.thirdPerson;
+  state.renderer?.setThirdPerson(state.thirdPerson);
+  state.playerModel?.setVisible(state.thirdPerson);
+  showToast(state.thirdPerson ? '第三人称视角（F5 切换）' : '第一人称视角（F5 切换）');
+}
+
 function setPaused(paused) {
   if (!state.running) return;
   state.paused = paused;
@@ -789,6 +854,11 @@ function bindKeyboard() {
         e.preventDefault();
         state.chat.close();
       }
+      return;
+    }
+    if (e.code === 'F5') {
+      e.preventDefault();
+      toggleThirdPerson();
       return;
     }
     if (e.code === 'Escape') {
@@ -1239,6 +1309,7 @@ function loop(now) {
   if (state.world) {
     if (activeGame()) {
       state.player.update(dt);
+      state.playerModel?.update(dt, state.player, state.renderer ? state.renderer.dayLight : 1);
       state.mobs?.update(dt);
       state.items?.update(dt);
       state.weather?.update(dt);
@@ -1321,6 +1392,7 @@ function bindUI() {
     hideTouch(true);
     state.chat?.show('');
   });
+  $('btn-hud-view').addEventListener('click', toggleThirdPerson);
   $('btn-hud-inv').addEventListener('click', () => openInventory(2));
   $('btn-hud-menu').addEventListener('click', () => setPaused(true));
 
@@ -1413,6 +1485,8 @@ function boot() {
   if (params.get('weather')) state.weatherDemo = params.get('weather');
   if (params.get('village') === '1') state.tpVillage = true;
   if (params.get('dungeon') === '1') state.tpDungeon = true;
+  if (params.get('thirdperson') === '1') state.startThirdPerson = true;
+  if (params.get('bed') === '1') state.bedDemo = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

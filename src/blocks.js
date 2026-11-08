@@ -46,6 +46,7 @@ export const BLOCK = Object.freeze({
   CLAY: 38,
   FURNACE: 39,
   CHEST: 40,
+  BED: 41,
 });
 
 export const BLOCK_DEFS = [];
@@ -199,6 +200,10 @@ def(BLOCK.FURNACE, 'furnace', '熔炉', {
 def(BLOCK.CHEST, 'chest', '箱子', {
   tiles: { top: 'chest_top', bottom: 'chest_top', side: 'chest_front' },
   hardness: 2.5, sound: 'wood', tool: 'axe',
+});
+def(BLOCK.BED, 'bed', '床', {
+  tiles: { top: 'bed_top', bottom: 'oak_planks', side: 'bed_side' },
+  hardness: 0.2, sound: 'wood',
 });
 
 // ---------------- 物品 ----------------

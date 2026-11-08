@@ -509,6 +509,10 @@ export class Player {
         this.game.openContainer?.(this.target);
         return;
       }
+      if (def.name === 'bed') {
+        this.game.sleepInBed?.(this.target);
+        return;
+      }
     }
     this.tryPlace();
   }
