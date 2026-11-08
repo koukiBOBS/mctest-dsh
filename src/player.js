@@ -601,6 +601,7 @@ export class Player {
     else if (hit.id === BLOCK.GOLD_ORE) this.addXp(6);
     else if (hit.id === BLOCK.DIAMOND_ORE) this.addXp(8);
     if (hit.id === BLOCK.WHEAT_3) this.game.achievements?.onEvent('harvest', {});
+    this.game.onBlockMined?.();
     this.game.onInventoryChange?.();
   }
 
@@ -1002,6 +1003,7 @@ export class Player {
     if (this.health <= 0) {
       this.health = 0;
       this.dead = true;
+      this.game.onPlayerDeath?.();
       this.deathMessage = reason || '死了';
       this.game.onDeath?.(this.deathMessage);
     }

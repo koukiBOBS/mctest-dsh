@@ -15,7 +15,7 @@ import * as RP from './resourcepack.js';
 import { ChatUI } from './chat.js';
 import { ContainerManager, ContainerUI } from './containers.js';
 import { WeatherManager } from './weather.js';
-import { Achievements } from './achievements.js';
+import { Achievements, ACHIEVEMENTS } from './achievements.js';
 import { PlayerModel } from './player-model.js';
 
 const $ = (id) => document.getElementById(id);
@@ -55,6 +55,8 @@ const state = {
   lecternOpen: false,
   campfireTimers: [],
   beaconOpen: false,
+  achievementsOpen: false,
+  stats: { blocks: 0, mobs: 0, deaths: 0, playTime: 0 },
   inNether: false,
   inEnd: false,
   endReturn: null,
@@ -411,6 +413,45 @@ function closeLectern() {
   state.lecternOpen = false;
   state.paused = false;
   $('screen-lectern').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+}
+
+function openAchievements() {
+  if (!state.running || state.loading || !state.player) return;
+  if (state.achievementsOpen) return;
+  state.achievementsOpen = true;
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-achievements').classList.remove('hidden');
+  const ach = state.achievements;
+  const list = $('achievement-list');
+  const done = ACHIEVEMENTS.filter((a) => ach && ach.has(a.id)).length;
+  $('achievement-progress').textContent = '已完成 ' + done + ' / ' + ACHIEVEMENTS.length;
+  if (list) {
+    list.innerHTML = ACHIEVEMENTS.map((a) => {
+      const unlocked = ach && ach.has(a.id);
+      return '<div class="ach-item ' + (unlocked ? 'done' : '') + '">'
+        + '<span class="ach-icon">' + (unlocked ? '🏆' : '🔒') + '</span>'
+        + '<div><div class="ach-name">' + a.name + '</div><div class="ach-desc">' + a.desc + '</div></div>'
+        + '</div>';
+    }).join('');
+  }
+  const st = state.stats || { blocks: 0, mobs: 0, deaths: 0, playTime: 0 };
+  const mins = Math.floor(st.playTime / 60);
+  const secs = Math.floor(st.playTime % 60);
+  $('stats-box').textContent = '挖掘方块：' + st.blocks + '　击杀生物：' + st.mobs
+    + '　死亡次数：' + st.deaths + '　游戏时间：' + mins + ' 分 ' + secs + ' 秒';
+}
+
+function closeAchievements() {
+  if (!state.achievementsOpen) return;
+  state.achievementsOpen = false;
+  state.paused = false;
+  $('screen-achievements').classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (state.isTouch) hideTouch(false);
 }
@@ -1064,6 +1105,7 @@ function saveGame() {
       containers: state.containers ? state.containers.serialize() : null,
       weather: state.weather ? state.weather.serialize() : null,
       achievements: state.achievements ? state.achievements.serialize() : [],
+      stats: state.stats || null,
       crops: state.world ? state.world.serializeCrops() : [],
       signs: state.world ? state.world.serializeSigns() : [],
     };
@@ -1183,6 +1225,9 @@ function startGame(opts = {}) {
   game.trySummonGolem = (x, y, z) => trySummonGolem(x, y, z);
   game.trySummonWither = (x, y, z) => trySummonWither(x, y, z);
   game.openBeacon = () => openBeacon();
+  game.onBlockMined = () => { state.stats.blocks += 1; };
+  game.onMobKilled = () => { state.stats.mobs += 1; };
+  game.onPlayerDeath = () => { state.stats.deaths += 1; };
   game.ringBell = (hit) => ringBell(hit);
   game.openLectern = (hit) => openLectern(hit);
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
@@ -1235,6 +1280,9 @@ function startGame(opts = {}) {
   state.achievements = achievements;
   game.achievements = achievements;
   if (save && save.achievements) achievements.load(save.achievements);
+  state.stats = save && save.stats
+    ? { blocks: save.stats.blocks | 0, mobs: save.stats.mobs | 0, deaths: save.stats.deaths | 0, playTime: save.stats.playTime || 0 }
+    : { blocks: 0, mobs: 0, deaths: 0, playTime: 0 };
 
   const playerModel = new PlayerModel(renderer.scene);
   state.playerModel = playerModel;
@@ -1457,6 +1505,23 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.achievementsDemo && state.player) {
+        state.achievementsDemo = false;
+        setTimeout(() => {
+          try {
+            state.stats.blocks = 128;
+            state.stats.mobs = 9;
+            state.stats.deaths = 1;
+            state.stats.playTime = 754;
+            state.achievements?.unlock('wood');
+            state.achievements?.unlock('stone');
+            state.achievements?.unlock('iron');
+            openAchievements();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.mushroomDemo && state.player) {
         state.mushroomDemo = false;
@@ -2673,6 +2738,10 @@ function handleEscape() {
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
     return;
   }
+  if (state.achievementsOpen) {
+    closeAchievements();
+    return;
+  }
   if (state.beaconOpen) {
     closeBeacon();
     return;
@@ -3358,6 +3427,7 @@ function loop(now) {
           }
         }
       }
+      if (state.stats) state.stats.playTime += dt;
       state.saveClock += dt;
       if (state.saveClock > 30) {
         state.saveClock = 0;
@@ -3520,6 +3590,8 @@ function bindUI() {
   $('sign-close').addEventListener('click', () => closeSignEditor(false));
   $('lectern-close').addEventListener('click', closeLectern);
   $('beacon-close').addEventListener('click', closeBeacon);
+  $('achievements-close').addEventListener('click', closeAchievements);
+  $('btn-pause-achievements').addEventListener('click', openAchievements);
   $('beacon-offers').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-beacon]');
     if (!btn) return;
@@ -3681,6 +3753,7 @@ function boot() {
   if (params.get('biome')) state.biomeDemo = params.get('biome');
   if (params.get('panda') === '1') state.pandaDemo = true;
   if (params.get('mushroom') === '1') state.mushroomDemo = true;
+  if (params.get('achievements') === '1') state.achievementsDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

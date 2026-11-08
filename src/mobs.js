@@ -658,6 +658,7 @@ export class MobManager {
         this.game.achievements?.onEvent('dragon', {});
         this.game.chat?.log('末影龙被击败了！');
       }
+      this.game.onMobKilled?.(mob.type);
       this._removeMob(mob, true);
       return true;
     }

@@ -1604,3 +1604,24 @@ body.touch #xp-bar {
   line-height: 1.7;
   white-space: pre-line;
 }
+
+
+.ach-panel {
+  width: min(560px, 94vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #1c1c1c;
+  border: 2px solid #5a5a5a;
+  padding: 12px;
+  color: #e8e8e8;
+}
+.ach-progress { font-size: 13px; color: #ffd24a; }
+.ach-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.ach-item { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: #262626; border: 1px solid #3a3a3a; opacity: 0.55; }
+.ach-item.done { opacity: 1; border-color: #c8a83a; background: #2e2a1c; }
+.ach-icon { width: 24px; text-align: center; font-size: 16px; }
+.ach-name { font-size: 13px; color: #fff; }
+.ach-desc { font-size: 11px; color: #b8b8b8; }
+.stats-box { padding: 8px; background: #151515; border: 1px solid #3a3a3a; font-size: 12px; line-height: 1.6; color: #c8c8c8; }
