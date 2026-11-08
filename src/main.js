@@ -1331,6 +1331,24 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.endCityDemo && state.player) {
+        state.endCityDemo = false;
+        setTimeout(() => {
+          try {
+            enterEnd();
+            const city = state.world.findNearestEndCity();
+            setTimeout(() => {
+              const p = state.player;
+              p.setPosition(city.x + 0.5, city.y + 1.2, city.z + 6);
+              p.yaw = 0;
+              p.pitch = 0.08;
+              state.chat?.log('演示：已到达末地城（塔内有宝箱与潜影贝）');
+            }, 700);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.campfireDemo && state.player) {
         state.campfireDemo = false;
         setTimeout(() => {
@@ -2112,6 +2130,13 @@ function checkDiscoveries() {
         }
       }
     }
+    // 末地城
+    if (state.inEnd && w.endCities.size > 0) {
+      const city = w.endCities.get('fixed');
+      if (city && Math.hypot(city.x - p.x, city.z - p.z) < 30) {
+        ach.onEvent('discover', { kind: 'end_city' });
+      }
+    }
     // 试炼密室
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
@@ -2849,6 +2874,18 @@ function loop(now) {
         state.villagerTimer = 0;
         ensureVillagers();
       }
+      state.shulkerTimer = (state.shulkerTimer || 0) + dt;
+      if (state.shulkerTimer > 8) {
+        state.shulkerTimer = 0;
+        const p = state.player;
+        const city = state.world.endCities.get('fixed');
+        if (p && city && state.mobs && state.mobs.count() < 10) {
+          if (Math.hypot(city.x - p.x, city.z - p.z) < 30) {
+            state.mobs.spawn('shulker', city.x + (Math.random() - 0.5) * 6, city.y + 2, city.z + (Math.random() - 0.5) * 6);
+            state.chat?.log('潜影贝出现了！');
+          }
+        }
+      }
       state.trialTimer = (state.trialTimer || 0) + dt;
       if (state.trialTimer > 6) {
         state.trialTimer = 0;
@@ -3224,6 +3261,7 @@ function boot() {
   if (params.get('city') === '1') state.tpCity = true;
   if (params.get('trial') === '1') state.tpTrial = true;
   if (params.get('campfire') === '1') state.campfireDemo = true;
+  if (params.get('endcity') === '1') state.endCityDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

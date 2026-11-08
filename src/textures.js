@@ -96,6 +96,7 @@ export const TILE_NAMES = [
   'campfire',
   'bell',
   'lectern_top',
+  'purpur',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -169,6 +170,7 @@ export const ITEM_ICON_NAMES = [
   'cooked_cod',
   'firework_rocket',
   'name_tag',
+  'shulker_shell',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -2306,6 +2308,20 @@ const TILE_PAINTERS = {
     }
   },
 
+  purpur(b, rng) {
+    noiseFill(b, rng, [
+      ['#a06aa8', 6],
+      ['#8a5a92', 5],
+      ['#b47abc', 3],
+    ]);
+    for (let i = 0; i < 12; i++) {
+      const x = (rng() * 16) | 0;
+      const y = (rng() * 16) | 0;
+      setPx(b, x, y, C('#c890d0'));
+      if (rng() < 0.35) setPx(b, (x + 1) & 15, y, C('#7a4a82'));
+    }
+  },
+
 };
 
 function paintTile(name) {
@@ -3564,6 +3580,13 @@ const ICON_PAINTERS = {
     fillRect(b, 9, 15, 7, 1, C('#8a6a3a'));
     thickLine(b, 6, 8, 2, 4, 1, C('#c8b898'));
     setPx(b, 3, 4, C('#8a5a2e'));
+  },
+
+  shulker_shell(b, rng) {
+    fillPoly(b, [[6, 12], [10, 6], [22, 6], [26, 12], [23, 24], [9, 24]], C('#8a5a92'));
+    fillPoly(b, [[9, 12], [12, 8], [20, 8], [23, 12], [21, 21], [11, 21]], C('#a06aa8'));
+    for (let i = 0; i < 8; i++) setPx(b, 8 + ((rng() * 16) | 0), 9 + ((rng() * 12) | 0), C('#c890d0'));
+    fillRect(b, 13, 13, 6, 3, C('#5a3a62'));
   },
 
 };

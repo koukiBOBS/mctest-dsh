@@ -84,6 +84,7 @@ export const BLOCK = Object.freeze({
   CAMPFIRE: 76,
   BELL: 77,
   LECTERN: 78,
+  PURPUR_BLOCK: 79,
 });
 
 export const BLOCK_DEFS = [];
@@ -320,6 +321,9 @@ def(BLOCK.SCULK_SENSOR, 'sculk_sensor', '幽匿感测体', {
 def(BLOCK.TRIAL_SPAWNER, 'trial_spawner', '试炼刷怪笼', {
   tiles: { all: 'trial_spawner' }, hardness: 2.5, sound: 'stone', light: 6,
 });
+def(BLOCK.PURPUR_BLOCK, 'purpur_block', '紫珀块', {
+  tiles: { all: 'purpur' }, hardness: 1.5, sound: 'stone',
+});
 def(BLOCK.CAMPFIRE, 'campfire', '营火', {
   tiles: { top: 'campfire', bottom: 'oak_planks', side: 'campfire' }, hardness: 1.0, sound: 'wood', light: 15,
 });
@@ -423,6 +427,7 @@ const EXTRA_ITEMS = {
   cooked_cod: { display: '熟鳕鱼', icon: 'cooked_cod', food: 5 },
   firework_rocket: { display: '烟花火箭', icon: 'firework_rocket', maxStack: 16 },
   name_tag: { display: '命名牌', icon: 'name_tag', maxStack: 16 },
+  shulker_shell: { display: '潜影壳', icon: 'shulker_shell', maxStack: 64 },
   glass_bottle: { display: '玻璃瓶', icon: 'glass_bottle', maxStack: 16 },
   water_bottle: { display: '水瓶', icon: 'water_bottle', maxStack: 1 },
   potion_healing: { display: '治疗药水', icon: 'potion_healing', maxStack: 1, potion: 'healing' },

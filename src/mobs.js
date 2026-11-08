@@ -120,6 +120,17 @@ export const MOB_TYPES = {
     ],
     colors: { body: 0x2f2f2f, white: 0xf1f1ec, snout: 0xd9a3a5, horn: 0xd9d5c5, leg: 0x3a3a3a, eye: 0x111111 },
   },
+  shulker: {
+    id: 'shulker',
+    name: '潜影贝',
+    hostile: true,
+    width: 1.0,
+    height: 1.0,
+    health: 30,
+    speed: 1.2,
+    drops: [{ id: 'shulker_shell', min: 1, max: 1 }],
+    colors: { shell: 0x8a5a92, shellLight: 0xa06aa8, eye: 0xf0e8c0, dark: 0x5a3a62 },
+  },
   ender_dragon: {
     id: 'ender_dragon',
     name: '末影龙',
@@ -659,6 +670,11 @@ export class MobManager {
       this._updateTint(mob);
       return;
     }
+    if (mob.type === 'shulker') {
+      this._updateShulker(mob, dt);
+      this._updateTint(mob);
+      return;
+    }
     if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
     if (mob.loveTimer > 0) mob.loveTimer = Math.max(0, mob.loveTimer - dt);
     if (mob.isBaby) {
@@ -777,6 +793,32 @@ export class MobManager {
   // ------------------------------------------------------------
   // AI
   // ------------------------------------------------------------
+  _updateShulker(mob, dt) {
+    const player = this.player;
+    mob.hoverPhase = (mob.hoverPhase || 0) + dt;
+    if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
+    if (mob.attackCd > 0) mob.attackCd -= dt;
+    if (mob.group) {
+      mob.group.position.set(mob.x, mob.y + Math.sin(mob.hoverPhase * 2.5) * 0.12, mob.z);
+    }
+    if (!player || player.dead) return;
+    const dx = player.x - mob.x;
+    const dz = player.z - mob.z;
+    const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
+    const targetY = player.y + 1.1;
+    mob.y += (targetY - mob.y) * Math.min(1, dt * 2);
+    if (dist > 1.2) {
+      mob.x += (dx / dist) * 1.3 * dt;
+      mob.z += (dz / dist) * 1.3 * dt;
+    }
+    mob.yaw = Math.atan2(dx, dz);
+    if (mob.group) mob.group.rotation.y = mob.yaw;
+    if (dist < 1.5 && mob.attackCd <= 0) {
+      mob.attackCd = 1.6;
+      player.damage(2, '被潜影贝撞死了');
+    }
+  }
+
   _updateDragon(mob, dt) {
     const player = this.player;
     mob.flap = (mob.flap || 0) + dt * 6;
@@ -1495,6 +1537,7 @@ export class MobManager {
       case 'spider': this._modelSpider(mob, root, c); break;
       case 'villager': this._modelVillager(mob, root, c); break;
       case 'ender_dragon': this._modelDragon(mob, root, c); break;
+      case 'shulker': this._modelShulker(mob, root, c); break;
       default: this._addBox(mob, root, 0xffffff, 0.5, 0.5, 0.5, 0, 0.5, 0); break;
     }
 
@@ -1600,6 +1643,16 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelShulker(mob, root, c) {
+    this._addBox(mob, root, c.shell, 1.0, 0.75, 1.0, 0, 0.45, 0);
+    this._addBox(mob, root, c.shellLight, 1.1, 0.18, 1.1, 0, 0.9, 0);
+    this._addBox(mob, root, c.dark, 0.9, 0.1, 0.9, 0, 0.02, 0);
+    const head = this._makeHead(mob, root, c.shellLight, 0.6, 0.35, 0.2, 0, 0.55, 0.52);
+    this._addBox(mob, head, c.eye, 0.12, 0.1, 0.04, -0.14, 0, 0.08);
+    this._addBox(mob, head, c.eye, 0.12, 0.1, 0.04, 0.14, 0, 0.08);
+    this._addBox(mob, head, c.dark, 0.3, 0.08, 0.04, 0, -0.12, 0.08);
   }
 
   _modelDragon(mob, root, c) {

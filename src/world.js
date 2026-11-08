@@ -34,6 +34,7 @@ export const END_ORIGIN = 300000;
 export const END_CHUNK_START = END_ORIGIN >> 4;
 export const END_CHUNK_SIZE = 16;
 export const END_DEST = { x: END_ORIGIN + 128, z: END_ORIGIN + 128 };
+export const END_CITY = { x: END_DEST.x + 70, z: END_DEST.z + 10, y: 60 };
 const CHUNK_AREA = CHUNK_SX * CHUNK_SZ;
 
 export const BIOME_NAMES = {
@@ -105,6 +106,7 @@ export class World {
     this.cityCache = new Map();
     this.trialCache = new Map();
     this.trialSpawners = new Map();
+    this.endCities = new Map();
     this.ruinCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
@@ -236,6 +238,7 @@ export class World {
 
     if (this.isEndChunk(cx, cz)) {
       this.generateEndChunk(chunk);
+      this.stampEndCity(chunk);
       const emods = this.modsByChunk.get(chunkKey(cx, cz));
       if (emods) {
         for (const [k, id] of emods) {
@@ -1863,6 +1866,88 @@ export class World {
       }
     }
     return best;
+  }
+
+  // ---------------- 末地城 ----------------
+  stampEndCity(chunk) {
+    const city = END_CITY;
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const half = 8;
+    if (x1 < city.x - half || x0 > city.x + half || z1 < city.z - half || z0 > city.z + half) {
+      return;
+    }
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const baseY = city.y;
+    const P = BLOCK.PURPUR_BLOCK;
+    const w = 7;
+    for (let dx = -w - 1; dx <= w + 1; dx++) {
+      for (let dz = -w - 1; dz <= w + 1; dz++) {
+        set(city.x + dx, baseY, city.z + dz, BLOCK.END_STONE);
+        for (let dy = 1; dy <= 28; dy++) set(city.x + dx, baseY + dy, city.z + dz, BLOCK.AIR);
+      }
+    }
+    // 塔身
+    for (let dy = 1; dy <= 22; dy++) {
+      for (let dx = -w; dx <= w; dx++) {
+        for (let dz = -w; dz <= w; dz++) {
+          const edge = Math.abs(dx) === w || Math.abs(dz) === w;
+          if (!edge) continue;
+          const window = dy % 5 === 2 && (dx + dz) % 3 === 0;
+          set(city.x + dx, baseY + dy, city.z + dz, window ? BLOCK.GLASS : P);
+        }
+      }
+    }
+    // 楼层
+    for (const fy of [7, 14, 21]) {
+      for (let dx = -w; dx <= w; dx++) {
+        for (let dz = -w; dz <= w; dz++) set(city.x + dx, baseY + fy, city.z + dz, P);
+      }
+    }
+    // 顶部
+    for (let layer = 0; layer < 4; layer++) {
+      const shrink = layer;
+      for (let dx = -w + shrink; dx <= w - shrink; dx++) {
+        for (let dz = -w + shrink; dz <= w - shrink; dz++) set(city.x + dx, baseY + 23 + layer, city.z + dz, P);
+      }
+    }
+    // 屋顶信标（荧石）
+    set(city.x, baseY + 27, city.z, BLOCK.GLOWSTONE);
+    // 门洞
+    for (let dx = -1; dx <= 1; dx++) {
+      set(city.x + dx, baseY + 1, city.z - w, BLOCK.AIR);
+      set(city.x + dx, baseY + 2, city.z - w, BLOCK.AIR);
+    }
+    // 宝箱
+    const chests = [
+      [city.x - 4, baseY + 8, city.z - 4],
+      [city.x + 4, baseY + 8, city.z + 4],
+      [city.x - 4, baseY + 15, city.z + 4],
+      [city.x + 4, baseY + 15, city.z - 4],
+    ];
+    for (const [cx, cy, cz] of chests) {
+      set(cx, cy, cz, BLOCK.CHEST);
+      const key = cx + ',' + cy + ',' + cz;
+      if (!this.structureChests.has(key)) this.structureChests.set(key, this._endCityLoot(cx, cz));
+    }
+    this.endCities.set('fixed', { x: city.x, y: baseY, z: city.z });
+  }
+
+  _endCityLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 19 + n, cz * 29 - n, this.seed + 3300 + n);
+    const loot = [];
+    loot.push({ id: 'diamond', count: 1 + Math.floor(r(1) * 3) });
+    loot.push({ id: 'shulker_shell', count: 1 + Math.floor(r(2) * 2) });
+    if (r(3) < 0.8) loot.push({ id: 'emerald', count: 2 + Math.floor(r(4) * 5) });
+    if (r(5) < 0.7) loot.push({ id: 'iron_ingot', count: 3 + Math.floor(r(6) * 4) });
+    if (r(7) < 0.6) loot.push({ id: 'gold_ingot', count: 2 + Math.floor(r(8) * 3) });
+    return loot;
+  }
+
+  findNearestEndCity() {
+    return { x: END_CITY.x, y: END_CITY.y, z: END_CITY.z };
   }
 
   takeStructureLoot(key) {
