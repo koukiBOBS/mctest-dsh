@@ -344,6 +344,7 @@ const BREWS = [
   { id: 'potion_fire_resist', name: '抗火药水', ingredient: 'coal', desc: '30 秒免疫火焰/岩浆' },
   { id: 'potion_night_vision', name: '夜视药水', ingredient: 'gold_ingot', desc: '60 秒夜视' },
   { id: 'potion_jump', name: '跳跃药水', ingredient: 'apple', desc: '30 秒跳跃力 +35%' },
+  { id: 'potion_regen', name: '再生药水', ingredient: 'nether_wart', desc: '12 秒缓慢回血' },
 ];
 
 const LECTERN_PAGES = [
@@ -3048,8 +3049,9 @@ function loop(now) {
         if (state.inNether && state.player && state.mobs && state.mobs.count() < 10) {
           const f = NETHER_FORTRESS;
           if (Math.hypot(f.x - state.player.x, f.z - state.player.z) < 30) {
-            state.mobs.spawn('blaze', f.x + (Math.random() - 0.5) * 10, f.y + 1, f.z + (Math.random() - 0.5) * 4);
-            state.chat?.log('烈焰人出现了！');
+            const isWither = Math.random() < 0.4;
+            state.mobs.spawn(isWither ? 'wither_skeleton' : 'blaze', f.x + (Math.random() - 0.5) * 10, f.y + 1, f.z + (Math.random() - 0.5) * 4);
+            state.chat?.log(isWither ? '凋灵骷髅出现了！' : '烈焰人出现了！');
           }
         }
       }
@@ -3177,6 +3179,8 @@ function loop(now) {
       if (state.player.fireResistTimer > 0) eff.push('抗火 ' + Math.ceil(state.player.fireResistTimer) + 's');
       if (state.player.nightVisionTimer > 0) eff.push('夜视 ' + Math.ceil(state.player.nightVisionTimer) + 's');
       if (state.player.jumpBoostTimer > 0) eff.push('跳跃 ' + Math.ceil(state.player.jumpBoostTimer) + 's');
+      if (state.player.regenTimer > 0) eff.push('再生 ' + Math.ceil(state.player.regenTimer) + 's');
+      if (state.player.witherTimer > 0) eff.push('凋零 ' + Math.ceil(state.player.witherTimer) + 's');
     }
     if (eff.length) {
       effEl.textContent = eff.join(' · ');

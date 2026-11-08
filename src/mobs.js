@@ -120,6 +120,21 @@ export const MOB_TYPES = {
     ],
     colors: { body: 0x2f2f2f, white: 0xf1f1ec, snout: 0xd9a3a5, horn: 0xd9d5c5, leg: 0x3a3a3a, eye: 0x111111 },
   },
+  wither_skeleton: {
+    id: 'wither_skeleton',
+    name: '凋灵骷髅',
+    hostile: true,
+    width: 0.6,
+    height: 1.9,
+    health: 20,
+    speed: 1.2,
+    damage: 3,
+    drops: [
+      { id: 'bone', min: 1, max: 2 },
+      { id: 'coal', min: 0, max: 1 },
+    ],
+    colors: { bone: 0x2a2a2a, dark: 0x1a1a1a, eye: 0x8a1a1a, blade: 0x555560 },
+  },
   blaze: {
     id: 'blaze',
     name: '烈焰人',
@@ -584,6 +599,9 @@ export class MobManager {
 
     if (mob.health <= 0) {
       mob.health = 0;
+      if (mob.type === 'wither_skeleton') {
+        this.game.achievements?.onEvent('wither', {});
+      }
       if (mob.type === 'ender_dragon') {
         this.game.player?.addXp?.(80);
         this.game.achievements?.onEvent('dragon', {});
@@ -1369,6 +1387,9 @@ export class MobManager {
     else if (def.id === 'creeper') reason = '被苦力怕炸死了';
 
     player.damage(def.damage || 2, reason);
+    if (mob.type === 'wither_skeleton' && typeof player.witherTimer === 'number') {
+      player.witherTimer = 10;
+    }
   }
 
   _explodeCreeper(mob) {
@@ -1820,6 +1841,7 @@ export class MobManager {
       case 'villager': this._modelVillager(mob, root, c); break;
       case 'ender_dragon': this._modelDragon(mob, root, c); break;
       case 'shulker': this._modelShulker(mob, root, c); break;
+      case 'wither_skeleton': this._modelWitherSkeleton(mob, root, c); break;
       case 'blaze': this._modelBlaze(mob, root, c); break;
       case 'iron_golem': this._modelIronGolem(mob, root, c); break;
       case 'bat': this._modelBat(mob, root, c); break;
@@ -1929,6 +1951,20 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelWitherSkeleton(mob, root, c) {
+    this._addLimb(mob, root, c.dark, 0.18, 0.75, 0.2, -0.14, 0.75, 0, mob.legs);
+    this._addLimb(mob, root, c.dark, 0.18, 0.75, 0.2, 0.14, 0.75, 0, mob.legs);
+    this._addBox(mob, root, c.bone, 0.5, 0.7, 0.25, 0, 1.15, 0);
+    this._addLimb(mob, root, c.bone, 0.15, 0.7, 0.15, -0.35, 1.45, 0, mob.arms);
+    const rightArm = mob.arms[mob.arms.length - 1];
+    this._addLimb(mob, root, c.bone, 0.15, 0.7, 0.15, 0.35, 1.45, 0, mob.arms);
+    if (rightArm) this._addBox(mob, rightArm, c.blade, 0.08, 0.7, 0.08, 0, -0.8, 0.1);
+    const head = this._makeHead(mob, root, c.bone, 0.48, 0.5, 0.48, 0, 1.75, 0);
+    this._addBox(mob, head, c.eye, 0.1, 0.06, 0.03, -0.1, 0.04, 0.25);
+    this._addBox(mob, head, c.eye, 0.1, 0.06, 0.03, 0.1, 0.04, 0.25);
+    this._addBox(mob, head, c.dark, 0.18, 0.1, 0.03, 0, -0.14, 0.25);
   }
 
   _modelBlaze(mob, root, c) {

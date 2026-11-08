@@ -101,6 +101,8 @@ export const TILE_NAMES = [
   'pumpkin_top',
   'pumpkin_face',
   'nether_bricks',
+  'soul_sand',
+  'nether_wart',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -185,6 +187,7 @@ export const ITEM_ICON_NAMES = [
   'mutton',
   'cooked_mutton',
   'blaze_rod',
+  'potion_regen',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -2388,6 +2391,25 @@ const TILE_PAINTERS = {
     for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#5a2a32'));
   },
 
+  soul_sand(b, rng) {
+    noiseFill(b, rng, [
+      ['#4a3226', 6],
+      ['#3a2418', 5],
+      ['#5a402e', 3],
+    ]);
+    for (let i = 0; i < 10; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#6a4a36'));
+    hline(b, 0, 15, 12, C('#2e1a12'));
+  },
+
+  nether_wart(b, rng) {
+    for (let i = 0; i < 4; i++) {
+      const x = 3 + i * 3;
+      vline(b, 8, 15, x, C('#7a1a1a'));
+      fillRect(b, x - 1, 5 + ((rng() * 3) | 0), 2, 4, C('#b83a3a'));
+      setPx(b, x, 4, C('#e05a5a'));
+    }
+  },
+
 };
 
 function paintTile(name) {
@@ -3734,6 +3756,15 @@ const ICON_PAINTERS = {
     fillPoly(b, [[18, 2], [26, 4], [24, 10], [16, 8]], C('#f0c040'));
     setPx(b, 21, 5, C('#fff2b0'));
     fillRect(b, 8, 24, 4, 4, C('#8a5a10'));
+  },
+
+  potion_regen(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#d84a8a'));
+    setPx(b, 14, 18, C('#ffb0d0'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
   },
 
 };

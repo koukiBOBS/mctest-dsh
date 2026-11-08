@@ -2047,6 +2047,13 @@ export class World {
       for (let dz = -1; dz <= 1; dz++) {
         for (let dy = 1; dy <= 2; dy++) set(rx + (rx < f.x ? 4 : -4), y + dy, f.z + dz, BLOCK.AIR);
       }
+      // 灵魂沙 + 下界疣
+      for (let dx = -2; dx <= 0; dx++) {
+        for (let dz = -2; dz <= 0; dz++) {
+          set(rx + dx, y, f.z + dz, BLOCK.SOUL_SAND);
+          set(rx + dx, y + 1, f.z + dz, BLOCK.NETHER_WART);
+        }
+      }
       // 宝箱
       const cx = rx + (rx < f.x ? -2 : 2);
       const cz = f.z + 2;
@@ -2057,6 +2064,7 @@ export class World {
           { id: 'blaze_rod', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 3500) * 3) },
           { id: 'gold_ingot', count: 2 + Math.floor(hash2i(cx, cz, this.seed + 3510) * 4) },
           { id: 'diamond', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 3520) * 2) },
+          { id: 'nether_wart', count: 2 + Math.floor(hash2i(cx, cz, this.seed + 3530) * 3) },
         ]);
       }
     }

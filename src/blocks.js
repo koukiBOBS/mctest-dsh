@@ -88,6 +88,8 @@ export const BLOCK = Object.freeze({
   IRON_BLOCK: 80,
   PUMPKIN: 81,
   NETHER_BRICKS: 82,
+  SOUL_SAND: 83,
+  NETHER_WART: 84,
 });
 
 export const BLOCK_DEFS = [];
@@ -327,6 +329,13 @@ def(BLOCK.TRIAL_SPAWNER, 'trial_spawner', '试炼刷怪笼', {
 def(BLOCK.NETHER_BRICKS, 'nether_bricks', '下界砖块', {
   tiles: { all: 'nether_bricks' }, hardness: 2.0, sound: 'stone',
 });
+def(BLOCK.SOUL_SAND, 'soul_sand', '灵魂沙', {
+  tiles: { all: 'soul_sand' }, hardness: 0.5, sound: 'sand',
+});
+def(BLOCK.NETHER_WART, 'nether_wart', '下界疣', {
+  tiles: { all: 'nether_wart' }, solid: false, opaque: false, transparent: true,
+  cross: true, needsSupport: true, hardness: 0.05, sound: 'grass', drop: 'nether_wart',
+});
 def(BLOCK.IRON_BLOCK, 'iron_block', '铁块', {
   tiles: { all: 'iron_block' }, hardness: 3.0, sound: 'stone',
 });
@@ -442,6 +451,7 @@ const EXTRA_ITEMS = {
   pumpkin_pie: { display: '南瓜派', icon: 'pumpkin_pie', food: 8 },
   golden_apple: { display: '金苹果', icon: 'golden_apple', food: 4 },
   blaze_rod: { display: '烈焰棒', icon: 'blaze_rod', maxStack: 64 },
+  potion_regen: { display: '再生药水', icon: 'potion_regen', maxStack: 1, potion: 'regen' },
   firework_rocket: { display: '烟花火箭', icon: 'firework_rocket', maxStack: 16 },
   name_tag: { display: '命名牌', icon: 'name_tag', maxStack: 16 },
   shulker_shell: { display: '潜影壳', icon: 'shulker_shell', maxStack: 64 },

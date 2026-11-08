@@ -69,6 +69,10 @@ export class Player {
     this.jumpBoostTimer = 0;
     this.burnTimer = 0;
     this.burnDmgTimer = 0;
+    this.witherTimer = 0;
+    this.witherDmgTimer = 0;
+    this.regenTimer = 0;
+    this.regenTick = 0;
     this.gliding = false;
     this.kills = 0;
     this.breakTarget = null;
@@ -146,6 +150,26 @@ export class Player {
     if (this.nightVisionTimer > 0) this.nightVisionTimer = Math.max(0, this.nightVisionTimer - dt);
     if (this.jumpBoostTimer > 0) this.jumpBoostTimer = Math.max(0, this.jumpBoostTimer - dt);
     if (this.inWater || this.inLava) this.burnTimer = 0;
+    if (this.witherTimer > 0) {
+      this.witherTimer = Math.max(0, this.witherTimer - dt);
+      this.witherDmgTimer += dt;
+      if (this.witherDmgTimer >= 2) {
+        this.witherDmgTimer = 0;
+        this.damage(1, '凋零效果');
+      }
+    } else {
+      this.witherDmgTimer = 0;
+    }
+    if (this.regenTimer > 0) {
+      this.regenTimer = Math.max(0, this.regenTimer - dt);
+      this.regenTick += dt;
+      if (this.regenTick >= 2) {
+        this.regenTick = 0;
+        if (this.health < 20) this.health = Math.min(20, this.health + 1);
+      }
+    } else {
+      this.regenTick = 0;
+    }
     if (this.burnTimer > 0) {
       this.burnTimer = Math.max(0, this.burnTimer - dt);
       this.burnDmgTimer += dt;
@@ -792,6 +816,7 @@ export class Player {
         else if (potion.potion === 'fire_resist') this.fireResistTimer = 30;
         else if (potion.potion === 'night_vision') this.nightVisionTimer = 60;
         else if (potion.potion === 'jump') this.jumpBoostTimer = 30;
+        else if (potion.potion === 'regen') this.regenTimer = 12;
         this.inventory.consumeHeld(1);
         this.inventory.add('glass_bottle', 1);
         this.game.sound?.play('pop', { volume: 0.6 });
@@ -865,6 +890,18 @@ export class Player {
     if (!item) return;
     if (item.food) {
       this.eat();
+      return;
+    }
+    if (held.id === 'nether_wart') {
+      if (this.target.id !== BLOCK.SOUL_SAND) return;
+      const px = this.target.x;
+      const py = this.target.y + 1;
+      const pz = this.target.z;
+      if (this.world.getBlock(px, py, pz) !== 0) return;
+      this.world.setBlock(px, py, pz, BLOCK.NETHER_WART);
+      if (this.mode === 'survival') this.inventory.consumeHeld(1);
+      this.game.sound?.play('place_grass', { volume: 0.3 });
+      this.game.onInventoryChange?.();
       return;
     }
     if (held.id === 'wheat_seeds') {

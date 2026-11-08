@@ -39,6 +39,7 @@ export const ACHIEVEMENTS = [
   { id: 'elytra', name: '自由滑翔', desc: '获得鞘翅' },
   { id: 'golem', name: '村庄守护者', desc: '召唤一只铁傀儡' },
   { id: 'nether_fortress', name: '下界要塞', desc: '发现一座下界要塞' },
+  { id: 'wither', name: '凋灵之骨', desc: '击败一只凋灵骷髅' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -126,6 +127,9 @@ export class Achievements {
         break;
       case 'breed':
         this.unlock('breed');
+        break;
+      case 'wither':
+        this.unlock('wither');
         break;
       case 'golem':
         this.unlock('golem');
