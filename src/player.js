@@ -473,9 +473,15 @@ export class Player {
     if (!this.mobTarget || !this.game.mobs) return false;
     this.attackCooldown = 0.45;
     const dir = this.forwardVector();
-    const dmg = this._attackDamage();
+    const crit = !this.onGround && this.vy < -0.5 && !this.inWater;
+    const dmg = Math.round(this._attackDamage() * (crit ? 1.5 : 1));
     const mob = this.mobTarget;
-    const died = this.game.mobs.hit(mob, dmg, dir.x * 0.9, dir.z * 0.9);
+    const knock = crit ? 1.25 : this.sprinting ? 1.15 : 0.9;
+    const died = this.game.mobs.hit(mob, dmg, dir.x * knock, dir.z * knock);
+    if (crit) {
+      this.game.achievements?.onEvent('crit', {});
+      this.game.sound?.play('pop', { volume: 0.4, pitch: 1.5 });
+    }
     if (died) {
       this.game.sound?.play('pop', { volume: 0.35 });
       this.game.achievements?.onEvent('kill', { hostile: !!(mob.def && mob.def.hostile) });

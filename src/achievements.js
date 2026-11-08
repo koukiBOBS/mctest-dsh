@@ -48,6 +48,7 @@ export const ACHIEVEMENTS = [
   { id: 'mushroom', name: '蘑菇岛', desc: '发现一座蘑菇岛' },
   { id: 'shield', name: '坚盾', desc: '举起盾牌格挡' },
   { id: 'shipwreck', name: '沉船宝藏', desc: '发现一艘沉船' },
+  { id: 'crit', name: '暴击', desc: '在下落时打出一次暴击' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -136,6 +137,9 @@ export class Achievements {
         break;
       case 'breed':
         this.unlock('breed');
+        break;
+      case 'crit':
+        this.unlock('crit');
         break;
       case 'shield':
         this.unlock('shield');

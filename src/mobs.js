@@ -381,9 +381,15 @@ export class MobManager {
       if (!mob || mob.removed) continue;
       if (this._frame % 2 === 0 && this.player) {
         const far = Math.hypot(mob.x - this.player.x, mob.z - this.player.z) > 40;
-        if (far) continue;
+        if (far) {
+          if (mob.group) mob.group.visible = false;
+          continue;
+        }
       }
       this._updateMob(mob, dt);
+      if (this.player && mob.group) {
+        mob.group.visible = Math.hypot(mob.x - this.player.x, mob.z - this.player.z) < 48;
+      }
     }
 
     this._separateMobs();
