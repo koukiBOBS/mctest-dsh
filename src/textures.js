@@ -2,9 +2,9 @@
  * textures.js
  * Procedural, dependency-free Minecraft-style pixel art for Canvas 2D.
  *
- *  - 35 block tiles  -> one 128x128 atlas (8 x 8 grid of 16x16 tiles)
+ *  - 52 block tiles  -> one 128x128 atlas (8 x 8 grid of 16x16 tiles)
  *  - 10 destroy-stage crack overlays (16x16, transparent)
- *  - 18 item icons (32x32, transparent)
+ *  - 33 item icons (32x32, transparent)
  *
  * Everything is drawn pixel by pixel into RGBA buffers; no images,
  * fonts, emoji, fillText or network access. Output is deterministic:
@@ -51,6 +51,23 @@ export const TILE_NAMES = [
   'lava',
   'wool_white',
   'brick',
+  'furnace_front',
+  'furnace_side',
+  'furnace_top',
+  'chest_front',
+  'chest_side',
+  'chest_top',
+  'birch_log_side',
+  'birch_log_top',
+  'birch_leaves',
+  'birch_planks',
+  'spruce_log_side',
+  'spruce_log_top',
+  'spruce_leaves',
+  'spruce_planks',
+  'cactus_side',
+  'cactus_top',
+  'clay',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -72,6 +89,21 @@ export const ITEM_ICON_NAMES = [
   'wooden_sword',
   'stone_sword',
   'iron_sword',
+  'beef',
+  'cooked_beef',
+  'porkchop',
+  'cooked_porkchop',
+  'chicken',
+  'cooked_chicken',
+  'feather',
+  'leather',
+  'bone',
+  'string',
+  'gunpowder',
+  'rotten_flesh',
+  'arrow',
+  'clay_ball',
+  'bread',
 ];
 
 /* =====================================================================
@@ -149,6 +181,7 @@ function makeBuf(w, h) {
 
 /** Write one pixel. Alpha defaults to fully opaque; out-of-bounds is a no-op. */
 function setPx(b, x, y, c, a = 255) {
+  if (typeof c === 'string') c = C(c);
   x = x | 0;
   y = y | 0;
   if (x < 0 || y < 0 || x >= b.w || y >= b.h) return;
@@ -168,6 +201,7 @@ function getPx(b, x, y) {
 
 /** Source-over blend, so translucent highlights keep the base alpha sane. */
 function blendPx(b, x, y, c, a) {
+  if (typeof c === 'string') c = C(c);
   x = x | 0;
   y = y | 0;
   if (x < 0 || y < 0 || x >= b.w || y >= b.h) return;
@@ -190,6 +224,7 @@ function paintPx(b, x, y, c, a) {
 }
 
 function fillSolid(b, c, a = 255) {
+  if (typeof c === 'string') c = C(c);
   const d = b.data;
   for (let i = 0; i < d.length; i += 4) {
     d[i] = c[0];
@@ -1333,6 +1368,502 @@ const TILE_PAINTERS = {
       '#c3baa6'
     );
   },
+
+  /* ------------------------------------------------------------------
+   * Appended tiles: furnace, chest, birch, spruce, cactus and clay.
+   * Same recipes as above: stone-noise, board and leaf recipes, all
+   * deterministic but seeded per tile name by paintTile().
+   * ------------------------------------------------------------------ */
+
+  furnace_side(b, rng) {
+    noiseFill(b, rng, [
+      ['#6b6b6b', 6],
+      ['#757575', 4],
+      ['#616161', 4],
+      ['#7d7d7d', 2],
+      ['#565656', 2],
+    ]);
+    for (let i = 0; i < 6; i++) {
+      blob(
+        b,
+        rng,
+        rng() * 16,
+        rng() * 16,
+        0.9 + rng() * 1.4,
+        C(rng() < 0.5 ? '#5e5e5e' : '#7a7a7a')
+      );
+    }
+    // Raised top edge: lit lip, stone step, dark shadow beneath it.
+    for (let x = 0; x < 16; x++) {
+      setPx(b, x, 0, jitter(C('#9c9c9c'), rng, 6));
+      setPx(b, x, 1, jitter(C('#828282'), rng, 5));
+      setPx(b, x, 2, jitter(C('#4f4f4f'), rng, 4));
+      setPx(b, x, 15, jitter(C('#4a4a4a'), rng, 4));
+    }
+    // Side bevel so the face reads as part of a cube.
+    for (let y = 3; y < 15; y++) {
+      setPx(b, 0, y, mix(getPx(b, 0, y), [205, 205, 205], 0.14));
+      setPx(b, 15, y, mix(getPx(b, 15, y), [28, 28, 28], 0.18));
+    }
+  },
+
+  furnace_front(b, rng) {
+    noiseFill(b, rng, [
+      ['#6b6b6b', 6],
+      ['#757575', 4],
+      ['#616161', 4],
+      ['#7d7d7d', 2],
+      ['#565656', 2],
+    ]);
+    for (let i = 0; i < 4; i++) {
+      blob(
+        b,
+        rng,
+        rng() * 16,
+        rng() * 16,
+        0.9 + rng() * 1.3,
+        C(rng() < 0.5 ? '#5e5e5e' : '#7a7a7a')
+      );
+    }
+    for (let x = 0; x < 16; x++) {
+      setPx(b, x, 0, jitter(C('#9c9c9c'), rng, 6));
+      setPx(b, x, 1, jitter(C('#828282'), rng, 5));
+      setPx(b, x, 2, jitter(C('#4f4f4f'), rng, 4));
+      setPx(b, x, 15, jitter(C('#4a4a4a'), rng, 4));
+    }
+    // Firebox: black frame, deep grey interior, sooty lower lip.
+    fillRect(b, 3, 8, 10, 5, C('#141414'));
+    fillRect(b, 4, 9, 8, 3, C('#333333'));
+    for (let x = 4; x <= 11; x++) {
+      setPx(b, x, 11, mix(getPx(b, x, 11), [10, 10, 10], 0.35));
+    }
+    for (let x = 3; x <= 12; x++) {
+      setPx(b, x, 7, mix(getPx(b, x, 7), [18, 18, 18], 0.3));
+    }
+    // Two light-grey pixels on the lintel above the opening.
+    setPx(b, 7, 6, C('#a8a8a8'));
+    setPx(b, 8, 6, C('#a8a8a8'));
+    // Side bevel.
+    for (let y = 3; y < 15; y++) {
+      setPx(b, 0, y, mix(getPx(b, 0, y), [205, 205, 205], 0.14));
+      setPx(b, 15, y, mix(getPx(b, 15, y), [28, 28, 28], 0.18));
+    }
+  },
+
+  furnace_top(b, rng) {
+    noiseFill(b, rng, [
+      ['#6b6b6b', 6],
+      ['#757575', 4],
+      ['#616161', 4],
+      ['#7d7d7d', 2],
+      ['#565656', 2],
+    ]);
+    for (let i = 0; i < 6; i++) {
+      blob(
+        b,
+        rng,
+        rng() * 16,
+        rng() * 16,
+        0.8 + rng() * 1.5,
+        C(rng() < 0.5 ? '#5e5e5e' : '#7d7d7d')
+      );
+    }
+    // Central round vent sunk into the stone.
+    blob(b, rng, 8, 8, 3.2, C('#4d4d4d'));
+    blob(b, rng, 8, 8, 2.4, C('#343434'));
+    blob(b, rng, 8, 8, 1.5, C('#262626'));
+    setPx(b, 7, 7, C('#4a4a4a'));
+    setPx(b, 9, 9, C('#1f1f1f'));
+    // Bevel: lit north/west rim, shaded south/east rim.
+    for (let i = 0; i < 16; i++) {
+      setPx(b, i, 0, jitter(C('#909090'), rng, 5));
+      setPx(b, 0, i, jitter(C('#909090'), rng, 5));
+      setPx(b, i, 15, jitter(C('#4d4d4d'), rng, 4));
+      setPx(b, 15, i, jitter(C('#4d4d4d'), rng, 4));
+    }
+    for (let i = 1; i < 15; i++) {
+      setPx(b, i, 1, mix(getPx(b, i, 1), [225, 225, 225], 0.12));
+      setPx(b, 1, i, mix(getPx(b, 1, i), [225, 225, 225], 0.12));
+      setPx(b, i, 14, mix(getPx(b, i, 14), [20, 20, 20], 0.14));
+      setPx(b, 14, i, mix(getPx(b, 14, i), [20, 20, 20], 0.14));
+    }
+    for (let i = 0; i < 5; i++) {
+      setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#9a9a9a'));
+    }
+  },
+
+  chest_side(b, rng) {
+    paintPlanks(b, rng);
+    // Dark oak frame along the top and bottom of the chest.
+    for (let x = 0; x < 16; x++) {
+      setPx(b, x, 0, jitter(C('#4a2f14'), rng, 4));
+      setPx(b, x, 1, jitter(C('#6b4726'), rng, 5));
+      setPx(b, x, 14, jitter(C('#5b3d1e'), rng, 5));
+      setPx(b, x, 15, jitter(C('#33200c'), rng, 4));
+    }
+    for (let i = 0; i < 4; i++) {
+      setPx(
+        b,
+        (rng() * 16) | 0,
+        2 + ((rng() * 12) | 0),
+        C('#8f6a3a')
+      );
+    }
+  },
+
+  chest_front(b, rng) {
+    paintPlanks(b, rng);
+    for (let x = 0; x < 16; x++) {
+      setPx(b, x, 0, jitter(C('#4a2f14'), rng, 4));
+      setPx(b, x, 1, jitter(C('#6b4726'), rng, 5));
+      setPx(b, x, 14, jitter(C('#5b3d1e'), rng, 5));
+      setPx(b, x, 15, jitter(C('#33200c'), rng, 4));
+    }
+    // Iron-and-brass latch, roughly 4x4, centred on the lid.
+    fillRect(b, 6, 6, 4, 4, C('#4a3418'));
+    fillRect(b, 7, 7, 2, 2, C('#d9b45a'));
+    setPx(b, 7, 7, C('#f2d888'));
+    setPx(b, 8, 8, C('#8a6a1e'));
+    // Small cast shadow under the latch.
+    for (let x = 6; x <= 9; x++) {
+      setPx(b, x, 10, mix(getPx(b, x, 10), [40, 25, 10], 0.4));
+    }
+  },
+
+  chest_top(b, rng) {
+    paintPlanks(b, rng);
+    // Lid seam running across the middle of the boards.
+    for (let x = 0; x < 16; x++) {
+      setPx(b, x, 8, jitter(C('#4a2f14'), rng, 4));
+      setPx(b, x, 9, mix(getPx(b, x, 9), [201, 163, 103], 0.2));
+    }
+    // Central latch straddling the seam.
+    fillRect(b, 6, 6, 4, 4, C('#4a3418'));
+    fillRect(b, 7, 7, 2, 2, C('#d9b45a'));
+    setPx(b, 7, 7, C('#f2d888'));
+    setPx(b, 8, 8, C('#8a6a1e'));
+    for (let i = 0; i < 3; i++) {
+      setPx(b, 2 + ((rng() * 12) | 0), 2 + ((rng() * 4) | 0), C('#8f6a3a'));
+    }
+  },
+
+  birch_log_side(b, rng) {
+    noiseFill(b, rng, [
+      ['#d8d3c3', 6],
+      ['#e3ddcd', 4],
+      ['#cbc5b3', 4],
+      ['#bdb7a4', 2],
+      ['#eae4d4', 1],
+    ]);
+    // Short horizontal lenticels are what makes birch read as birch.
+    for (let i = 0; i < 10; i++) {
+      const y = (rng() * 16) | 0;
+      const x = (rng() * 14) | 0;
+      const len = 1 + ((rng() * 4) | 0);
+      const dark = C(rng() < 0.7 ? '#2f2b22' : '#4a4438');
+      for (let k = 0; k < len && x + k < 16; k++) {
+        setPx(b, x + k, y, dark);
+      }
+      if (rng() < 0.45 && x + len < 16) {
+        setPx(b, x + len, y, C('#7d7768'));
+      }
+    }
+    // Soft vertical streaks, then one small knot.
+    for (let i = 0; i < 3; i++) {
+      const x = 1 + ((rng() * 14) | 0);
+      const y0 = (rng() * 10) | 0;
+      for (let y = y0; y < Math.min(16, y0 + 4); y++) {
+        setPx(b, x, y, mix(getPx(b, x, y), [140, 134, 120], 0.3));
+      }
+    }
+    blob(b, rng, 10.5, 6.5, 1.4, C('#c4bfae'));
+    setPx(b, 10, 6, C('#6f695b'));
+    setPx(b, 11, 7, C('#8a8474'));
+  },
+
+  birch_log_top(b, rng) {
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = x - 7.5;
+        const dy = y - 7.5;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        let c;
+        if (d > 6.1) {
+          c = jitter(C('#cfc9b8'), rng, 7);
+        } else if (d > 5.3) {
+          c = jitter(C('#e6dfcb'), rng, 5);
+        } else {
+          const ring = Math.floor(d + (rng() - 0.5) * 0.35);
+          c = jitter(C(ring % 2 === 0 ? '#e3d9bb' : '#cfc3a0'), rng, 5);
+        }
+        setPx(b, x, y, c);
+      }
+    }
+    // Thin dark growth rings.
+    for (const rr of [2.2, 3.6, 4.8]) {
+      for (let a = 0; a < Math.PI * 2; a += 0.11) {
+        const x = Math.round(7.5 + Math.cos(a) * rr);
+        const y = Math.round(7.5 + Math.sin(a) * rr);
+        setPx(b, x, y, mix(getPx(b, x, y), [168, 156, 124], 0.55));
+      }
+    }
+    // Pale heart and a couple of radial checks.
+    blob(b, rng, 8, 8, 1.3, C('#efe6ca'));
+    for (const a of [0.5, 2.6, 4.7]) {
+      for (let t = 1.2; t < 5.2; t += 0.6) {
+        const x = Math.round(7.5 + Math.cos(a) * t);
+        const y = Math.round(7.5 + Math.sin(a) * t);
+        setPx(b, x, y, C('#b9ab86'));
+      }
+    }
+  },
+
+  birch_leaves(b, rng) {
+    noiseFill(b, rng, [
+      ['#8fb84a', 6],
+      ['#9cc655', 4],
+      ['#7fa83f', 4],
+      ['#a9d063', 2],
+      ['#6f973a', 2],
+    ]);
+    for (let i = 0; i < 9; i++) {
+      blob(
+        b,
+        rng,
+        rng() * 16,
+        rng() * 16,
+        0.8 + rng() * 1.6,
+        C(rng() < 0.5 ? '#6f973a' : '#b3d970')
+      );
+    }
+    // Gaps between leaf clusters; a few are see-through.
+    for (let i = 0; i < 24; i++) {
+      const x = (rng() * 16) | 0;
+      const y = (rng() * 16) | 0;
+      if (rng() < 0.22) setPx(b, x, y, [0, 0, 0], 0);
+      else setPx(b, x, y, C('#5f852f'));
+    }
+    for (let i = 0; i < 6; i++) {
+      setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#c2e07f'));
+    }
+  },
+
+  birch_planks(b, rng) {
+    paintPlanks(
+      b,
+      rng,
+      [
+        ['#d7c88f', 5],
+        ['#cdbd80', 4],
+        ['#e0d29b', 3],
+        ['#c4b478', 3],
+      ],
+      '#9a8a5c',
+      '#eadfb4'
+    );
+    // Pale fibre flecks along the boards.
+    for (let i = 0; i < 6; i++) {
+      const y = (rng() * 16) | 0;
+      const x = (rng() * 14) | 0;
+      setPx(b, x, y, C('#f0e7c2'));
+      setPx(b, x + 1, y, C('#e2d6a8'));
+    }
+  },
+
+  spruce_log_side(b, rng) {
+    const bark = ['#3f2c1d', '#4a3524', '#33251a', '#563f2b', '#2b1f16'];
+    for (let x = 0; x < 16; x++) {
+      const base = C(bark[(rng() * bark.length) | 0]);
+      for (let y = 0; y < 16; y++) setPx(b, x, y, jitter(base, rng, 7));
+    }
+    // Deep vertical grooves with a lit ridge on their right.
+    for (let g = 0; g < 6; g++) {
+      const x = 1 + ((rng() * 14) | 0);
+      const y0 = (rng() * 6) | 0;
+      const len = 5 + ((rng() * 10) | 0);
+      for (let y = y0; y < Math.min(16, y0 + len); y++) {
+        setPx(b, x, y, C('#241811'));
+        if (x + 1 < 16) {
+          setPx(b, x + 1, y, mix(getPx(b, x + 1, y), [122, 92, 62], 0.35));
+        }
+      }
+    }
+    // Knots and a couple of bark flecks.
+    blob(b, rng, 5, 7, 1.4, C('#2a1d13'));
+    blob(b, rng, 11, 12, 1.2, C('#241810'));
+    setPx(b, 4, 6, C('#6b4f33'));
+    setPx(b, 13, 3, C('#6b4f33'));
+  },
+
+  spruce_log_top(b, rng) {
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = x - 7.5;
+        const dy = y - 7.5;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        let c;
+        if (d > 6.2) {
+          c = jitter(C('#392a1c'), rng, 6);
+        } else if (d > 5.4) {
+          c = jitter(C('#5a4028'), rng, 6);
+        } else {
+          const ring = Math.floor(d + (rng() - 0.5) * 0.35);
+          c = jitter(C(ring % 2 === 0 ? '#7a5a36' : '#63482c'), rng, 5);
+        }
+        setPx(b, x, y, c);
+      }
+    }
+    for (const rr of [2.4, 3.8, 5.0]) {
+      for (let a = 0; a < Math.PI * 2; a += 0.11) {
+        const x = Math.round(7.5 + Math.cos(a) * rr);
+        const y = Math.round(7.5 + Math.sin(a) * rr);
+        setPx(b, x, y, mix(getPx(b, x, y), [42, 30, 18], 0.55));
+      }
+    }
+    blob(b, rng, 8, 8, 1.3, C('#4f3722'));
+    setPx(b, 7, 7, C('#3a2818'));
+  },
+
+  spruce_leaves(b, rng) {
+    noiseFill(b, rng, [
+      ['#2f5a44', 6],
+      ['#3a6b50', 4],
+      ['#26493a', 4],
+      ['#447a5c', 2],
+      ['#1e3a2d', 3],
+    ]);
+    for (let i = 0; i < 10; i++) {
+      blob(
+        b,
+        rng,
+        rng() * 16,
+        rng() * 16,
+        0.8 + rng() * 1.7,
+        C(rng() < 0.5 ? '#1e3a2d' : '#4d8a67')
+      );
+    }
+    for (let i = 0; i < 26; i++) {
+      const x = (rng() * 16) | 0;
+      const y = (rng() * 16) | 0;
+      if (rng() < 0.22) setPx(b, x, y, [0, 0, 0], 0);
+      else setPx(b, x, y, C('#183026'));
+    }
+    for (let i = 0; i < 6; i++) {
+      setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#5d9673'));
+    }
+  },
+
+  spruce_planks(b, rng) {
+    paintPlanks(
+      b,
+      rng,
+      [
+        ['#6b4a2c', 5],
+        ['#5f4126', 4],
+        ['#775434', 3],
+        ['#55391f', 3],
+      ],
+      '#33210f',
+      '#8a6238'
+    );
+    for (let i = 0; i < 5; i++) {
+      const y = (rng() * 16) | 0;
+      const x = (rng() * 13) | 0;
+      setPx(b, x, y, C('#4a3220'));
+      setPx(b, x + 2, y, C('#8a6238'));
+    }
+  },
+
+  cactus_side(b, rng) {
+    noiseFill(b, rng, [
+      ['#4c8b3a', 6],
+      ['#549a41', 4],
+      ['#3f7a30', 4],
+      ['#5aa646', 2],
+      ['#376b29', 2],
+    ]);
+    // Three vertical ribs: dark groove plus lit ridge.
+    for (const rx of [2, 7, 12]) {
+      for (let y = 0; y < 16; y++) {
+        setPx(b, rx, y, jitter(C('#316324'), rng, 4));
+        setPx(b, rx + 1, y, mix(getPx(b, rx + 1, y), [126, 190, 96], 0.42));
+      }
+    }
+    // White spines in pairs, staggered down the ribs.
+    for (let y = 1; y < 16; y += 3) {
+      for (const rx of [2, 7, 12]) {
+        setPx(b, rx - 1, y, C('#eef4dc'));
+        if (y + 1 < 16) setPx(b, rx - 1, y + 1, C('#c6d4a4'));
+      }
+      if (y + 1 < 16) {
+        setPx(b, 5, y + 1, C('#e2eccb'));
+        setPx(b, 10, y + 1, C('#e2eccb'));
+      }
+    }
+    // Dark rims keep the block from bleeding into its neighbours.
+    for (let y = 0; y < 16; y++) {
+      setPx(b, 0, y, mix(getPx(b, 0, y), [24, 56, 18], 0.35));
+      setPx(b, 15, y, mix(getPx(b, 15, y), [24, 56, 18], 0.35));
+    }
+  },
+
+  cactus_top(b, rng) {
+    noiseFill(b, rng, [
+      ['#4c8b3a', 6],
+      ['#549a41', 4],
+      ['#3f7a30', 4],
+      ['#5aa646', 2],
+      ['#376b29', 2],
+    ]);
+    // Dark outer wall of the trunk.
+    for (let i = 0; i < 16; i++) {
+      setPx(b, i, 0, mix(getPx(b, i, 0), [26, 60, 20], 0.45));
+      setPx(b, i, 15, mix(getPx(b, i, 15), [26, 60, 20], 0.45));
+      setPx(b, 0, i, mix(getPx(b, 0, i), [26, 60, 20], 0.45));
+      setPx(b, 15, i, mix(getPx(b, 15, i), [26, 60, 20], 0.45));
+    }
+    // Pale fleshy centre.
+    blob(b, rng, 8, 8, 4.4, C('#3f7a30'));
+    blob(b, rng, 8, 8, 3.3, C('#7fb864'));
+    blob(b, rng, 7.6, 7.6, 1.9, C('#93c978'));
+    // Spines and areoles radiating from the centre.
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+      for (let t = 4.6; t <= 6.4; t += 0.9) {
+        const x = Math.round(7.5 + Math.cos(a) * t);
+        const y = Math.round(7.5 + Math.sin(a) * t);
+        setPx(b, x, y, C(rng() < 0.5 ? '#eef4dc' : '#c6d4a4'));
+      }
+    }
+    blob(b, rng, 6.5, 6.5, 1.1, C('#a8d78d'), 220);
+  },
+
+  clay(b, rng) {
+    noiseFill(b, rng, [
+      ['#9aa3ab', 6],
+      ['#a6afb6', 4],
+      ['#8e97a0', 4],
+      ['#b2bac0', 2],
+      ['#828b94', 3],
+    ]);
+    for (let i = 0; i < 8; i++) {
+      blob(
+        b,
+        rng,
+        rng() * 16,
+        rng() * 16,
+        0.7 + rng() * 1.5,
+        C(rng() < 0.5 ? '#8b949d' : '#a7b0b7')
+      );
+    }
+    for (let i = 0; i < 14; i++) {
+      setPx(
+        b,
+        (rng() * 16) | 0,
+        (rng() * 16) | 0,
+        C(rng() < 0.5 ? '#7f8891' : '#b3bbc1')
+      );
+    }
+  },
 };
 
 function paintTile(name) {
@@ -1851,6 +2382,453 @@ const ICON_PAINTERS = {
   },
   iron_sword(b, rng) {
     paintTool(b, MAT.iron, 'sword');
+  },
+
+  /* ------------------------------------------------------------------
+   * Appended item icons: food, mob drops, arrow, clay and bread.
+   * Same language as the tools above: one-pixel dark outline, a lit
+   * top-left bevel and chunky readable silhouettes on 32x32.
+   * ------------------------------------------------------------------ */
+
+  beef(b, rng) {
+    const meat = {
+      base: C('#b13a34'),
+      light: C('#d15a4a'),
+      dark: C('#852623'),
+      line: C('#4a1210'),
+    };
+    drawShape(b, irregularPoly(16, 18, 11, 8, 10, rng, 0.12), meat);
+    // White fat marbling across the cut.
+    thickLine(b, 10, 15, 16, 13, 2.4, C('#f0cfc4'));
+    thickLine(b, 12, 21, 21, 18, 2.2, C('#e8bfb2'));
+    thickLine(b, 11, 18, 13, 22, 1.6, C('#dcae9f'));
+    thickLine(b, 19, 15, 22, 18, 1.4, C('#e8bfb2'));
+    // Wet shine on the upper left.
+    setPx(b, 10, 13, C('#f0968a'));
+    setPx(b, 11, 13, C('#e88170'));
+    setPx(b, 10, 14, C('#e88170'));
+    for (let i = 0; i < 6; i++) {
+      setPx(b, 9 + ((rng() * 12) | 0), 16 + ((rng() * 7) | 0), C('#7c2320'));
+    }
+  },
+
+  cooked_beef(b, rng) {
+    const meat = {
+      base: C('#8a5834'),
+      light: C('#a8774a'),
+      dark: C('#63391f'),
+      line: C('#33200f'),
+    };
+    drawShape(b, irregularPoly(16, 18, 11, 8, 10, rng, 0.1), meat);
+    // Sear stripes from the grill.
+    thickLine(b, 9, 16, 15, 13, 2.2, C('#4f2f18'));
+    thickLine(b, 13, 21, 22, 18, 2.2, C('#4f2f18'));
+    thickLine(b, 18, 14, 23, 17, 1.8, C('#4f2f18'));
+    // Juicy highlight.
+    setPx(b, 10, 13, C('#d9ab7c'));
+    setPx(b, 11, 13, C('#c2946a'));
+    setPx(b, 10, 14, C('#c2946a'));
+    setPx(b, 11, 15, C('#b2825a'));
+  },
+
+  porkchop(b, rng) {
+    // Bone first, sticking out of the top-left corner of the chop.
+    thickLine(b, 9, 10, 20, 21, 9, C('#8f8878'));
+    thickLine(b, 9, 10, 20, 21, 6.5, C('#ece7d6'));
+    blob(b, rng, 8.5, 9.5, 4.6, C('#8f8878'));
+    blob(b, rng, 8.5, 9.5, 3.5, C('#ece7d6'));
+    thickLine(b, 7.5, 8.5, 10, 9, 1.4, C('#ffffff'), 220);
+    // Pale pink meat slab covering the lower-right half of the bone.
+    const meat = {
+      base: C('#e08a9a'),
+      light: C('#f2b0bc'),
+      dark: C('#c26474'),
+      line: C('#7a3040'),
+    };
+    drawShape(b, irregularPoly(18, 20, 10, 7.5, 9, rng, 0.09), meat);
+    // Rind of fat along the top of the chop.
+    thickLine(b, 12, 16, 20, 14.5, 1.8, C('#f6dcd8'));
+    setPx(b, 15, 15, C('#ffffff'));
+    setPx(b, 16, 15, C('#ffe9ec'));
+    setPx(b, 16, 17, C('#f7c6cf'));
+    setPx(b, 17, 18, C('#f7c6cf'));
+  },
+
+  cooked_porkchop(b, rng) {
+    thickLine(b, 9, 10, 20, 21, 9, C('#8f8878'));
+    thickLine(b, 9, 10, 20, 21, 6.5, C('#e4ddca'));
+    blob(b, rng, 8.5, 9.5, 4.6, C('#8f8878'));
+    blob(b, rng, 8.5, 9.5, 3.5, C('#e4ddca'));
+    thickLine(b, 7.5, 8.5, 10, 9, 1.4, C('#ffffff'), 220);
+    const meat = {
+      base: C('#c08444'),
+      light: C('#ddaa62'),
+      dark: C('#96602a'),
+      line: C('#4f2f10'),
+    };
+    drawShape(b, irregularPoly(18, 20, 10, 7.5, 9, rng, 0.09), meat);
+    // Grill sear.
+    thickLine(b, 12, 18, 20, 16, 1.8, C('#7a4a1c'));
+    thickLine(b, 14, 22, 21, 20, 1.6, C('#7a4a1c'));
+    // Rind and shine.
+    thickLine(b, 12, 16, 20, 14.5, 1.8, C('#e8c07a'));
+    setPx(b, 15, 15, C('#ffffff'));
+    setPx(b, 16, 15, C('#ffe0a8'));
+  },
+
+  chicken(b, rng) {
+    const meat = {
+      base: C('#e6a294'),
+      light: C('#f7cfc4'),
+      dark: C('#c07f72'),
+      line: C('#6f4038'),
+    };
+    drawShape(b, irregularPoly(16, 18, 10.5, 8, 9, rng, 0.12), meat);
+    // Membrane streaks.
+    thickLine(b, 12, 15, 19, 13, 1.6, C('#f8d8ce'));
+    thickLine(b, 12, 19, 20, 17, 1.4, C('#f2c4b8'));
+    // Skin dimples.
+    for (let i = 0; i < 7; i++) {
+      setPx(b, 11 + ((rng() * 11) | 0), 15 + ((rng() * 8) | 0), C('#cf9184'));
+    }
+    setPx(b, 11, 14, C('#ffe3da'));
+    setPx(b, 12, 14, C('#ffd6ca'));
+    setPx(b, 11, 15, C('#ffd6ca'));
+  },
+
+  cooked_chicken(b, rng) {
+    const meat = {
+      base: C('#c98a3c'),
+      light: C('#e8b45a'),
+      dark: C('#a06a26'),
+      line: C('#5a3a10'),
+    };
+    drawShape(b, irregularPoly(16, 18, 10.5, 8, 9, rng, 0.11), meat);
+    // Crispy roasted patches.
+    blob(b, rng, 13, 16, 1.8, C('#b0782e'));
+    blob(b, rng, 19, 20, 1.6, C('#b0782e'));
+    blob(b, rng, 16, 22, 1.4, C('#a06a26'));
+    for (let i = 0; i < 5; i++) {
+      setPx(b, 11 + ((rng() * 10) | 0), 14 + ((rng() * 8) | 0), C('#8f5f22'));
+    }
+    setPx(b, 11, 13, C('#ffe0a0'));
+    setPx(b, 12, 13, C('#f2c874'));
+    setPx(b, 11, 14, C('#f2c874'));
+  },
+
+  feather(b, rng) {
+    const vane = {
+      base: C('#ececec'),
+      light: C('#ffffff'),
+      dark: C('#b8b8b8'),
+      line: C('#6b6b6b'),
+    };
+    // Quill axis: bottom-left to top-right.
+    const ax = 9;
+    const ay = 26;
+    const bx = 24;
+    const by = 7;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len;
+    const uy = dy / len;
+    const nx = -uy;
+    const ny = ux;
+    const steps = 10;
+    // Fat in the middle, tapering to the quill base and the tip.
+    const halfWidth = (t) =>
+      5.2 * Math.sin(Math.PI * Math.min(1, t * 1.05)) * (0.55 + 0.45 * t) + 0.6;
+    const right = [];
+    const left = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const w = halfWidth(t);
+      const px = ax + dx * t;
+      const py = ay + dy * t;
+      right.push([px + nx * w, py + ny * w]);
+      left.push([px - nx * w * 0.85, py - ny * w * 0.85]);
+    }
+    drawShape(b, right.concat(left.reverse()), vane);
+    // Barbs running from the quill out to the vane edge.
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const w = halfWidth(t) * 0.72;
+      const px = ax + dx * t;
+      const py = ay + dy * t;
+      thickLine(b, px, py, px + nx * w, py + ny * w, 1, C('#d0d0d0'));
+      thickLine(b, px, py, px - nx * w, py - ny * w, 1, C('#d0d0d0'));
+    }
+    // Quill: dark rim, pale shaft, lit upper edge.
+    thickLine(b, ax, ay, bx, by, 3.6, C('#8a8a8a'));
+    thickLine(b, ax, ay, bx, by, 2, C('#f2f2f2'));
+    thickLine(b, ax - 0.6, ay - 0.6, bx - 0.6, by - 0.6, 1, C('#ffffff'));
+    // Downy wisps near the base.
+    setPx(b, 10, 24, C('#ffffff'));
+    setPx(b, 8, 25, C('#e8e8e8'));
+    setPx(b, 11, 22, C('#ffffff'));
+  },
+
+  leather(b, rng) {
+    const hide = {
+      base: C('#8a5a2b'),
+      light: C('#a87740'),
+      dark: C('#6b4320'),
+      line: C('#3a2410'),
+    };
+    drawShape(b, irregularPoly(16, 17, 11, 8.5, 7, rng, 0.2), hide);
+    // Stitch line just inside the border.
+    const inner = irregularPoly(16, 17, 8.5, 6.2, 7, rng, 0.12);
+    for (let i = 0; i < inner.length; i++) {
+      const p = inner[i];
+      const q = inner[(i + 1) % inner.length];
+      for (let t = 0.15; t < 0.9; t += 0.28) {
+        setPx(
+          b,
+          Math.round(p[0] + (q[0] - p[0]) * t),
+          Math.round(p[1] + (q[1] - p[1]) * t),
+          C('#d9b57e')
+        );
+      }
+    }
+    // Fold crease and a highlight on the upper left.
+    thickLine(b, 12, 14, 19, 20, 1.6, C('#6b4320'));
+    setPx(b, 11, 12, C('#c9995c'));
+    setPx(b, 12, 12, C('#c9995c'));
+    setPx(b, 11, 13, C('#bd8b4e'));
+    setPx(b, 20, 15, C('#a87740'));
+  },
+
+  bone(b, rng) {
+    const rim = C('#8f8878');
+    const body = C('#ece7d6');
+    const shadeC = C('#c9c2ae');
+    const lobes = [
+      [7.5, 11.5],
+      [11.5, 7.5],
+      [20.5, 24.5],
+      [24.5, 20.5],
+    ];
+    // Outline pass.
+    thickLine(b, 11, 11, 21, 21, 11, rim);
+    for (const [lx, ly] of lobes) blob(b, rng, lx, ly, 4.6, rim);
+    // Bone body.
+    thickLine(b, 11, 11, 21, 21, 6.5, body);
+    for (const [lx, ly] of lobes) blob(b, rng, lx, ly, 3.4, body);
+    // Knuckle shading: light on the top-left side, shadow below right.
+    for (const [lx, ly] of lobes) {
+      blob(b, rng, lx - 1.2, ly - 1.2, 1.5, C('#ffffff'), 190);
+      blob(b, rng, lx + 1.4, ly + 1.4, 1.3, shadeC);
+    }
+    // A hairline crack and two chips on the shaft.
+    thickLine(b, 14, 14, 17, 17, 1, shadeC);
+    setPx(b, 12, 15, shadeC);
+    setPx(b, 18, 12, shadeC);
+  },
+
+  string(b, rng) {
+    // Flat coil: a slowly opening spiral sampled into short segments.
+    const pts = [];
+    const steps = 48;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const a = t * Math.PI * 2 * 2.4 - Math.PI * 0.35;
+      const r = 2.4 + t * 8.2;
+      pts.push([16 + Math.cos(a) * r * 1.12, 17 + Math.sin(a) * r * 0.86]);
+    }
+    const end = pts[pts.length - 1];
+    // Dark outline first, then the pale thread, so the halo stays outside.
+    for (let i = 0; i + 1 < pts.length; i++) {
+      thickLine(
+        b,
+        pts[i][0],
+        pts[i][1],
+        pts[i + 1][0],
+        pts[i + 1][1],
+        4.6,
+        C('#8a8a8a')
+      );
+    }
+    thickLine(b, end[0], end[1], 23, 28, 4.6, C('#8a8a8a'));
+    for (let i = 0; i + 1 < pts.length; i++) {
+      thickLine(
+        b,
+        pts[i][0],
+        pts[i][1],
+        pts[i + 1][0],
+        pts[i + 1][1],
+        2.8,
+        C('#f0f0f0')
+      );
+    }
+    thickLine(b, end[0], end[1], 23, 28, 2.8, C('#f0f0f0'));
+    // Lit core along the strand.
+    for (let i = 0; i + 1 < pts.length; i += 2) {
+      thickLine(b, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], 1, C('#ffffff'));
+    }
+    setPx(b, 17, 15, C('#ffffff'));
+    setPx(b, 18, 15, C('#ffffff'));
+    setPx(b, 17, 16, C('#ffffff'));
+  },
+
+  gunpowder(b, rng) {
+    const powder = {
+      base: C('#6e6e6e'),
+      light: C('#8f8f8f'),
+      dark: C('#484848'),
+      line: C('#2a2a2a'),
+    };
+    drawShape(
+      b,
+      [
+        [3, 26],
+        [4, 21],
+        [7, 16],
+        [11, 12],
+        [16, 10],
+        [21, 12],
+        [25, 16],
+        [28, 21],
+        [29, 26],
+      ],
+      powder
+    );
+    // Granular texture, only on pixels that are inside the heap.
+    for (let i = 0; i < 30; i++) {
+      const x = 7 + ((rng() * 19) | 0);
+      const y = 14 + ((rng() * 11) | 0);
+      if (getPx(b, x, y)[3] < 200) continue;
+      setPx(b, x, y, C(rng() < 0.5 ? '#3f3f3f' : '#9a9a9a'));
+    }
+    // A few chunkier grains and a lit crest.
+    blob(b, rng, 13, 21, 1.8, C('#3f3f3f'));
+    blob(b, rng, 19, 22, 1.6, C('#8a8a8a'));
+    blob(b, rng, 22, 19, 1.4, C('#4a4a4a'));
+    setPx(b, 12, 15, C('#b0b0b0'));
+    setPx(b, 13, 15, C('#a0a0a0'));
+    setPx(b, 14, 16, C('#b0b0b0'));
+  },
+
+  rotten_flesh(b, rng) {
+    const rot = {
+      base: C('#5f7a3c'),
+      light: C('#7f9c52'),
+      dark: C('#43592a'),
+      line: C('#243a14'),
+    };
+    drawShape(b, irregularPoly(16, 18, 10.5, 8, 9, rng, 0.22), rot);
+    // Rotten pits eaten into the flesh.
+    blob(b, rng, 12, 16, 1.8, rot.dark);
+    blob(b, rng, 19, 19, 1.6, rot.dark);
+    blob(b, rng, 14, 22, 1.4, rot.dark);
+    blob(b, rng, 20, 14, 1.2, C('#33491f'));
+    // Sickly slime shine.
+    setPx(b, 11, 14, C('#a8c47a'));
+    setPx(b, 12, 14, C('#96b268'));
+    setPx(b, 11, 15, C('#96b268'));
+    setPx(b, 13, 15, C('#8aa85e'));
+    for (let i = 0; i < 8; i++) {
+      setPx(b, 10 + ((rng() * 13) | 0), 14 + ((rng() * 10) | 0), C('#3a5222'));
+    }
+  },
+
+  arrow(b, rng) {
+    const steel = {
+      base: C('#a8a8a8'),
+      light: C('#d0d0d0'),
+      dark: C('#7a7a7a'),
+      line: C('#3f3f3f'),
+    };
+    // Fletching first, so the shaft crosses it cleanly.
+    const vanes = [
+      [10, 27.5],
+      [4, 22],
+    ];
+    for (const [vx, vy] of vanes) {
+      thickLine(b, 9, 23, vx, vy, 6.5, C('#6b6b6b'));
+    }
+    for (const [vx, vy] of vanes) {
+      thickLine(b, 9, 23, vx, vy, 4.6, C('#f2f2f2'));
+    }
+    for (const [vx, vy] of vanes) {
+      thickLine(b, 8.4, 22.4, vx - 0.6, vy - 0.6, 1.6, C('#ffffff'));
+    }
+    // Wooden shaft.
+    thickLine(b, 6, 26, 21, 11, 5, C('#4a2f14'));
+    thickLine(b, 6, 26, 21, 11, 3.2, C('#a0703c'));
+    thickLine(b, 5.4, 25.4, 20.4, 10.4, 1.2, C('#c2924f'));
+    // Grey flint head.
+    drawShape(
+      b,
+      [
+        [26.5, 5.5],
+        [23.8, 13.8],
+        [18.2, 8.2],
+      ],
+      steel
+    );
+  },
+
+  clay_ball(b, rng) {
+    const clayMat = {
+      base: C('#9aa3ab'),
+      light: C('#b8c0c7'),
+      dark: C('#7b848d'),
+      line: C('#454d55'),
+    };
+    drawShape(b, irregularPoly(16, 17, 9.5, 8.5, 10, rng, 0.08), clayMat);
+    // Rolled clay: soft highlight, darker underside, a few flecks.
+    setPx(b, 11, 12, C('#d2d8dd'));
+    setPx(b, 12, 12, C('#d2d8dd'));
+    setPx(b, 11, 13, C('#c6ccd2'));
+    setPx(b, 12, 13, C('#c6ccd2'));
+    setPx(b, 13, 12, C('#c6ccd2'));
+    for (let i = 0; i < 5; i++) {
+      setPx(b, 12 + ((rng() * 9) | 0), 16 + ((rng() * 7) | 0), C('#8a939c'));
+    }
+    setPx(b, 18, 22, C('#7b848d'));
+  },
+
+  bread(b, rng) {
+    const crust = {
+      base: C('#c08a3e'),
+      light: C('#e0ad5c'),
+      dark: C('#96662a'),
+      line: C('#54380f'),
+    };
+    drawShape(
+      b,
+      [
+        [8, 12],
+        [9, 8],
+        [13, 6],
+        [20, 6],
+        [24, 8],
+        [25, 12],
+        [25, 21],
+        [22, 25],
+        [10, 25],
+        [7, 21],
+        [7, 15],
+      ],
+      crust
+    );
+    // Slashed top.
+    for (let i = 0; i < 3; i++) {
+      const x = 9 + i * 5;
+      thickLine(b, x, 13, x + 3, 9, 1.8, C('#8a5a24'));
+      thickLine(b, x + 1, 13, x + 4, 9, 1, C('#e8bc72'));
+    }
+    // Toasted bottom crust and a flour dusting up top.
+    for (let x = 10; x <= 22; x++) {
+      setPx(b, x, 24, mix(getPx(b, x, 24), [90, 58, 18], 0.35));
+    }
+    setPx(b, 12, 10, C('#f0cd8c'));
+    setPx(b, 13, 10, C('#f0cd8c'));
+    setPx(b, 12, 11, C('#e8c07a'));
+    for (let i = 0; i < 6; i++) {
+      setPx(b, 10 + ((rng() * 13) | 0), 10 + ((rng() * 4) | 0), C('#d9a95e'));
+    }
   },
 };
 

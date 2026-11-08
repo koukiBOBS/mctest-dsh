@@ -36,6 +36,16 @@ export const BLOCK = Object.freeze({
   LAVA: 28,
   WOOL: 29,
   BRICK: 30,
+  BIRCH_LOG: 31,
+  BIRCH_LEAVES: 32,
+  BIRCH_PLANKS: 33,
+  SPRUCE_LOG: 34,
+  SPRUCE_LEAVES: 35,
+  SPRUCE_PLANKS: 36,
+  CACTUS: 37,
+  CLAY: 38,
+  FURNACE: 39,
+  CHEST: 40,
 });
 
 export const BLOCK_DEFS = [];
@@ -156,6 +166,41 @@ def(BLOCK.LAVA, 'lava', '岩浆', {
 def(BLOCK.WOOL, 'wool_white', '白色羊毛', { tiles: { all: 'wool_white' }, hardness: 0.8, sound: 'grass' });
 def(BLOCK.BRICK, 'brick', '红砖块', { tiles: { all: 'brick' }, hardness: 2, tool: 'pickaxe', minTier: 1 });
 
+// 新树种
+def(BLOCK.BIRCH_LOG, 'birch_log', '白桦原木', {
+  tiles: { top: 'birch_log_top', bottom: 'birch_log_top', side: 'birch_log_side' },
+  hardness: 2, sound: 'wood', tool: 'axe',
+});
+def(BLOCK.BIRCH_LEAVES, 'birch_leaves', '白桦树叶', {
+  tiles: { all: 'birch_leaves' }, hardness: 0.2, sound: 'grass', opaque: false, drop: null,
+});
+def(BLOCK.BIRCH_PLANKS, 'birch_planks', '白桦木板', { tiles: { all: 'birch_planks' }, hardness: 2, sound: 'wood', tool: 'axe' });
+def(BLOCK.SPRUCE_LOG, 'spruce_log', '云杉原木', {
+  tiles: { top: 'spruce_log_top', bottom: 'spruce_log_top', side: 'spruce_log_side' },
+  hardness: 2, sound: 'wood', tool: 'axe',
+});
+def(BLOCK.SPRUCE_LEAVES, 'spruce_leaves', '云杉树叶', {
+  tiles: { all: 'spruce_leaves' }, hardness: 0.2, sound: 'grass', opaque: false, drop: null,
+});
+def(BLOCK.SPRUCE_PLANKS, 'spruce_planks', '云杉木板', { tiles: { all: 'spruce_planks' }, hardness: 2, sound: 'wood', tool: 'axe' });
+
+// 沙漠与黏土
+def(BLOCK.CACTUS, 'cactus', '仙人掌', {
+  tiles: { top: 'cactus_top', bottom: 'cactus_top', side: 'cactus_side' },
+  hardness: 0.4, sound: 'grass',
+});
+def(BLOCK.CLAY, 'clay', '黏土块', { tiles: { all: 'clay' }, hardness: 0.6, sound: 'sand', drop: { id: 'clay_ball', count: 4 } });
+
+// 功能方块（容器界面在后续版本开放）
+def(BLOCK.FURNACE, 'furnace', '熔炉', {
+  tiles: { top: 'furnace_top', bottom: 'furnace_top', side: 'furnace_front' },
+  hardness: 3.5, sound: 'stone', tool: 'pickaxe', minTier: 1,
+});
+def(BLOCK.CHEST, 'chest', '箱子', {
+  tiles: { top: 'chest_top', bottom: 'chest_top', side: 'chest_front' },
+  hardness: 2.5, sound: 'wood', tool: 'axe',
+});
+
 // ---------------- 物品 ----------------
 export const ITEMS = {};
 
@@ -181,6 +226,28 @@ const MATERIALS = {
   apple: { display: '苹果', icon: 'apple', food: 4 },
 };
 for (const [id, m] of Object.entries(MATERIALS)) {
+  ITEMS[id] = { id, maxStack: 64, ...m };
+}
+
+// 生物掉落与食物
+const EXTRA_ITEMS = {
+  beef: { display: '生牛肉', icon: 'beef', food: 3 },
+  cooked_beef: { display: '牛排', icon: 'cooked_beef', food: 8 },
+  porkchop: { display: '生猪排', icon: 'porkchop', food: 3 },
+  cooked_porkchop: { display: '熟猪排', icon: 'cooked_porkchop', food: 8 },
+  chicken: { display: '生鸡肉', icon: 'chicken', food: 2 },
+  cooked_chicken: { display: '熟鸡肉', icon: 'cooked_chicken', food: 6 },
+  feather: { display: '羽毛', icon: 'feather' },
+  leather: { display: '皮革', icon: 'leather' },
+  bone: { display: '骨头', icon: 'bone' },
+  string: { display: '线', icon: 'string' },
+  gunpowder: { display: '火药', icon: 'gunpowder' },
+  rotten_flesh: { display: '腐肉', icon: 'rotten_flesh', food: 1 },
+  arrow: { display: '箭', icon: 'arrow' },
+  clay_ball: { display: '黏土球', icon: 'clay_ball' },
+  bread: { display: '面包', icon: 'bread', food: 5 },
+};
+for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };
 }
 
@@ -269,10 +336,11 @@ export function breakTimeSeconds(blockId, heldItemId) {
 export function breakDrop(blockId, heldItemId) {
   const d = getBlockDef(blockId);
   if (d.drop === null || d.drop === undefined) return null;
-  if (d.tool) {
+  if (d.tool && d.minTier > 0) {
     const tool = toolOf(heldItemId);
     if (!tool || tool.type !== d.tool || tool.tier < d.minTier) return null;
   }
+  if (typeof d.drop === 'object') return { id: d.drop.id, count: d.drop.count || 1 };
   return { id: d.drop, count: 1 };
 }
 

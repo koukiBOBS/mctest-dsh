@@ -27,6 +27,7 @@
   </div>
 
   <div id="hud-buttons">
+    <button id="btn-hud-chat" class="hud-btn" title="聊天/命令">聊天</button>
     <button id="btn-hud-inv" class="hud-btn" title="物品栏">背包</button>
     <button id="btn-hud-menu" class="hud-btn" title="菜单">☰</button>
   </div>
@@ -44,6 +45,13 @@
     <button id="btn-place" class="round-btn action" title="放置">▣</button>
     <button id="btn-fly" class="round-btn small hidden" title="飞行">✈</button>
   </div>
+</div>
+
+<div id="chat" class="hidden">
+  <div id="chat-log"></div>
+  <form id="chat-form" autocomplete="off">
+    <input id="chat-input" type="text" maxlength="120" placeholder="输入消息或 /命令，回车发送">
+  </form>
 </div>
 
 <div id="rotate-hint" class="hidden">建议横屏游玩</div>
@@ -135,6 +143,7 @@
         <p>1-9 选择快捷栏 · 滚轮切换</p>
         <p>E 物品栏 · Esc 暂停</p>
         <p>F3 调试信息 · F 飞行（创造）</p>
+        <p>T 聊天 / 输入命令（/help）</p>
       </div>
       <div>
         <h3>手机</h3>
@@ -152,7 +161,9 @@
         <p>3. 放下工作台并右键打开，3×3 合成镐子</p>
         <p>4. 挖石头 → 圆石 → 石镐 → 铁矿 → 铁镐</p>
         <p>5. 树叶偶尔掉苹果，可恢复饥饿</p>
-        <p>6. 小心夜晚、洞穴和岩浆</p>
+        <p>6. 小心夜晚的僵尸、骷髅、苦力怕和蜘蛛</p>
+        <p>7. 用剑左键攻击生物，会掉肉/骨头/线等</p>
+        <p>8. 输入 /give 物品 数量、/time set night 等命令</p>
       </div>
     </div>
     <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>

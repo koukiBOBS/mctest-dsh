@@ -7,8 +7,11 @@ import { Renderer } from './render.js';
 import { Player } from './player.js';
 import { Inventory, InventoryUI, makeHudIcons } from './inventory.js';
 import { SoundEngine } from './sound.js';
+import { ItemEntityManager } from './items.js';
+import { MobManager } from './mobs.js';
 import { BLOCK, getBlockDef, itemDisplay } from './blocks.js';
 import * as RP from './resourcepack.js';
+import { ChatUI } from './chat.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -28,6 +31,9 @@ const state = {
   invUI: null,
   sound: null,
   hudIcons: null,
+  items: null,
+  mobs: null,
+  chat: null,
   isTouch: false,
   settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false },
   overlayReturn: 'title',
@@ -231,6 +237,9 @@ function startGame(opts = {}) {
   state.world = world;
   if (save && save.mods) world.applyMods(save.mods);
   world.time = save && typeof save.time === 'number' ? save.time : 150;
+  if (!save && typeof state.startTime === 'number' && isFinite(state.startTime)) {
+    world.time = ((state.startTime % 600) + 600) % 600;
+  }
   const spawn = world.findSpawn();
 
   const inventory = new Inventory({ mode });
@@ -247,6 +256,7 @@ function startGame(opts = {}) {
   const game = {
     world,
     renderer,
+    scene: renderer.scene,
     inventory,
     sound: state.sound,
     mode,
@@ -262,10 +272,36 @@ function startGame(opts = {}) {
 
   const player = new Player(game);
   state.player = player;
+
+  const items = new ItemEntityManager({
+    scene: renderer.scene,
+    world,
+    player,
+    inventory,
+    sound: state.sound,
+  });
+  state.items = items;
+  game.items = items;
+  game.dropItem = (id, x, y, z, count = 1) => items.spawn(id, x, y, z, count);
+  game.explode = (x, y, z, power = 3) => explode(x, y, z, power);
+
+  const mobs = new MobManager(game, {
+    maxMobs: state.isTouch ? 14 : 24,
+    dayLength: 600,
+  });
+  state.mobs = mobs;
+  game.mobs = mobs;
   state.invUI = new InventoryUI(inventory, {
     sound: state.sound,
     onClose: onInventoryClosed,
   });
+  state.chat = new ChatUI(game);
+  game.invUI = state.invUI;
+  game.chat = state.chat;
+  game.onChatClose = () => {
+    if (state.isTouch) hideTouch(false);
+  };
+  state.chat.log('欢迎来到 Minecraft Web！输入 /help 查看命令，T 键打开聊天。');
   state.invUI.onCraft = (res) => showToast('合成：' + itemDisplay(res.id));
 
   if (save) {
@@ -333,6 +369,18 @@ function stopGame(toTitle = true) {
     }
     state.renderer = null;
   }
+  if (state.chat) {
+    state.chat.close();
+    state.chat = null;
+  }
+  if (state.mobs) {
+    try { state.mobs.clear(); } catch (e) { /* ignore */ }
+    state.mobs = null;
+  }
+  if (state.items) {
+    try { state.items.clear(); } catch (e) { /* ignore */ }
+    state.items = null;
+  }
   state.world = null;
   state.player = null;
   state.inventory = null;
@@ -367,6 +415,58 @@ function updateLoading() {
       if (state.isTouch) hideTouch(false);
       updateHUD();
       showToast(state.isTouch ? '左下摇杆移动，拖动屏幕转视角，⛏ 长按挖掘' : '点击画面锁定鼠标 · WASD 移动 · 左键挖掘 · 右键放置', 2600);
+      if (state.openInvAfterLoad) {
+        setTimeout(() => {
+          if (state.running) openInventory(2);
+        }, 500);
+        state.openInvAfterLoad = false;
+      }
+      if (state.spawnDemoItems && state.items && state.player) {
+        setTimeout(() => {
+          const p = state.player;
+          const f = p.forwardVector();
+          const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+          const list = [
+            ['oak_log', 3, -1.6],
+            ['diamond', 2, 0],
+            ['beef', 1, 1.6],
+            ['clay_ball', 4, 3.2],
+            ['birch_planks', 8, 4.8],
+          ];
+          for (const [id, n, sd] of list) {
+            const x = p.x + f.x * 2.6 + right.x * sd;
+            const z = p.z + f.z * 2.6 + right.z * sd;
+            const gy = state.world.getSurfaceY(Math.floor(x), Math.floor(z));
+            state.items.spawn(id, x, gy + 0.7, z, n);
+          }
+          state.chat?.log('演示掉落物已生成');
+        }, 500);
+        state.spawnDemoItems = false;
+      }
+      if (state.spawnDemoMobs && state.mobs && state.player) {
+        setTimeout(() => {
+          const p = state.player;
+          const f = p.forwardVector();
+          const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+          const list = [
+            ['zombie', 4.5, 0],
+            ['pig', 3.5, 2.2],
+            ['cow', 3.0, -2.2],
+            ['creeper', 6.0, 1.5],
+            ['sheep', 5.0, -1.5],
+          ];
+          let spawned = 0;
+          for (const [type, fw, sd] of list) {
+            const x = p.x + f.x * fw + right.x * sd;
+            const z = p.z + f.z * fw + right.z * sd;
+            const gy = state.world.getSurfaceY(Math.floor(x), Math.floor(z));
+            const m = state.mobs.spawn(type, x, gy + 1.05, z);
+            if (m) spawned++;
+          }
+          state.chat?.log('演示生物已生成 ' + spawned + ' 只，当前总数 ' + state.mobs.count());
+        }, 700);
+        state.spawnDemoMobs = false;
+      }
     }, 320);
   }
 }
@@ -413,10 +513,15 @@ function updateDebug() {
   const hours = Math.floor((t / DAY_LENGTH) * 24);
   const minutes = Math.floor(((t / DAY_LENGTH) * 24 - hours) * 60);
   const target = p.target ? getBlockDef(p.target.id).display : '—';
+  let mobInfo = '';
+  if (state.mobs && state.mobs.mobs && state.mobs.mobs.length) {
+    const m0 = state.mobs.mobs[0];
+    mobInfo = `   最近 ${m0.type} ${m0.x.toFixed(1)},${m0.y.toFixed(1)},${m0.z.toFixed(1)}`;
+  }
   debugEl.textContent =
     `FPS ${state.fps.toFixed(0)}   XYZ ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n` +
     `区块 ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)}   生物群系 ${biome}   朝向 ${yawDirectionName()}\n` +
-    `模式 ${p.mode === 'creative' ? '创造' : '生存'}${p.flying ? '·飞行' : ''}   时间 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}   注视 ${target}`;
+    `模式 ${p.mode === 'creative' ? '创造' : '生存'}${p.flying ? '·飞行' : ''}   时间 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}   生物 ${state.mobs ? state.mobs.count() : 0}   注视 ${target}${mobInfo}`;
 }
 
 // ---------------- 界面操作 ----------------
@@ -526,12 +631,20 @@ function bindKeyboard() {
       saveSettings();
       return;
     }
+    if (state.chat && state.chat.isOpen) {
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        state.chat.close();
+      }
+      return;
+    }
     if (e.code === 'Escape') {
       e.preventDefault();
       handleEscape();
       return;
     }
     if (!state.running || !state.player) return;
+    if (state.player.dead) return;
     if (state.loading || state.paused || state.player.dead) return;
     if (state.invUI && state.invUI.isOpen) return;
     const c = state.player.controls;
@@ -567,6 +680,22 @@ function bindKeyboard() {
         break;
       case 'KeyE':
         openInventory(2);
+        break;
+      case 'KeyT':
+        if (state.chat) {
+          resetControls();
+          releasePointerLock();
+          hideTouch(true);
+          state.chat.show('');
+        }
+        break;
+      case 'Slash':
+        if (state.chat) {
+          resetControls();
+          releasePointerLock();
+          hideTouch(true);
+          state.chat.show('/');
+        }
         break;
       case 'KeyF':
         if (state.player.mode === 'creative') {
@@ -643,6 +772,7 @@ function bindMouse() {
     if (!activeGame()) return;
     if (e.button === 0) {
       state.player.breakHeld = true;
+      state.player.primaryAction();
       requestLock();
     } else if (e.button === 2) {
       state.player.secondaryAction();
@@ -792,9 +922,7 @@ function bindTouchControls() {
     () => {
       if (!state.player) return;
       state.player.breakHeld = true;
-      if (state.player.mode === 'creative' && state.player.target) {
-        state.player.breakBlock(state.player.target);
-      }
+      if (state.player.mode === 'creative') state.player.primaryAction();
     },
     () => {
       if (state.player) state.player.breakHeld = false;
@@ -908,6 +1036,46 @@ function updatePackStatus() {
   }
 }
 
+// ---------------- 苦力怕爆炸 ----------------
+function explode(cx, cy, cz, power = 3) {
+  const world = state.world;
+  if (!world) return;
+  const r = Math.ceil(power);
+  for (let dx = -r; dx <= r; dx++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dz = -r; dz <= r; dz++) {
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist > power) continue;
+        const x = Math.floor(cx) + dx;
+        const y = Math.floor(cy) + dy;
+        const z = Math.floor(cz) + dz;
+        const id = world.getBlock(x, y, z);
+        if (!id) continue;
+        const def = getBlockDef(id);
+        if (!isFinite(def.hardness)) continue;
+        if (Math.random() < 1 - dist / (power + 0.4)) world.setBlock(x, y, z, 0);
+      }
+    }
+  }
+  if (state.renderer) {
+    for (let i = 0; i < 8; i++) {
+      state.renderer.spawnBreakParticles(
+        cx + (Math.random() - 0.5) * 2, cy + (Math.random() - 0.5) * 2, cz + (Math.random() - 0.5) * 2,
+        BLOCK.STONE,
+      );
+    }
+  }
+  state.sound?.play('break_glass', { volume: 0.9 });
+  const p = state.player;
+  if (p && !p.dead && p.mode !== 'creative') {
+    const dx = p.x - cx;
+    const dy = p.y + 0.9 - cy;
+    const dz = p.z - cz;
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (dist < power) p.damage(Math.max(1, Math.round(9 - dist * 2)), '被苦力怕炸死了');
+  }
+}
+
 // ---------------- 主循环 ----------------
 function loop(now) {
   requestAnimationFrame(loop);
@@ -918,6 +1086,8 @@ function loop(now) {
   if (state.world) {
     if (activeGame()) {
       state.player.update(dt);
+      state.mobs?.update(dt);
+      state.items?.update(dt);
       state.world.time += dt;
       state.saveClock += dt;
       if (state.saveClock > 30) {
@@ -984,6 +1154,13 @@ function bindUI() {
   $('btn-death-quit').addEventListener('click', () => {
     saveGame();
     stopGame(true);
+  });
+  $('btn-hud-chat').addEventListener('click', () => {
+    if (!state.running || state.loading || state.paused || state.player?.dead) return;
+    resetControls();
+    releasePointerLock();
+    hideTouch(true);
+    state.chat?.show('');
   });
   $('btn-hud-inv').addEventListener('click', () => openInventory(2));
   $('btn-hud-menu').addEventListener('click', () => setPaused(true));
@@ -1069,6 +1246,13 @@ function boot() {
 
   const params = new URLSearchParams(location.search);
   if (params.get('noplants') === '1') state.noPlants = true;
+  if (params.get('openinv') === '1') state.openInvAfterLoad = true;
+  if (params.get('mobs') === '1') state.spawnDemoMobs = true;
+  if (params.get('items') === '1') state.spawnDemoItems = true;
+  if (params.get('time') !== null) {
+    const tv = params.get('time');
+    state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);
+  }
   if (params.get('give') === '1') state.giveStarter = true;
   if (params.get('pitch') !== null) state.startPitch = Number(params.get('pitch'));
   if (params.get('yaw') !== null) state.startYaw = Number(params.get('yaw'));

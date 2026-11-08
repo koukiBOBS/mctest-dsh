@@ -107,43 +107,7 @@ export class Renderer {
         actx.drawImage(cnv, col * 16, row * 16, 16, 16);
       }
     }
-    // 贴图整体偏暗/噪点过重，做一次逐贴图 gamma 提亮（可按需单独调）
-    try {
-      const actx = this.atlasCanvas.getContext('2d');
-      const gammaMap = {
-        grass_top: 0.5, grass_side: 0.5, dirt: 0.55,
-        stone: 0.68, cobblestone: 0.68, sand: 0.72,
-        sandstone_top: 0.72, sandstone_side: 0.72, gravel: 0.6,
-        oak_log_side: 0.6, oak_log_top: 0.6, oak_leaves: 0.72, oak_planks: 0.65,
-        glass: 0.8, water: 0.8, bedrock: 0.92,
-        coal_ore: 0.62, iron_ore: 0.62, gold_ore: 0.62, diamond_ore: 0.62,
-        snow: 0.85, ice: 0.8,
-        crafting_table_top: 0.6, crafting_table_side: 0.6, crafting_table_front: 0.6,
-        torch: 0.45, rose: 0.42, dandelion: 0.42, tall_grass: 0.34,
-        stone_bricks: 0.68, obsidian: 1.0, glowstone: 0.78, lava: 0.8,
-        wool_white: 0.85, brick: 0.7,
-      };
-      for (const name of TILE_NAMES) {
-        if (opts.customTiles && opts.customTiles.has(name)) continue;
-        const gamma = gammaMap[name] !== undefined ? gammaMap[name] : 0.65;
-        if (gamma >= 1) continue;
-        const idx = TILE_NAMES.indexOf(name);
-        if (idx < 0) continue;
-        const col = idx % ATLAS_COLS;
-        const row = Math.floor(idx / ATLAS_COLS);
-        const img = actx.getImageData(col * 16, row * 16, 16, 16);
-        const d = img.data;
-        for (let i = 0; i < d.length; i += 4) {
-          if (d[i + 3] < 8) continue;
-          d[i] = Math.round(255 * Math.pow(d[i] / 255, gamma));
-          d[i + 1] = Math.round(255 * Math.pow(d[i + 1] / 255, gamma));
-          d[i + 2] = Math.round(255 * Math.pow(d[i + 2] / 255, gamma));
-        }
-        actx.putImageData(img, col * 16, row * 16);
-      }
-    } catch (e) {
-      // 忽略提亮失败
-    }
+    // 贴图颜色已由 textures.js 正确生成，无需再整体提亮
 
     this.atlasTexture = new THREE.CanvasTexture(this.atlasCanvas);
     this.atlasTexture.magFilter = THREE.NearestFilter;
@@ -189,6 +153,7 @@ export class Renderer {
     this._lastPlayer = { x: 0, z: 0 };
     this.quads = 0;
     this.underwater = false;
+    this.dayLight = 1;
     this._tileColorCache = new Map();
 
     this._initSky();
@@ -550,6 +515,7 @@ export class Renderer {
     }
 
     const lightMul = 0.3 + 0.7 * dayF;
+    this.dayLight = lightMul;
     this.matOpaque.color.setScalar(lightMul);
     this.matAlpha.color.setScalar(lightMul);
     this.matWater.color.setScalar(lightMul);

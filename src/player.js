@@ -56,6 +56,8 @@ export class Player {
     this.hurtFlash = 0;
 
     this.target = null;
+    this.mobTarget = null;
+    this.attackCooldown = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
     this.breakHeld = false;
@@ -122,13 +124,16 @@ export class Player {
     this._updatePhysics(dt);
     this._updateVitals(dt);
     this._updateTargeting();
+    this._updateMobTarget();
     this._updateBreaking(dt);
+    if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    if (this.breakHeld && this.mobTarget && this.attackCooldown <= 0) this.attackAction();
     this._updateFootsteps(dt);
 
     const r = this.game.renderer;
     if (r) {
-      r.setHighlight(this.target);
-      r.setBreakOverlay(this.breakTarget, this.breakProgress);
+      r.setHighlight(this.mobTarget ? null : this.target);
+      r.setBreakOverlay(this.mobTarget ? null : this.breakTarget, this.breakProgress);
     }
   }
 
@@ -343,7 +348,56 @@ export class Player {
     this.target = this.world.raycast(this.x, this.eyeY(), this.z, dir.x, dir.y, dir.z, this.reach);
   }
 
+  _updateMobTarget() {
+    this.mobTarget = null;
+    if (!this.game.mobs) return;
+    const dir = this.forwardVector();
+    const hit = this.game.mobs.pick({ x: this.x, y: this.eyeY(), z: this.z }, dir, this.reach);
+    if (hit) this.mobTarget = hit.mob;
+  }
+
+  _attackDamage() {
+    const held = this.inventory.held;
+    const item = held ? getItem(held.id) : null;
+    if (item && item.tool) {
+      const t = item.tool;
+      if (t.type === 'sword') return [0, 4, 5, 6][t.tier] || 1;
+      if (t.type === 'axe') return [0, 3, 4, 5][t.tier] || 2;
+      return [0, 2, 3, 4][t.tier] || 1;
+    }
+    return 1;
+  }
+
+  attackAction() {
+    if (this.dead || this.attackCooldown > 0) return false;
+    if (!this.mobTarget || !this.game.mobs) return false;
+    this.attackCooldown = 0.45;
+    const dir = this.forwardVector();
+    const dmg = this._attackDamage();
+    const died = this.game.mobs.hit(this.mobTarget, dmg, dir.x * 0.9, dir.z * 0.9);
+    if (died) this.game.sound?.play('pop', { volume: 0.35 });
+    const held = this.inventory.held;
+    if (held) this.inventory.damageHeld(1);
+    return true;
+  }
+
+  primaryAction() {
+    if (this.attackAction()) return;
+    if (this.mode === 'creative' && this.target) this.breakBlock(this.target);
+  }
+
+  _dropItem(id, count, x, y, z) {
+    if (!id || count <= 0) return;
+    if (this.game.dropItem) this.game.dropItem(id, x, y, z, count);
+    else this.inventory.add(id, count);
+  }
+
   _updateBreaking(dt) {
+    if (this.mobTarget) {
+      this.breakProgress = 0;
+      this.breakTarget = null;
+      return;
+    }
     if (this.dead || !this.breakHeld) {
       this.breakProgress = 0;
       this.breakTarget = null;
@@ -403,12 +457,11 @@ export class Player {
 
     if (this.mode === 'survival') {
       const drop = breakDrop(hit.id, heldId);
-      if (drop) {
-        if (hit.id === BLOCK.LEAVES && Math.random() < 0.06) this.inventory.add('apple', 1);
-        const left = this.inventory.add(drop.id, drop.count);
-        if (left > 0 && this.game.toast) this.game.toast('背包已满');
-        if (tool && def.tool === tool.type) this.inventory.damageHeld(1);
+      if (drop) this._dropItem(drop.id, drop.count, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+      if (hit.id === BLOCK.LEAVES && Math.random() < 0.06) {
+        this._dropItem('apple', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
       }
+      if (tool && def.tool === tool.type) this.inventory.damageHeld(1);
     }
 
     this.world.setBlock(hit.x, hit.y, hit.z, 0);

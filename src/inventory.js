@@ -85,6 +85,7 @@ export class Inventory {
     this.defaultIcons = null;
     this.onChange = null;
     this._iconCache = new Map();
+    this._iconCanvasCache = new Map();
   }
 
   get held() {
@@ -214,31 +215,37 @@ export class Inventory {
     return this.defaultIcons;
   }
 
+  iconCanvas(id) {
+    if (this._iconCanvasCache.has(id)) return this._iconCanvasCache.get(id);
+    let c = null;
+    const item = getItem(id);
+    if (item) {
+      if (item.block !== undefined && item.block !== null && this.atlasCanvas) {
+        const def = getBlockDef(item.block);
+        const tile = def.tiles.side || def.tiles.all || 'stone';
+        const idx = Math.max(0, TILE_NAMES.indexOf(tile));
+        const col = idx % ATLAS_COLS;
+        const row = Math.floor(idx / ATLAS_COLS);
+        c = document.createElement('canvas');
+        c.width = c.height = 32;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(this.atlasCanvas, col * 16, row * 16, 16, 16, 0, 0, 32, 32);
+      } else if (this.customIcons && this.customIcons.has(id)) {
+        c = this.customIcons.get(id);
+      } else {
+        const icons = this.getDefaultIcons();
+        c = icons[id] || null;
+      }
+    }
+    this._iconCanvasCache.set(id, c);
+    return c;
+  }
+
   iconURL(id) {
     if (this._iconCache.has(id)) return this._iconCache.get(id);
-    let url = '';
-    const item = getItem(id);
-    if (!item) {
-      url = '';
-    } else if (item.block !== undefined && item.block !== null && this.atlasCanvas) {
-      const def = getBlockDef(item.block);
-      const tile = def.tiles.side || def.tiles.all || 'stone';
-      const idx = Math.max(0, TILE_NAMES.indexOf(tile));
-      const col = idx % ATLAS_COLS;
-      const row = Math.floor(idx / ATLAS_COLS);
-      const c = document.createElement('canvas');
-      c.width = c.height = 32;
-      const ctx = c.getContext('2d');
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(this.atlasCanvas, col * 16, row * 16, 16, 16, 0, 0, 32, 32);
-      url = c.toDataURL();
-    } else if (this.customIcons && this.customIcons.has(id)) {
-      url = this.customIcons.get(id).toDataURL();
-    } else {
-      const icons = this.getDefaultIcons();
-      const cnv = icons[id];
-      url = cnv ? cnv.toDataURL() : '';
-    }
+    const c = this.iconCanvas(id);
+    const url = c && c.toDataURL ? c.toDataURL() : '';
     this._iconCache.set(id, url);
     return url;
   }
@@ -588,11 +595,15 @@ function ITEMS_FOR_CREATIVE() {
   const ids = [];
   for (const id of [
     'grass_block', 'dirt', 'stone', 'cobblestone', 'sand', 'sandstone', 'gravel',
-    'oak_log', 'oak_leaves', 'oak_planks', 'glass', 'water', 'bedrock',
+    'oak_log', 'oak_leaves', 'oak_planks', 'birch_log', 'birch_leaves', 'birch_planks',
+    'spruce_log', 'spruce_leaves', 'spruce_planks',
+    'glass', 'water', 'bedrock', 'clay', 'cactus',
     'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'snow', 'ice',
-    'crafting_table', 'torch', 'rose', 'dandelion', 'tall_grass',
+    'crafting_table', 'furnace', 'chest', 'torch', 'rose', 'dandelion', 'tall_grass',
     'stone_bricks', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
-    'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple',
+    'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
+    'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken',
+    'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread',
     'wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe',
     'wooden_axe', 'stone_axe', 'iron_axe',
     'wooden_shovel', 'stone_shovel', 'iron_shovel',

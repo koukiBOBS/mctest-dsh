@@ -158,14 +158,18 @@ export class World {
             id = BLOCK.BEDROCK;
           } else if (y <= h) {
             if (y === h) {
-              if (biome === 'ocean') id = hash3i(wx, 1, wz, this.seed + 9) < 0.4 ? BLOCK.GRAVEL : BLOCK.SAND;
-              else if (biome === 'beach' || biome === 'desert') id = BLOCK.SAND;
+              if (biome === 'ocean') {
+                const r0 = hash3i(wx, 1, wz, this.seed + 9);
+                id = r0 < 0.15 ? BLOCK.CLAY : r0 < 0.5 ? BLOCK.GRAVEL : BLOCK.SAND;
+              } else if (biome === 'beach') {
+                id = hash3i(wx, 2, wz, this.seed + 9) < 0.15 ? BLOCK.CLAY : BLOCK.SAND;
+              } else if (biome === 'desert') id = BLOCK.SAND;
               else if (biome === 'snowy') id = BLOCK.SNOW;
               else if (biome === 'mountain' && h > 88) id = BLOCK.SNOW;
               else id = BLOCK.GRASS;
             } else if (y >= h - 3) {
               if (biome === 'desert') id = y >= h - 1 ? BLOCK.SAND : BLOCK.SANDSTONE;
-              else if (biome === 'beach' || biome === 'ocean') id = BLOCK.SAND;
+              else if (biome === 'beach' || biome === 'ocean') id = hash3i(wx, 1, wz, this.seed + 77) < 0.22 ? BLOCK.CLAY : BLOCK.SAND;
               else if (biome === 'snowy') id = BLOCK.DIRT;
               else if (biome === 'mountain' && h > 88) id = BLOCK.STONE;
               else id = BLOCK.DIRT;
@@ -216,7 +220,8 @@ export class World {
     }
     for (let gz = z0 - 2; gz <= z0 + CHUNK_SZ + 1; gz++) {
       for (let gx = x0 - 2; gx <= x0 + CHUNK_SX + 1; gx++) {
-        if (this.treeAt(gx, gz)) this.placeTree(chunk, gx, gz);
+        const kind = this.treeKindAt(gx, gz);
+        if (kind) this.placeTree(chunk, gx, gz, kind);
       }
     }
 
@@ -245,6 +250,26 @@ export class World {
       }
     }
 
+    // 3b) 沙漠仙人掌（只在本区块自己的列）
+    for (let lz = 0; lz < CHUNK_SZ; lz++) {
+      for (let lx = 0; lx < CHUNK_SX; lx++) {
+        const wx = x0 + lx;
+        const wz = z0 + lz;
+        const h = chunk.heightMap[lz * CHUNK_SX + lx];
+        if (h <= SEA_LEVEL) continue;
+        const info = this.columnInfo(wx, wz);
+        if (info.biome !== 'desert') continue;
+        if (chunk.get(lx, h, lz) !== BLOCK.SAND) continue;
+        if (chunk.get(lx, h + 1, lz) !== BLOCK.AIR) continue;
+        if (hash2i(wx, wz, this.seed + 606) > 0.012) continue;
+        const height = 1 + Math.floor(hash2i(wx, wz, this.seed + 607) * 3);
+        for (let dy = 1; dy <= height; dy++) {
+          chunk.set(lx, h + dy, lz, BLOCK.CACTUS);
+          chunk.maxY = Math.max(chunk.maxY, h + dy);
+        }
+      }
+    }
+
     // 4) 应用玩家改动
     const mods = this.modsByChunk.get(chunkKey(cx, cz));
     if (mods) {
@@ -260,51 +285,99 @@ export class World {
     return chunk;
   }
 
-  treeAt(gx, gz) {
+  treeKindAt(gx, gz) {
     const info = this.columnInfo(gx, gz);
-    if (info.height <= SEA_LEVEL + 1) return false;
-    let density = 0;
+    if (info.height <= SEA_LEVEL + 1) return null;
+    let oak = 0;
+    let birch = 0;
+    let spruce = 0;
     switch (info.biome) {
-      case 'forest': density = 0.028; break;
-      case 'plains': density = 0.004; break;
-      case 'snowy': density = 0.012; break;
-      case 'mountain': density = 0.006; break;
-      default: return false;
+      case 'forest':
+        oak = 0.02;
+        birch = 0.012;
+        spruce = 0.003;
+        break;
+      case 'plains':
+        oak = 0.004;
+        birch = 0.003;
+        break;
+      case 'snowy':
+        spruce = 0.02;
+        break;
+      case 'mountain':
+        spruce = 0.006;
+        break;
+      default:
+        return null;
     }
-    return hash2i(gx, gz, this.seed + 21) < density;
+    const r = hash2i(gx, gz, this.seed + 21);
+    if (r < oak) return 'oak';
+    if (r < oak + birch) return 'birch';
+    if (r < oak + birch + spruce) return 'spruce';
+    return null;
   }
 
-  placeTree(chunk, gx, gz) {
+  placeTree(chunk, gx, gz, kind = 'oak') {
     const info = this.columnInfo(gx, gz);
     const baseY = info.height + 1;
-    const trunkH = 4 + Math.floor(hash2i(gx, gz, this.seed + 22) * 3);
+    const rand = hash2i(gx, gz, this.seed + 22);
+    let trunkH;
+    if (kind === 'spruce') trunkH = 7 + Math.floor(rand * 4);
+    else if (kind === 'birch') trunkH = 5 + Math.floor(rand * 3);
+    else trunkH = 4 + Math.floor(rand * 3);
+
     const topY = baseY + trunkH - 1;
     const x0 = chunk.cx * CHUNK_SX;
     const z0 = chunk.cz * CHUNK_SZ;
+    const woodId = kind === 'birch' ? BLOCK.BIRCH_LOG : kind === 'spruce' ? BLOCK.SPRUCE_LOG : BLOCK.LOG;
+    const leafId = kind === 'birch' ? BLOCK.BIRCH_LEAVES : kind === 'spruce' ? BLOCK.SPRUCE_LEAVES : BLOCK.LEAVES;
+
+    const replaceable = (cur) =>
+      cur === BLOCK.AIR ||
+      cur === BLOCK.TALL_GRASS ||
+      cur === BLOCK.LEAVES ||
+      cur === BLOCK.BIRCH_LEAVES ||
+      cur === BLOCK.SPRUCE_LEAVES;
 
     const put = (wx, wy, wz, id, onlyAir) => {
       const lx = wx - x0;
       const lz = wz - z0;
       if (lx < 0 || lx >= CHUNK_SX || lz < 0 || lz >= CHUNK_SZ || wy < 0 || wy >= CHUNK_H) return;
-      if (wy >= baseY - 1 && onlyAir) {
+      if (onlyAir) {
         const cur = chunk.get(lx, wy, lz);
-        if (cur !== BLOCK.AIR && cur !== BLOCK.TALL_GRASS && cur !== BLOCK.LEAVES) return;
+        if (!replaceable(cur)) return;
       }
       chunk.set(lx, wy, lz, id);
       chunk.maxY = Math.max(chunk.maxY, wy);
     };
 
-    for (let y = baseY; y <= topY; y++) put(gx, y, gz, BLOCK.LOG, false);
+    for (let y = baseY; y <= topY; y++) put(gx, y, gz, woodId, false);
 
-    for (let dy = trunkH - 2; dy <= trunkH + 1; dy++) {
-      const radius = dy >= trunkH ? 1 : 2;
-      for (let dx = -radius; dx <= radius; dx++) {
-        for (let dz = -radius; dz <= radius; dz++) {
-          if (dx === 0 && dz === 0 && dy <= trunkH - 1) continue;
-          if (Math.abs(dx) === radius && Math.abs(dz) === radius) {
-            if (hash2i(gx + dx, gz + dz, this.seed + dy) < 0.45) continue;
+    if (kind === 'spruce') {
+      for (let dy = trunkH - 6; dy <= trunkH + 1; dy++) {
+        const t = dy - (trunkH - 6);
+        const radius = t >= 6 ? 1 : t >= 4 ? 2 : 3;
+        for (let dx = -radius; dx <= radius; dx++) {
+          for (let dz = -radius; dz <= radius; dz++) {
+            if (dx === 0 && dz === 0 && dy <= trunkH - 1) continue;
+            if (Math.abs(dx) === radius && Math.abs(dz) === radius) {
+              if (hash2i(gx + dx, gz + dz, this.seed + dy) < 0.5) continue;
+            }
+            put(gx + dx, baseY + dy, gz + dz, leafId, true);
           }
-          put(gx + dx, baseY + dy, gz + dz, BLOCK.LEAVES, true);
+        }
+      }
+    } else {
+      for (let dy = trunkH - 2; dy <= trunkH + 1; dy++) {
+        const radius = dy >= trunkH ? 1 : 2;
+        for (let dx = -radius; dx <= radius; dx++) {
+          for (let dz = -radius; dz <= radius; dz++) {
+            if (dx === 0 && dz === 0 && dy <= trunkH - 1) continue;
+            if (Math.abs(dx) === radius && Math.abs(dz) === radius) {
+              if (hash2i(gx + dx, gz + dz, this.seed + dy) < 0.45) continue;
+            }
+            put(gx + dx, baseY + dy, gz + dz, leafId, true);
+          }
         }
       }
     }

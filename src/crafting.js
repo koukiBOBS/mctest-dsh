@@ -8,18 +8,22 @@
 export const RECIPES = [
   // 木材
   { id: 'oak_planks', shapeless: ['oak_log'], result: { id: 'oak_planks', count: 4 } },
-  { id: 'stick', pattern: ['P', 'P'], keys: { P: 'oak_planks' }, result: { id: 'stick', count: 4 } },
-  { id: 'crafting_table', pattern: ['PP', 'PP'], keys: { P: 'oak_planks' }, result: { id: 'crafting_table', count: 1 } },
+  { id: 'birch_planks', shapeless: ['birch_log'], result: { id: 'birch_planks', count: 4 } },
+  { id: 'spruce_planks', shapeless: ['spruce_log'], result: { id: 'spruce_planks', count: 4 } },
+  { id: 'stick', pattern: ['P', 'P'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'stick', count: 4 } },
+  { id: 'crafting_table', pattern: ['PP', 'PP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'crafting_table', count: 1 } },
+  { id: 'chest', pattern: ['PPP', 'P P', 'PPP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'chest', count: 1 } },
+  { id: 'furnace', pattern: ['CCC', 'C C', 'CCC'], keys: { C: 'cobblestone' }, result: { id: 'furnace', count: 1 } },
   { id: 'torch', pattern: ['C', 'S'], keys: { C: 'coal', S: 'stick' }, result: { id: 'torch', count: 4 } },
 
   // 石砖
   { id: 'stone_bricks', pattern: ['CC', 'CC'], keys: { C: 'cobblestone' }, result: { id: 'stone_bricks', count: 4 } },
 
   // 木制工具
-  { id: 'wooden_pickaxe', pattern: ['WWW', ' S ', ' S '], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_pickaxe', count: 1 } },
-  { id: 'wooden_axe', pattern: ['WW', 'WS', ' S'], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_axe', count: 1 } },
-  { id: 'wooden_shovel', pattern: ['W', 'S', 'S'], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_shovel', count: 1 } },
-  { id: 'wooden_sword', pattern: ['W', 'W', 'S'], keys: { W: 'oak_planks', S: 'stick' }, result: { id: 'wooden_sword', count: 1 } },
+  { id: 'wooden_pickaxe', pattern: ['WWW', ' S ', ' S '], keys: { W: ['oak_planks', 'birch_planks', 'spruce_planks'], S: 'stick' }, result: { id: 'wooden_pickaxe', count: 1 } },
+  { id: 'wooden_axe', pattern: ['WW', 'WS', ' S'], keys: { W: ['oak_planks', 'birch_planks', 'spruce_planks'], S: 'stick' }, result: { id: 'wooden_axe', count: 1 } },
+  { id: 'wooden_shovel', pattern: ['W', 'S', 'S'], keys: { W: ['oak_planks', 'birch_planks', 'spruce_planks'], S: 'stick' }, result: { id: 'wooden_shovel', count: 1 } },
+  { id: 'wooden_sword', pattern: ['W', 'W', 'S'], keys: { W: ['oak_planks', 'birch_planks', 'spruce_planks'], S: 'stick' }, result: { id: 'wooden_sword', count: 1 } },
 
   // 石制工具
   { id: 'stone_pickaxe', pattern: ['CCC', ' S ', ' S '], keys: { C: 'cobblestone', S: 'stick' }, result: { id: 'stone_pickaxe', count: 1 } },
@@ -113,7 +117,13 @@ export function matchRecipe(slots, w, h) {
     for (let r = 0; r < ph && ok; r++) {
       for (let c = 0; c < pw; c++) {
         const want = grid[minR + r][minC + c];
-        if ((trimmed.grid[r * trimmed.w + c] || null) !== want) { ok = false; break; }
+        const got = trimmed.grid[r * trimmed.w + c] || null;
+        if (Array.isArray(want)) {
+          if (!want.includes(got)) { ok = false; break; }
+        } else if (got !== want) {
+          ok = false;
+          break;
+        }
       }
     }
     if (ok) return { ...recipe.result };
