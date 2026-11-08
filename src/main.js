@@ -58,6 +58,8 @@ const state = {
   thirdPerson: false,
   qualityScale: 1,
   qualityTimer: 0,
+  baseDistance: 3,
+  adaptiveDistance: 3,
   isTouch: false,
   settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false },
   overlayReturn: 'title',
@@ -591,6 +593,8 @@ function applyRuntimeSettings() {
   if (state.player) state.player.lookSensitivity = 0.0024 * state.settings.sens;
   if (state.renderer) state.renderer.setRenderDistance(state.settings.distance);
   if (state.world) state.world.renderDistance = state.settings.distance;
+  state.baseDistance = state.settings.distance;
+  state.adaptiveDistance = state.settings.distance;
   if (state.sound) {
     state.sound.setMasterVolume(state.settings.volume);
     state.sound.setMuted(!!state.settings.mute);
@@ -1500,7 +1504,7 @@ function updateDebug() {
   debugEl.textContent =
     `FPS ${state.fps.toFixed(0)}   XYZ ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n` +
     `区块 ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)}   生物群系 ${biome}   朝向 ${yawDirectionName()}\n` +
-    `模式 ${p.mode === 'creative' ? '创造' : '生存'}${p.flying ? '·飞行' : ''}   时间 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}   生物 ${state.mobs ? state.mobs.count() : 0}   画质 ${Math.round(state.qualityScale * 100)}%   注视 ${target}${mobInfo}`;
+    `模式 ${p.mode === 'creative' ? '创造' : '生存'}${p.flying ? '·飞行' : ''}   时间 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}   生物 ${state.mobs ? state.mobs.count() : 0}   画质 ${Math.round(state.qualityScale * 100)}%   视距 ${state.renderer ? state.renderer.renderDistance : '-'}   注视 ${target}${mobInfo}`;
 }
 
 // ---------------- 界面操作 ----------------
@@ -2304,6 +2308,16 @@ function loop(now) {
             state.renderer.setQualityScale(state.qualityScale);
             state.weather?.setDensity(state.qualityScale);
           }
+          if (state.fps > 0 && state.fps < 35 && state.adaptiveDistance > 2) {
+            state.adaptiveDistance -= 1;
+            state.renderer.setRenderDistance(state.adaptiveDistance);
+            state.world.renderDistance = state.adaptiveDistance;
+            showToast('性能不足：视距降低到 ' + state.adaptiveDistance);
+          } else if (state.fps > 56 && state.adaptiveDistance < state.baseDistance) {
+            state.adaptiveDistance += 1;
+            state.renderer.setRenderDistance(state.adaptiveDistance);
+            state.world.renderDistance = state.adaptiveDistance;
+          }
         }
       }
       state.world.time += dt;
@@ -2326,6 +2340,10 @@ function loop(now) {
       if (state.discoverTimer > 2) {
         state.discoverTimer = 0;
         checkDiscoveries();
+        const armor = state.inventory && state.inventory.armor;
+        if (armor && armor.length === 4 && armor.every(Boolean)) {
+          state.achievements?.onEvent('armor', { full: true });
+        }
       }
       state.saveClock += dt;
       if (state.saveClock > 30) {
@@ -2363,6 +2381,10 @@ function loop(now) {
     } else {
       bowBar.classList.add('hidden');
     }
+  }
+
+  if (state.running && !state.loading && state.inventory && state.inventory.armor && state.inventory.armor.length === 4 && state.inventory.armor.every(Boolean)) {
+    state.achievements?.onEvent('armor', { full: true });
   }
 
   if (state.loading) updateLoading();

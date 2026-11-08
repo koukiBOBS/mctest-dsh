@@ -26,6 +26,8 @@ export const ACHIEVEMENTS = [
   { id: 'brew', name: '魔药学家', desc: '在酿造台酿造一瓶药水' },
   { id: 'nether', name: '下界之旅', desc: '穿过下界传送门进入下界' },
   { id: 'end', name: '末地之旅', desc: '穿过末地传送门进入末地' },
+  { id: 'full_armor', name: '全副武装', desc: '穿满头盔、胸甲、护腿和靴子' },
+  { id: 'hunter10', name: '怪物杀手', desc: '累计击杀 10 只敌对生物' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -109,6 +111,10 @@ export class Achievements {
       }
       case 'kill':
         if (data.hostile) this.unlock('hunter');
+        if ((data.kills || 0) >= 10) this.unlock('hunter10');
+        break;
+      case 'armor':
+        if (data.full) this.unlock('full_armor');
         break;
       case 'harvest':
         this.unlock('farmer');

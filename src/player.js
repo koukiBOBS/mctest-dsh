@@ -64,6 +64,7 @@ export class Player {
     this.xpLevel = 0;
     this.strengthTimer = 0;
     this.speedTimer = 0;
+    this.kills = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
     this.breakHeld = false;
@@ -857,6 +858,7 @@ export class Player {
       hunger: this.hunger,
       xp: this.xp,
       xpLevel: this.xpLevel,
+      kills: this.kills,
       mode: this.mode,
       flying: this.flying,
       spawn: { ...this.spawn },
@@ -874,6 +876,7 @@ export class Player {
     if (typeof s.hunger === 'number') this.hunger = s.hunger;
     if (typeof s.xp === 'number') this.xp = s.xp;
     if (typeof s.xpLevel === 'number') this.xpLevel = s.xpLevel;
+    if (typeof s.kills === 'number') this.kills = s.kills;
     if (s.mode === 'creative' || s.mode === 'survival') this.mode = s.mode;
     this.flying = !!s.flying && this.mode === 'creative';
     if (s.spawn) this.spawn = { ...s.spawn };
