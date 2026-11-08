@@ -119,6 +119,15 @@ body {
   pointer-events: none;
 }
 
+#lightning-overlay {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.09s linear;
+}
+
 #water-overlay {
   position: absolute;
   inset: 0;

@@ -13,6 +13,7 @@ import { BLOCK, getBlockDef, itemDisplay } from './blocks.js';
 import * as RP from './resourcepack.js';
 import { ChatUI } from './chat.js';
 import { ContainerManager, ContainerUI } from './containers.js';
+import { WeatherManager } from './weather.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -37,6 +38,7 @@ const state = {
   chat: null,
   containers: null,
   containerUI: null,
+  weather: null,
   isTouch: false,
   settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false },
   overlayReturn: 'title',
@@ -185,6 +187,7 @@ function saveGame() {
       player: state.player.saveState(),
       inventory: state.inventory.serialize(),
       containers: state.containers ? state.containers.serialize() : null,
+      weather: state.weather ? state.weather.serialize() : null,
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     return true;
@@ -330,6 +333,22 @@ function startGame(opts = {}) {
     if (state.isTouch) hideTouch(false);
   };
   state.chat.log('欢迎来到 Minecraft Web！输入 /help 查看命令，T 键打开聊天。');
+
+  const weather = new WeatherManager({
+    scene: renderer.scene,
+    world,
+    player,
+    sound: state.sound,
+    renderer,
+    chat: state.chat,
+  });
+  state.weather = weather;
+  game.weather = weather;
+  if (save && save.weather) weather.load(save.weather);
+  else if (state.weatherDemo && ['clear', 'rain', 'thunder', 'snow'].includes(state.weatherDemo)) {
+    weather.setType(state.weatherDemo);
+  }
+  if (state.weatherDemo) weather.timer = 600;
   state.invUI.onCraft = (res) => showToast('合成：' + itemDisplay(res.id));
 
   if (save) {
@@ -396,6 +415,10 @@ function stopGame(toTitle = true) {
       // ignore
     }
     state.renderer = null;
+  }
+  if (state.weather) {
+    try { state.weather.clear(); } catch (e) { /* ignore */ }
+    state.weather = null;
   }
   if (state.containerUI) {
     state.containerUI.isOpen = false;
@@ -1190,6 +1213,7 @@ function loop(now) {
       state.player.update(dt);
       state.mobs?.update(dt);
       state.items?.update(dt);
+      state.weather?.update(dt);
       state.world.time += dt;
       state.saveClock += dt;
       if (state.saveClock > 30) {
@@ -1358,6 +1382,7 @@ function boot() {
   if (params.get('items') === '1') state.spawnDemoItems = true;
   if (params.get('gui') === 'chest' || params.get('gui') === 'furnace') state.guiDemo = params.get('gui');
   if (params.get('torches') === '1') state.spawnTorches = true;
+  if (params.get('weather')) state.weatherDemo = params.get('weather');
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

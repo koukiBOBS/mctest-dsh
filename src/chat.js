@@ -121,7 +121,7 @@ export class ChatUI {
       switch (cmd) {
         case 'help':
           this.log('命令：/gamemode <survival|creative> · /give <物品> [数量] · /time set <day|night|noon|midnight>');
-          this.log('/tp <x> <y> <z> · /seed · /spawn · /kill · /clear · /summon <生物> · /help');
+          this.log('/tp <x> <y> <z> · /weather <clear|rain|thunder|snow> · /seed · /spawn · /kill · /clear · /summon <生物>');
           break;
         case 'gamemode': {
           const m = (parts[0] || '').toLowerCase();
@@ -189,6 +189,19 @@ export class ChatUI {
           this.game.inventory.notify();
           this.log('背包已清空');
           break;
+        case 'weather': {
+          const t = (parts[0] || '').toLowerCase();
+          if (!this.game.weather) {
+            this.log('天气系统尚未加载', 'err');
+            break;
+          }
+          if (!['clear', 'rain', 'thunder', 'snow'].includes(t)) {
+            this.log('用法：/weather clear|rain|thunder|snow', 'err');
+            break;
+          }
+          this.game.weather.setType(t);
+          break;
+        }
         case 'summon': {
           const type = (parts[0] || '').toLowerCase();
           if (!this.game.mobs) {

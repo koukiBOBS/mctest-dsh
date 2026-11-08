@@ -181,6 +181,8 @@ export class Renderer {
     this._lastPlayer = { x: 0, z: 0 };
     this.quads = 0;
     this.underwater = false;
+    this.weatherFactor = 0;
+    this.flashFactor = 0;
     this.dayLight = 1;
     this._tileColorCache = new Map();
 
@@ -282,6 +284,9 @@ export class Renderer {
       sunsetBot: new THREE.Color(0xff9a52),
       waterFog: new THREE.Color(0x1a4f8a),
       lavaFog: new THREE.Color(0x7a2a10),
+      rainTop: new THREE.Color(0x4a5560),
+      rainBot: new THREE.Color(0x8a97a3),
+      white: new THREE.Color(0xffffff),
     };
     this._tmpTop = new THREE.Color();
     this._tmpBot = new THREE.Color();
@@ -538,8 +543,6 @@ export class Renderer {
 
     const top = this._tmpTop.copy(C.nightTop).lerp(C.dayTop, dayF).lerp(C.sunsetTop, sunsetF * 0.75);
     const bot = this._tmpBot.copy(C.nightBot).lerp(C.dayBot, dayF).lerp(C.sunsetBot, sunsetF * 0.75);
-    this.skyUniforms.topColor.value.copy(top);
-    this.skyUniforms.bottomColor.value.copy(bot);
 
     const eyeBlock = this.world.getBlock(
       Math.floor(player.x),
@@ -550,6 +553,19 @@ export class Renderer {
     this.underwater = under;
     this.skyGroup.visible = !under;
 
+    const rain = under ? 0 : clamp(this.weatherFactor || 0, 0, 1);
+    const flash = clamp(this.flashFactor || 0, 0, 1);
+    if (rain > 0) {
+      top.lerp(C.rainTop, rain * 0.8);
+      bot.lerp(C.rainBot, rain * 0.8);
+    }
+    if (flash > 0) {
+      top.lerp(C.white, flash * 0.4);
+      bot.lerp(C.white, flash * 0.4);
+    }
+    this.skyUniforms.topColor.value.copy(top);
+    this.skyUniforms.bottomColor.value.copy(bot);
+
     if (under) {
       const fogColor = eyeBlock === BLOCK.LAVA ? C.lavaFog : C.waterFog;
       this.scene.fog.color.copy(fogColor);
@@ -558,12 +574,12 @@ export class Renderer {
       this.scene.background = fogColor;
     } else {
       this.scene.fog.color.copy(bot);
-      this.scene.fog.near = this.renderDistance * 16 * 0.62;
-      this.scene.fog.far = this.renderDistance * 16 * 1.15 + 10;
+      this.scene.fog.near = this.renderDistance * 16 * 0.62 * (1 - 0.45 * rain);
+      this.scene.fog.far = this.renderDistance * 16 * 1.15 * (1 - 0.35 * rain) + 10;
       this.scene.background = null;
     }
 
-    const lightMul = 0.3 + 0.7 * dayF;
+    const lightMul = Math.min(1, (0.3 + 0.7 * dayF) * (1 - 0.42 * rain) + flash * 0.3);
     this.dayLight = lightMul;
     for (const mat of this.chunkMaterials) {
       const u = mat.uniforms;
@@ -587,8 +603,8 @@ export class Renderer {
     this.clouds.position.z = player.z;
     this.cloudTex.offset.x += dt * 0.004;
     this.cloudTex.offset.y += dt * 0.0012;
-    this.cloudMat.opacity = (0.25 + 0.6 * dayF) * 0.9;
-    this.cloudMat.color.setScalar(0.75 + 0.25 * dayF);
+    this.cloudMat.opacity = Math.min(1, (0.25 + 0.6 * dayF) * (1 + 0.45 * rain) * 0.9);
+    this.cloudMat.color.setScalar((0.75 + 0.25 * dayF) * (1 - 0.35 * rain));
     this.clouds.visible = !under;
   }
 

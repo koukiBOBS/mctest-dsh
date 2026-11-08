@@ -32,6 +32,8 @@ export class SoundEngine {
     // 环境音
     this._amb = null; // { src, hp, lp, amp, lfo, lfo2, lfoDepth, lpDepth }
     this._ambWanted = false;
+    this._rain = null;
+    this._rainWanted = 0;
 
     this._disposed = false;
     this._unlocking = null;
@@ -71,6 +73,7 @@ export class SoundEngine {
         if (this._ctx && this._ctx.state === 'running') {
           // 若 unlock 前就调用过 startAmbience()，这里补启动
           if (this._ambWanted) this._startAmbience();
+          if (this._rainWanted) this._startRain();
           return true;
         }
       } catch (e) {
@@ -128,6 +131,7 @@ export class SoundEngine {
         case 'jump': this._jump(t, volume, pitch, pan); break;
         case 'land': this._land(t, volume, pitch, pan); break;
         case 'hurt': this._hurt(t, volume, pitch, pan); break;
+        case 'thunder': this._thunder(t, volume, pitch, pan); break;
         case 'click': this._click(t, volume, pitch, pan); break;
         case 'craft': this._craft(t, volume, pitch, pan); break;
         case 'pop': this._pop(t, volume, pitch, pan); break;
@@ -163,6 +167,71 @@ export class SoundEngine {
         this._master.gain.setTargetAtTime(this._volume, this._ctx.currentTime, 0.02);
       } catch (e) { /* ignore */ }
     }
+  }
+
+  /** 循环雨声，音量 0~1。可重复调用。 */
+  startRain(volume = 0.07) {
+    if (this._disposed) return;
+    this._rainWanted = clamp(Number(volume) || 0.07, 0, 0.5);
+    if (this.ready) this._startRain();
+  }
+
+  /** 停止雨声，0.8s 淡出。 */
+  stopRain() {
+    this._rainWanted = 0;
+    const rain = this._rain;
+    if (!rain || !this._ctx) return;
+    this._rain = null;
+    try {
+      const ctx = this._ctx;
+      const now = ctx.currentTime;
+      const g = rain.amp.gain;
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(Math.max(g.value, MIN), now);
+      g.exponentialRampToValueAtTime(MIN, now + 0.8);
+      const end = now + 0.85;
+      try { rain.src.stop(end); } catch (e) { /* ignore */ }
+      try { rain.lfo.stop(end); } catch (e) { /* ignore */ }
+      rain.src.onended = () => {
+        for (const n of [rain.src, rain.hp, rain.lp, rain.amp, rain.lfo, rain.lfoDepth]) {
+          try { n.disconnect(); } catch (e) { /* ignore */ }
+        }
+      };
+    } catch (e) { /* ignore */ }
+  }
+
+  _startRain() {
+    if (this._rain || !this.ready || !this._noiseBuf || this._disposed) return;
+    try {
+      const ctx = this._ctx;
+      const src = ctx.createBufferSource();
+      src.buffer = this._noiseBuf;
+      src.loop = true;
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 900;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 5600;
+      const amp = ctx.createGain();
+      amp.gain.value = MIN;
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.13;
+      const lfoDepth = ctx.createGain();
+      lfoDepth.gain.value = 0.018;
+      lfo.connect(lfoDepth);
+      lfoDepth.connect(amp.gain);
+      src.connect(hp);
+      hp.connect(lp);
+      lp.connect(amp);
+      amp.connect(this._master);
+      src.start();
+      lfo.start();
+      const now = ctx.currentTime;
+      amp.gain.setValueAtTime(MIN, now);
+      amp.gain.exponentialRampToValueAtTime(Math.max(0.012, this._rainWanted), now + 1.2);
+      this._rain = { src, hp, lp, amp, lfo, lfoDepth };
+    } catch (e) { /* ignore */ }
   }
 
   /** 轻柔的风声/空气声床，循环播放，音量约 0.03。可重复调用。 */
@@ -551,6 +620,44 @@ export class SoundEngine {
   }
 
   // ---------------------------------------------------------------- 环境音
+
+  _thunder(t, volume, pitch, pan) {
+    const ctx = this._ctx;
+    if (!ctx || !this._noiseBuf) return;
+    try {
+      const dur = 2.4;
+      const src = ctx.createBufferSource();
+      src.buffer = this._noiseBuf;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(340, t);
+      lp.frequency.exponentialRampToValueAtTime(55, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(MIN, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.02, volume * 0.55), t + 0.06);
+      g.gain.exponentialRampToValueAtTime(MIN, t + dur);
+      let out = g;
+      if (ctx.createStereoPanner) {
+        const panner = ctx.createStereoPanner();
+        panner.pan.value = pan;
+        g.connect(panner);
+        out = panner;
+        out.connect(this._master);
+        src.onended = () => {
+          for (const n of [src, lp, g, panner]) { try { n.disconnect(); } catch (e) { /* ignore */ } }
+        };
+      } else {
+        out.connect(this._master);
+        src.onended = () => {
+          for (const n of [src, lp, g]) { try { n.disconnect(); } catch (e) { /* ignore */ } }
+        };
+      }
+      src.connect(lp);
+      lp.connect(g);
+      src.start(t);
+      src.stop(t + dur + 0.05);
+    } catch (e) { /* ignore */ }
+  }
 
   _startAmbience() {
     if (this._amb || !this.ready || !this._noiseBuf || this._disposed) return;
