@@ -286,6 +286,10 @@ const PROFESSIONS = {
       { cost: { id: 'emerald', count: 3 }, result: { id: 'diamond', count: 1 } },
       { cost: { id: 'coal', count: 12 }, result: { id: 'emerald', count: 1 } },
     ],
+    extras: [
+      { cost: { id: 'emerald', count: 2 }, result: { id: 'apple', count: 8 } },
+      { cost: { id: 'emerald', count: 5 }, result: { id: 'diamond', count: 2 } },
+    ],
   },
   librarian: {
     name: '图书管理员',
@@ -294,6 +298,10 @@ const PROFESSIONS = {
       { cost: { id: 'emerald', count: 2 }, result: { id: 'bookshelf', count: 1 } },
       { cost: { id: 'emerald', count: 4 }, result: { id: 'diamond', count: 1 } },
       { cost: { id: 'book', count: 4 }, result: { id: 'emerald', count: 1 } },
+    ],
+    extras: [
+      { cost: { id: 'book', count: 2 }, result: { id: 'emerald', count: 2 } },
+      { cost: { id: 'emerald', count: 6 }, result: { id: 'name_tag', count: 1 } },
     ],
   },
   blacksmith: {
@@ -304,13 +312,27 @@ const PROFESSIONS = {
       { cost: { id: 'emerald', count: 4 }, result: { id: 'diamond', count: 1 } },
       { cost: { id: 'iron_ingot', count: 6 }, result: { id: 'emerald', count: 1 } },
     ],
+    extras: [
+      { cost: { id: 'emerald', count: 3 }, result: { id: 'iron_pickaxe', count: 1 } },
+      { cost: { id: 'emerald', count: 8 }, result: { id: 'diamond_pickaxe', count: 1 } },
+    ],
   },
 };
 
 function currentTrades() {
   const prof = state.tradeMob && state.tradeMob.profession;
   const data = PROFESSIONS[prof] || PROFESSIONS.farmer;
-  return data.trades;
+  const level = state.tradeMob && state.tradeMob.tradeLevel ? state.tradeMob.tradeLevel : 1;
+  const extras = (data.extras || []).slice(0, Math.max(0, level - 1));
+  return data.trades.concat(extras);
+}
+
+function tradeTitle() {
+  const mob = state.tradeMob;
+  const prof = mob && mob.profession;
+  const data = PROFESSIONS[prof];
+  const level = mob && mob.tradeLevel ? mob.tradeLevel : 1;
+  return (data ? data.name : '村民') + ' Lv.' + level + ' 交易';
 }
 
 const BREWS = [
@@ -673,10 +695,7 @@ function openTrade(mob) {
   state.tradeOpen = true;
   state.tradeMob = mob || null;
   const titleEl = $('trade-title');
-  if (titleEl) {
-    const prof = mob && mob.profession;
-    titleEl.textContent = (prof && PROFESSIONS[prof] ? PROFESSIONS[prof].name : '村民') + '交易';
-  }
+  if (titleEl) titleEl.textContent = tradeTitle();
   state.paused = true;
   resetControls();
   releasePointerLock();
@@ -707,6 +726,16 @@ function doTrade(index) {
   state.inventory.add(offer.result.id, offer.result.count);
   state.sound?.play('craft', { volume: 0.5 });
   state.achievements?.onEvent('trade', {});
+  const trader = state.tradeMob;
+  if (trader && trader.profession) {
+    trader.tradeCount = (trader.tradeCount || 0) + 1;
+    if (trader.tradeCount % 3 === 0 && (trader.tradeLevel || 1) < 3) {
+      trader.tradeLevel = (trader.tradeLevel || 1) + 1;
+      state.chat?.log('📈 村民升级到 Lv.' + trader.tradeLevel + '，解锁了新的交易！');
+    }
+    const titleEl = $('trade-title');
+    if (titleEl) titleEl.textContent = tradeTitle();
+  }
   showToast('交易完成：' + itemDisplay(offer.result.id) + ' ×' + offer.result.count);
   updateHUD();
   renderTradeOffers();
@@ -1451,7 +1480,12 @@ function updateLoading() {
             state.inventory.add('coal', 32);
             state.onInventoryChange?.();
             openTrade(villager);
-            setTimeout(() => doTrade(0), 1500);
+            let n = 0;
+            const timer = setInterval(() => {
+              doTrade(0);
+              n += 1;
+              if (n >= 4) clearInterval(timer);
+            }, 700);
           } catch (e) {
             showError(e && e.stack ? e.stack : String(e));
           }
@@ -1627,7 +1661,7 @@ function updateLoading() {
           }
         }, 700);
       }
-      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold || state.tpMansion || state.tpMonument || state.tpRuin || state.tpCity) {
+      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold || state.tpMansion || state.tpMonument || state.tpRuin || state.tpCity || state.tpTrial) {
         setTimeout(() => {
           try {
             const p = state.player;
@@ -1651,6 +1685,10 @@ function updateLoading() {
                 const gy = state.world.getSurfaceY(m.centerX, tz);
                 target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `沙漠神殿 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
               }
+            }
+            if (state.tpTrial) {
+              const m = state.world.findNearestTrialChamber(p.x, p.z);
+              if (m) target = { x: m.centerX + 0.5, y: m.y + 1.2, z: m.centerZ + 5.5, label: `试炼密室 ${m.centerX}, ${m.y}, ${m.centerZ}` };
             }
             if (state.tpCity) {
               const m = state.world.findNearestAncientCity(p.x, p.z);
@@ -1709,6 +1747,7 @@ function updateLoading() {
           state.tpMonument = false;
           state.tpRuin = false;
           state.tpCity = false;
+          state.tpTrial = false;
         }, 900);
       }
       if (state.spawnTorches && state.player) {
@@ -1972,6 +2011,16 @@ function checkDiscoveries() {
         const m = w.getIgloo(vcx + dx, vcz + dz);
         if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
           ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
+      }
+    }
+    // 试炼密室
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getTrialChamber(Math.floor(p.x / 384) + dx, Math.floor(p.z / 384) + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 30) {
+          ach.onEvent('discover', { kind: 'trial' });
           break;
         }
       }
@@ -2699,6 +2748,22 @@ function loop(now) {
         state.villagerTimer = 0;
         ensureVillagers();
       }
+      state.trialTimer = (state.trialTimer || 0) + dt;
+      if (state.trialTimer > 6) {
+        state.trialTimer = 0;
+        const p = state.player;
+        const w = state.world;
+        if (p && w && state.mobs && state.mobs.count() < 12) {
+          for (const s of w.trialSpawners.values()) {
+            if (Math.hypot(s.x - p.x, s.z - p.z) > 24) continue;
+            if (w.getBlock(s.x, s.y, s.z) !== BLOCK.TRIAL_SPAWNER) continue;
+            const type = Math.random() < 0.5 ? 'zombie' : 'skeleton';
+            state.mobs.spawn(type, s.x + (Math.random() - 0.5) * 4, s.y, s.z + (Math.random() - 0.5) * 4);
+            state.chat?.log('试炼刷怪笼激活了！');
+            break;
+          }
+        }
+      }
       state.dungeonSpawnTimer = (state.dungeonSpawnTimer || 0) + dt;
       if (state.dungeonSpawnTimer > 6) {
         state.dungeonSpawnTimer = 0;
@@ -3044,6 +3109,7 @@ function boot() {
   if (params.get('breed') === '1') state.breedDemo = true;
   if (params.get('nametag') === '1') state.nameTagDemo = true;
   if (params.get('city') === '1') state.tpCity = true;
+  if (params.get('trial') === '1') state.tpTrial = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

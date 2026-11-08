@@ -666,7 +666,7 @@ function ITEMS_FOR_CREATIVE() {
     'glass', 'water', 'bedrock', 'clay', 'cactus',
     'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'snow', 'ice',
     'crafting_table', 'furnace', 'chest', 'bed', 'farmland', 'door', 'fence', 'enchanting_table', 'brewing_stand', 'torch', 'tnt', 'rose', 'dandelion', 'tall_grass',
-    'stone_bricks', 'deepslate', 'sculk', 'sculk_sensor', 'bookshelf', 'sign', 'prismarine', 'sea_lantern', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
+    'stone_bricks', 'deepslate', 'sculk', 'sculk_sensor', 'trial_spawner', 'bookshelf', 'sign', 'prismarine', 'sea_lantern', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
     'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
     'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken', 'wheat_seeds', 'wheat',
     'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread', 'bow', 'flint', 'egg', 'shears', 'bucket', 'water_bucket', 'lava_bucket', 'emerald', 'book', 'fishing_rod', 'cod', 'cooked_cod', 'firework_rocket', 'name_tag', 'glass_bottle', 'water_bottle', 'potion_healing', 'potion_strength', 'potion_speed',

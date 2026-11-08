@@ -34,6 +34,7 @@ export const ACHIEVEMENTS = [
   { id: 'fish', name: '钓鱼佬', desc: '钓到第一条鱼' },
   { id: 'breed', name: '牧场主', desc: '让两只动物生出幼崽' },
   { id: 'ancient_city', name: '远古回响', desc: '发现一座远古城市' },
+  { id: 'trial', name: '试炼挑战者', desc: '发现一座试炼密室' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -167,6 +168,7 @@ export class Achievements {
         else if (data.kind === 'mansion') this.unlock('mansion');
         else if (data.kind === 'monument') this.unlock('monument');
         else if (data.kind === 'ancient_city') this.unlock('ancient_city');
+        else if (data.kind === 'trial') this.unlock('trial');
         break;
       default:
         break;

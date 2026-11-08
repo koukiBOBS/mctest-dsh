@@ -92,6 +92,7 @@ export const TILE_NAMES = [
   'deepslate',
   'sculk',
   'sculk_sensor',
+  'trial_spawner',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2243,6 +2244,22 @@ const TILE_PAINTERS = {
     fillRect(b, 6, 10, 4, 2, C('#7cf0e0'));
     setPx(b, 7, 10, C('#e8fffa'));
     for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#2a8a8a'));
+  },
+
+  trial_spawner(b, rng) {
+    noiseFill(b, rng, [
+      ['#2a2a30', 6],
+      ['#1e1e24', 5],
+      ['#3a3a42', 3],
+    ]);
+    // 铁笼
+    for (let x = 2; x < 15; x += 4) vline(b, 1, 14, x, C('#5a5a62'));
+    hline(b, 1, 14, 2, C('#5a5a62'));
+    hline(b, 1, 14, 13, C('#5a5a62'));
+    // 中央火焰
+    fillRect(b, 6, 5, 4, 8, C('#e06a1a'));
+    fillRect(b, 7, 7, 2, 5, C('#ffd24a'));
+    setPx(b, 8, 8, C('#fff2b0'));
   },
 
 };

@@ -80,6 +80,7 @@ export const BLOCK = Object.freeze({
   DEEPSLATE: 72,
   SCULK: 73,
   SCULK_SENSOR: 74,
+  TRIAL_SPAWNER: 75,
 });
 
 export const BLOCK_DEFS = [];
@@ -312,6 +313,9 @@ def(BLOCK.SCULK, 'sculk', '幽匿块', {
 });
 def(BLOCK.SCULK_SENSOR, 'sculk_sensor', '幽匿感测体', {
   tiles: { all: 'sculk_sensor' }, hardness: 0.6, sound: 'grass', light: 2,
+});
+def(BLOCK.TRIAL_SPAWNER, 'trial_spawner', '试炼刷怪笼', {
+  tiles: { all: 'trial_spawner' }, hardness: 2.5, sound: 'stone', light: 6,
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },

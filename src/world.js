@@ -103,6 +103,8 @@ export class World {
     this.mansionCache = new Map();
     this.monumentCache = new Map();
     this.cityCache = new Map();
+    this.trialCache = new Map();
+    this.trialSpawners = new Map();
     this.ruinCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
@@ -547,6 +549,7 @@ export class World {
     this.stampMonuments(chunk);
     this.stampRuinedPortals(chunk);
     this.stampAncientCities(chunk);
+    this.stampTrialChambers(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
   }
@@ -1733,6 +1736,124 @@ export class World {
     for (let dx = -6; dx <= 6; dx++) {
       for (let dz = -6; dz <= 6; dz++) {
         const m = this.getAncientCity(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 试炼密室 ----------------
+  getTrialChamber(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.trialCache.has(key)) return this.trialCache.get(key);
+    if (this.trialCache.size > 600) this.trialCache.clear();
+    const h = (n) => hash2i(cx * 73 + n, cz * 47 - n, this.seed + 2700 + n);
+    let m = null;
+    if (h(1) < 0.35) {
+      const centerX = Math.round(cx * 384 + 30 + h(2) * 320);
+      const centerZ = Math.round(cz * 384 + 30 + h(3) * 320);
+      const y = 20 + Math.floor(h(4) * 14);
+      m = {
+        centerX,
+        centerZ,
+        y,
+        minX: centerX - 16,
+        maxX: centerX + 16,
+        minZ: centerZ - 16,
+        maxZ: centerZ + 16,
+      };
+    }
+    this.trialCache.set(key, m);
+    return m;
+  }
+
+  stampTrialChambers(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 384);
+    const ccz = Math.floor(z0 / 384);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getTrialChamber(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampTrialChamber(chunk, m);
+      }
+    }
+  }
+
+  stampTrialChamber(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const D = BLOCK.DEEPSLATE;
+    const B = BLOCK.STONE_BRICKS;
+    const baseY = m.y;
+    const half = 10;
+    for (let dx = -half - 1; dx <= half + 1; dx++) {
+      for (let dz = -half - 1; dz <= half + 1; dz++) {
+        set(m.centerX + dx, baseY - 2, m.centerZ + dz, D);
+        set(m.centerX + dx, baseY - 1, m.centerZ + dz, D);
+        for (let dy = 0; dy <= 6; dy++) set(m.centerX + dx, baseY + dy, m.centerZ + dz, BLOCK.AIR);
+        set(m.centerX + dx, baseY + 7, m.centerZ + dz, D);
+        if (Math.abs(dx) === half || Math.abs(dz) === half) {
+          for (let dy = 0; dy <= 6; dy++) {
+            set(m.centerX + dx, baseY + dy, m.centerZ + dz, (dx + dz) % 2 === 0 ? D : B);
+          }
+        }
+      }
+    }
+    // 立柱
+    for (const [px, pz] of [[-5, -5], [5, -5], [-5, 5], [5, 5]]) {
+      for (let dy = 0; dy <= 3; dy++) set(m.centerX + px, baseY + dy, m.centerZ + pz, B);
+    }
+    // 试炼刷怪笼
+    set(m.centerX, baseY + 1, m.centerZ, BLOCK.TRIAL_SPAWNER);
+    this.trialSpawners.set(m.centerX + ',' + (baseY + 1) + ',' + m.centerZ, {
+      x: m.centerX,
+      y: baseY + 1,
+      z: m.centerZ,
+    });
+    // 宝箱
+    const chests = [
+      [m.centerX - 7, baseY, m.centerZ - 7],
+      [m.centerX + 7, baseY, m.centerZ + 7],
+    ];
+    for (const [cx, cy, cz] of chests) {
+      set(cx, cy, cz, BLOCK.CHEST);
+      const key = cx + ',' + cy + ',' + cz;
+      if (!this.structureChests.has(key)) this.structureChests.set(key, this._trialLoot(cx, cz));
+    }
+    // 入口通道（-Z）
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = 0; dy <= 2; dy++) set(m.centerX + dx, baseY + dy, m.centerZ - half, BLOCK.AIR);
+    }
+  }
+
+  _trialLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 17 + n, cz * 23 - n, this.seed + 2800 + n);
+    const loot = [];
+    loot.push({ id: 'diamond', count: 1 + Math.floor(r(1) * 3) });
+    loot.push({ id: 'emerald', count: 2 + Math.floor(r(2) * 4) });
+    if (r(3) < 0.85) loot.push({ id: 'iron_ingot', count: 2 + Math.floor(r(4) * 4) });
+    if (r(5) < 0.6) loot.push({ id: 'apple', count: 1 });
+    if (r(6) < 0.7) loot.push({ id: 'arrow', count: 6 + Math.floor(r(7) * 10) });
+    return loot;
+  }
+
+  findNearestTrialChamber(x, z) {
+    const ccx = Math.floor(x / 384);
+    const ccz = Math.floor(z / 384);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -6; dx <= 6; dx++) {
+      for (let dz = -6; dz <= 6; dz++) {
+        const m = this.getTrialChamber(ccx + dx, ccz + dz);
         if (!m) continue;
         const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
         if (d < bestD) {

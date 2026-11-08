@@ -356,6 +356,8 @@ export class MobManager {
     mob.yawTarget = mob.yaw;
     if (type === 'villager') {
       mob.profession = ['farmer', 'librarian', 'blacksmith'][Math.floor(Math.random() * 3)];
+      mob.tradeLevel = 1;
+      mob.tradeCount = 0;
     }
 
     this._buildModel(mob);
