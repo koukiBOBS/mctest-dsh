@@ -947,6 +947,7 @@ export class Player {
     }
     this.world.setBlock(px, py, pz, placeId);
     if (placeDef.name === 'pumpkin') this.game.trySummonGolem?.(px, py, pz);
+    if (placeId === BLOCK.WITHER_SKULL) this.game.trySummonWither?.(px, py, pz);
     if (this.mode === 'survival') this.inventory.consumeHeld(1);
     this.game.achievements?.onEvent('place', { name: placeDef.name });
     this.game.sound?.play(placeSoundName(item.block), { volume: 0.5 });

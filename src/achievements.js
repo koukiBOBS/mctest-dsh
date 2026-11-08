@@ -42,6 +42,7 @@ export const ACHIEVEMENTS = [
   { id: 'wither', name: '凋灵之骨', desc: '击败一只凋灵骷髅' },
   { id: 'blaze', name: '烈焰克星', desc: '击败一只烈焰人' },
   { id: 'foodie', name: '美食家', desc: '吃过 6 种不同食物' },
+  { id: 'wither_boss', name: '凋灵讨伐者', desc: '击败凋灵 Boss' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -130,6 +131,9 @@ export class Achievements {
         break;
       case 'breed':
         this.unlock('breed');
+        break;
+      case 'wither_boss':
+        this.unlock('wither_boss');
         break;
       case 'blaze':
         this.unlock('blaze');

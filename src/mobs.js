@@ -120,6 +120,17 @@ export const MOB_TYPES = {
     ],
     colors: { body: 0x2f2f2f, white: 0xf1f1ec, snout: 0xd9a3a5, horn: 0xd9d5c5, leg: 0x3a3a3a, eye: 0x111111 },
   },
+  wither: {
+    id: 'wither',
+    name: '凋灵',
+    hostile: true,
+    width: 1.8,
+    height: 3.0,
+    health: 300,
+    speed: 1.0,
+    drops: [{ id: 'nether_star', min: 1, max: 1 }],
+    colors: { body: 0x1a1a1a, bone: 0x2e2e2e, eye: 0xc02020, dark: 0x101010 },
+  },
   wither_skeleton: {
     id: 'wither_skeleton',
     name: '凋灵骷髅',
@@ -132,6 +143,7 @@ export const MOB_TYPES = {
     drops: [
       { id: 'bone', min: 1, max: 2 },
       { id: 'coal', min: 0, max: 1 },
+      { id: 'wither_skull', min: 1, max: 1, chance: 0.5 },
     ],
     colors: { bone: 0x2a2a2a, dark: 0x1a1a1a, eye: 0x8a1a1a, blade: 0x555560 },
   },
@@ -316,6 +328,7 @@ export class MobManager {
     this._arrowGeo = getArrowGeometry();
     this._fireballGeo = new THREE.SphereGeometry(0.2, 8, 6);
     this._fireballMat = new THREE.MeshBasicMaterial({ color: 0xffa040 });
+    this._witherMat = new THREE.MeshBasicMaterial({ color: 0x2a2a3a });
     this._arrowMat = getArrowMaterial();
   }
 
@@ -479,6 +492,7 @@ export class MobManager {
     const list = def.drops || [];
     for (let i = 0; i < list.length; i++) {
       const d = list[i];
+      if (d.chance !== undefined && Math.random() > d.chance) continue;
       const n = randInt(d.min, d.max);
       if (n <= 0) continue;
       const ox = mob.x + (Math.random() - 0.5) * 0.5;
@@ -606,6 +620,10 @@ export class MobManager {
       mob.health = 0;
       if (mob.type === 'wither_skeleton') {
         this.game.achievements?.onEvent('wither', {});
+      }
+      if (mob.type === 'wither') {
+        this.game.achievements?.onEvent('wither_boss', {});
+        this.game.chat?.log('凋灵被击败了！');
       }
       if (mob.type === 'blaze') {
         this.game.achievements?.onEvent('blaze', {});
@@ -799,6 +817,11 @@ export class MobManager {
       this._updateTint(mob);
       return;
     }
+    if (mob.type === 'wither') {
+      this._updateWither(mob, dt);
+      this._updateTint(mob);
+      return;
+    }
     if (mob.type === 'blaze') {
       this._updateBlaze(mob, dt);
       this._updateTint(mob);
@@ -937,6 +960,37 @@ export class MobManager {
   // ------------------------------------------------------------
   // AI
   // ------------------------------------------------------------
+  _updateWither(mob, dt) {
+    const player = this.player;
+    mob.hoverPhase = (mob.hoverPhase || 0) + dt;
+    if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
+    if (mob.shootCd === undefined) mob.shootCd = 1.5;
+    mob.shootCd -= dt;
+    if (mob.group) mob.group.position.set(mob.x, mob.y + Math.sin(mob.hoverPhase * 2) * 0.3, mob.z);
+    if (!player || player.dead) return;
+    const dx = player.x - mob.x;
+    const dy = player.y + 1.5 - (mob.y + 2);
+    const dz = player.z - mob.z;
+    const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
+    const targetY = player.y + 4 + Math.sin(mob.hoverPhase) * 0.5;
+    mob.y += (targetY - mob.y) * Math.min(1, dt * 1.5);
+    if (dist > 7) {
+      mob.x += (dx / dist) * 1.1 * dt;
+      mob.z += (dz / dist) * 1.1 * dt;
+    }
+    mob.yaw = Math.atan2(dx, dz);
+    if (mob.group) mob.group.rotation.y = mob.yaw;
+    if (mob.shootCd <= 0 && dist < 22) {
+      mob.shootCd = 2 + Math.random() * 1.5;
+      const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+      this._spawnFireball(
+        { x: mob.x, y: mob.y + 2.2, z: mob.z },
+        { x: dx / len, y: dy / len, z: dz / len },
+        { color: 0x2a2a3a, damage: 6, wither: true },
+      );
+    }
+  }
+
   _updateBlaze(mob, dt) {
     const player = this.player;
     mob.hoverPhase = (mob.hoverPhase || 0) + dt;
@@ -1503,10 +1557,10 @@ export class MobManager {
     return false;
   }
 
-  _spawnFireball(origin, dir) {
+  _spawnFireball(origin, dir, opts = {}) {
     let mesh = null;
     if (this.scene) {
-      mesh = new THREE.Mesh(this._fireballGeo, this._fireballMat);
+      mesh = new THREE.Mesh(this._fireballGeo, opts.color === 0x2a2a3a ? this._witherMat : this._fireballMat);
       mesh.position.set(origin.x, origin.y, origin.z);
       this.scene.add(mesh);
     }
@@ -1514,6 +1568,8 @@ export class MobManager {
       x: origin.x, y: origin.y, z: origin.z,
       vx: dir.x * 11, vy: dir.y * 11, vz: dir.z * 11,
       life: 4, mesh,
+      damage: opts.damage || 4,
+      wither: !!opts.wither,
     });
     this._playSound('pop', 0.25);
   }
@@ -1531,8 +1587,12 @@ export class MobManager {
       if (!dead && player && !player.dead) {
         const d = Math.hypot(player.x - fb.x, player.y + 1 - fb.y, player.z - fb.z);
         if (d < 0.8) {
-          player.damage(4, '被烈焰人烧死了');
-          if (typeof player.burnTimer === 'number') player.burnTimer = 4;
+          player.damage(fb.damage || 4, '被烈焰人烧死了');
+          if (fb.wither) {
+            if (typeof player.witherTimer === 'number') player.witherTimer = 8;
+          } else if (typeof player.burnTimer === 'number') {
+            player.burnTimer = 4;
+          }
           dead = true;
         }
       }
@@ -1849,6 +1909,7 @@ export class MobManager {
       case 'villager': this._modelVillager(mob, root, c); break;
       case 'ender_dragon': this._modelDragon(mob, root, c); break;
       case 'shulker': this._modelShulker(mob, root, c); break;
+      case 'wither': this._modelWither(mob, root, c); break;
       case 'wither_skeleton': this._modelWitherSkeleton(mob, root, c); break;
       case 'blaze': this._modelBlaze(mob, root, c); break;
       case 'iron_golem': this._modelIronGolem(mob, root, c); break;
@@ -1959,6 +2020,20 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelWither(mob, root, c) {
+    this._addBox(mob, root, c.body, 1.5, 1.4, 0.9, 0, 1.5, 0);
+    this._addBox(mob, root, c.bone, 1.4, 0.12, 0.8, 0, 1.15, 0);
+    this._addBox(mob, root, c.bone, 1.4, 0.12, 0.8, 0, 1.55, 0);
+    this._addBox(mob, root, c.bone, 1.4, 0.12, 0.8, 0, 1.95, 0);
+    const center = this._makeHead(mob, root, c.bone, 0.7, 0.7, 0.7, 0, 2.5, 0);
+    this._addBox(mob, center, c.eye, 0.12, 0.08, 0.03, 0, 0.1, 0.36);
+    const left = this._makeHead(mob, root, c.bone, 0.55, 0.55, 0.55, -0.8, 2.25, 0.1);
+    this._addBox(mob, left, c.eye, 0.1, 0.07, 0.03, 0, 0.08, 0.29);
+    const right = this._makeHead(mob, root, c.bone, 0.55, 0.55, 0.55, 0.8, 2.25, 0.1);
+    this._addBox(mob, right, c.eye, 0.1, 0.07, 0.03, 0, 0.08, 0.29);
+    this._addBox(mob, root, c.dark, 1.6, 0.3, 0.5, 0, 0.7, 0.2);
   }
 
   _modelWitherSkeleton(mob, root, c) {

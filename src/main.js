@@ -414,6 +414,26 @@ function closeLectern() {
   if (state.isTouch) hideTouch(false);
 }
 
+function trySummonWither(x, y, z) {
+  const w = state.world;
+  if (!w) return false;
+  const S = BLOCK.SOUL_SAND;
+  const K = BLOCK.WITHER_SKULL;
+  const skulls = [[x - 1, y, z], [x, y, z], [x + 1, y, z]];
+  const sands = [[x - 1, y - 1, z], [x, y - 1, z], [x + 1, y - 1, z], [x, y - 1, z - 1]];
+  for (const [sx, sy, sz] of skulls) if (w.getBlock(sx, sy, sz) !== K) return false;
+  for (const [sx, sy, sz] of sands) if (w.getBlock(sx, sy, sz) !== S) return false;
+  for (const [sx, sy, sz] of skulls) w.setBlock(sx, sy, sz, 0);
+  for (const [sx, sy, sz] of sands) w.setBlock(sx, sy, sz, 0);
+  const wither = state.mobs?.spawn('wither', x + 0.5, y - 1, z + 0.5);
+  if (wither) {
+    state.chat?.log('凋灵被召唤了！');
+    state.sound?.play('thunder', { volume: 0.5 });
+    return true;
+  }
+  return false;
+}
+
 function trySummonGolem(x, y, z) {
   const w = state.world;
   if (!w) return false;
@@ -1124,6 +1144,7 @@ function startGame(opts = {}) {
   game.launchFirework = () => launchFirework();
   game.useCampfire = (hit) => useCampfire(hit);
   game.trySummonGolem = (x, y, z) => trySummonGolem(x, y, z);
+  game.trySummonWither = (x, y, z) => trySummonWither(x, y, z);
   game.ringBell = (hit) => ringBell(hit);
   game.openLectern = (hit) => openLectern(hit);
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
@@ -1398,6 +1419,25 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.witherBossDemo && state.player) {
+        state.witherBossDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 6);
+            const z = Math.floor(p.z + f.z * 6);
+            const gy = state.world.getSurfaceY(x, z) + 1;
+            for (const [dx, dz] of [[-1, 0], [0, 0], [1, 0], [0, -1]]) {
+              state.world.setBlock(x + dx, gy - 1, z + dz, BLOCK.SOUL_SAND);
+            }
+            for (const dx of [-1, 0, 1]) state.world.setBlock(x + dx, gy, z, BLOCK.WITHER_SKULL);
+            trySummonWither(x, gy, z);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.fortressDemo && state.player) {
         state.fortressDemo = false;
@@ -3210,11 +3250,14 @@ function loop(now) {
   }
   const bossBar = $('boss-bar');
   if (bossBar) {
-    const dragon = state.mobs && state.mobs.mobs ? state.mobs.mobs.find((m) => m.type === 'ender_dragon' && !m.removed) : null;
-    if (dragon && state.running) {
+    const list = state.mobs && state.mobs.mobs ? state.mobs.mobs : [];
+    const boss = list.find((m) => !m.removed && (m.type === 'ender_dragon' || m.type === 'wither'));
+    if (boss && state.running) {
       bossBar.classList.remove('hidden');
+      const name = $('boss-name');
+      if (name) name.textContent = boss.type === 'wither' ? '凋灵' : '末影龙';
       const fill = $('boss-fill');
-      if (fill) fill.style.width = Math.round(Math.max(0, dragon.health / dragon.maxHealth) * 100) + '%';
+      if (fill) fill.style.width = Math.round(Math.max(0, boss.health / boss.maxHealth) * 100) + '%';
     } else {
       bossBar.classList.add('hidden');
     }
@@ -3464,6 +3507,7 @@ function boot() {
   if (params.get('ship') === '1') state.shipDemo = true;
   if (params.get('golem') === '1') state.golemDemo = true;
   if (params.get('fortress') === '1') state.fortressDemo = true;
+  if (params.get('witherboss') === '1') state.witherBossDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

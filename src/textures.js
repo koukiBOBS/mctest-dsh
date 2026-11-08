@@ -103,6 +103,7 @@ export const TILE_NAMES = [
   'nether_bricks',
   'soul_sand',
   'nether_wart',
+  'wither_skull',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -188,6 +189,7 @@ export const ITEM_ICON_NAMES = [
   'cooked_mutton',
   'blaze_rod',
   'potion_regen',
+  'nether_star',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -2410,6 +2412,16 @@ const TILE_PAINTERS = {
     }
   },
 
+  wither_skull(b, rng) {
+    fillPoly(b, [[5, 6], [11, 6], [11, 15], [5, 15]], C('#2a2a2a'));
+    fillPoly(b, [[5, 8], [7, 6], [9, 6], [11, 8]], C('#3a3a3a'));
+    fillRect(b, 6, 9, 2, 2, C('#b02a2a'));
+    fillRect(b, 9, 9, 2, 2, C('#b02a2a'));
+    fillRect(b, 6, 13, 2, 2, C('#4a4a4a'));
+    fillRect(b, 9, 13, 2, 2, C('#4a4a4a'));
+    setPx(b, 8, 12, C('#141414'));
+  },
+
 };
 
 function paintTile(name) {
@@ -3765,6 +3777,12 @@ const ICON_PAINTERS = {
     fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#d84a8a'));
     setPx(b, 14, 18, C('#ffb0d0'));
     fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  nether_star(b, rng) {
+    fillPoly(b, [[16, 2], [19, 11], [28, 13], [20, 17], [22, 28], [16, 21], [10, 28], [12, 17], [4, 13], [13, 11]], C('#f0f0e0'));
+    fillPoly(b, [[16, 6], [18, 12], [24, 13], [18, 16], [19, 22], [16, 18], [13, 22], [14, 16], [8, 13], [14, 12]], C('#ffffff'));
+    setPx(b, 16, 12, C('#fff8c0'));
   },
 
 };

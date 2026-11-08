@@ -90,6 +90,7 @@ export const BLOCK = Object.freeze({
   NETHER_BRICKS: 82,
   SOUL_SAND: 83,
   NETHER_WART: 84,
+  WITHER_SKULL: 85,
 });
 
 export const BLOCK_DEFS = [];
@@ -336,6 +337,10 @@ def(BLOCK.NETHER_WART, 'nether_wart', '下界疣', {
   tiles: { all: 'nether_wart' }, solid: false, opaque: false, transparent: true,
   cross: true, needsSupport: true, hardness: 0.05, sound: 'grass', drop: 'nether_wart',
 });
+def(BLOCK.WITHER_SKULL, 'wither_skull', '凋灵骷髅头', {
+  tiles: { all: 'wither_skull' }, solid: false, opaque: false, transparent: true,
+  cross: true, needsSupport: true, hardness: 1.0, sound: 'grass',
+});
 def(BLOCK.IRON_BLOCK, 'iron_block', '铁块', {
   tiles: { all: 'iron_block' }, hardness: 3.0, sound: 'stone',
 });
@@ -452,6 +457,7 @@ const EXTRA_ITEMS = {
   golden_apple: { display: '金苹果', icon: 'golden_apple', food: 4 },
   blaze_rod: { display: '烈焰棒', icon: 'blaze_rod', maxStack: 64 },
   potion_regen: { display: '再生药水', icon: 'potion_regen', maxStack: 1, potion: 'regen' },
+  nether_star: { display: '下界之星', icon: 'nether_star', maxStack: 64 },
   firework_rocket: { display: '烟花火箭', icon: 'firework_rocket', maxStack: 16 },
   name_tag: { display: '命名牌', icon: 'name_tag', maxStack: 16 },
   shulker_shell: { display: '潜影壳', icon: 'shulker_shell', maxStack: 64 },
