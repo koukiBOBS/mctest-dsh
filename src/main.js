@@ -42,6 +42,8 @@ const state = {
   weather: null,
   playerModel: null,
   thirdPerson: false,
+  qualityScale: 1,
+  qualityTimer: 0,
   isTouch: false,
   settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false },
   overlayReturn: 'title',
@@ -391,6 +393,10 @@ function startGame(opts = {}) {
   if (!save && typeof state.startPitch === 'number' && isFinite(state.startPitch)) player.pitch = state.startPitch;
   if (!save && typeof state.startYaw === 'number' && isFinite(state.startYaw)) player.yaw = state.startYaw;
   player.lookSensitivity = 0.0024 * state.settings.sens;
+  if (typeof state.startQuality === 'number') {
+    state.qualityScale = state.startQuality;
+    renderer.setQualityScale(state.startQuality);
+  }
   if (state.startThirdPerson) {
     state.thirdPerson = true;
     renderer.setThirdPerson(true);
@@ -747,7 +753,7 @@ function updateDebug() {
   debugEl.textContent =
     `FPS ${state.fps.toFixed(0)}   XYZ ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n` +
     `区块 ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)}   生物群系 ${biome}   朝向 ${yawDirectionName()}\n` +
-    `模式 ${p.mode === 'creative' ? '创造' : '生存'}${p.flying ? '·飞行' : ''}   时间 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}   生物 ${state.mobs ? state.mobs.count() : 0}   注视 ${target}${mobInfo}`;
+    `模式 ${p.mode === 'creative' ? '创造' : '生存'}${p.flying ? '·飞行' : ''}   时间 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}   生物 ${state.mobs ? state.mobs.count() : 0}   画质 ${Math.round(state.qualityScale * 100)}%   注视 ${target}${mobInfo}`;
 }
 
 // ---------------- 界面操作 ----------------
@@ -1393,6 +1399,20 @@ function loop(now) {
       }
       state.items?.update(dt);
       state.weather?.update(dt);
+      state.qualityTimer += dt;
+      if (state.qualityTimer > 6) {
+        state.qualityTimer = 0;
+        if (state.renderer && state.renderer.setQualityScale) {
+          if (state.fps > 0 && state.fps < 38 && state.qualityScale > 0.55) {
+            state.qualityScale = Math.max(0.55, state.qualityScale - 0.15);
+            state.renderer.setQualityScale(state.qualityScale);
+            showToast('性能不足：已自动降低渲染分辨率');
+          } else if (state.fps > 56 && state.qualityScale < 1) {
+            state.qualityScale = Math.min(1, state.qualityScale + 0.05);
+            state.renderer.setQualityScale(state.qualityScale);
+          }
+        }
+      }
       state.world.time += dt;
       state.world.updateCrops(dt);
       state.saveClock += dt;
@@ -1567,6 +1587,10 @@ function boot() {
   if (params.get('village') === '1') state.tpVillage = true;
   if (params.get('dungeon') === '1') state.tpDungeon = true;
   if (params.get('thirdperson') === '1') state.startThirdPerson = true;
+  if (params.get('quality')) {
+    const q = Number(params.get('quality'));
+    if (isFinite(q)) state.startQuality = Math.max(0.5, Math.min(1, q));
+  }
   if (params.get('bed') === '1') state.bedDemo = true;
   if (params.get('farm') === '1') state.farmDemo = true;
   if (params.get('mineshaft') === '1') state.tpMineshaft = true;

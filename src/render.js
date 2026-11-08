@@ -134,6 +134,7 @@ export class Renderer {
     const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.35 : 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.qualityScale = 1;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(this.fov, 1, 0.08, 700);
@@ -363,6 +364,17 @@ export class Renderer {
       depthWrite: opts.depthWrite !== false,
       side: opts.side !== undefined ? opts.side : THREE.FrontSide,
     });
+  }
+
+  // 动态画质：降低/恢复渲染分辨率（用于低帧率设备）
+  setQualityScale(scale) {
+    this.qualityScale = Math.max(0.5, Math.min(1, scale));
+    const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    const base = Math.min(window.devicePixelRatio || 1, coarse ? 1.35 : 2);
+    this.renderer.setPixelRatio(base * this.qualityScale);
+    const w = this.canvas.clientWidth || window.innerWidth;
+    const h = this.canvas.clientHeight || window.innerHeight;
+    this.renderer.setSize(w, h, false);
   }
 
   // ---------- 尺寸 ----------

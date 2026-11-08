@@ -521,10 +521,24 @@ export class MobManager {
     if (!this.player || this.player.dead) return;
     if (this.mobs.length >= this.maxMobs) return;
 
+    const hostileCount = this._countHostile(true);
     if (this.sunElev > 0.15) {
       if (this._countHostile(false) < PASSIVE_LIMIT) this._trySpawn(false);
+      // 白天也会在阴暗洞穴里刷敌对生物
+      if (hostileCount < HOSTILE_LIMIT && Math.random() < 0.6) {
+        const p = this._findCaveSpawnPoint();
+        if (p) this.spawn(choose(HOSTILE_KINDS), p.x, p.y, p.z);
+      }
     } else if (this.sunElev < -0.1) {
-      if (this._countHostile(true) < HOSTILE_LIMIT) this._trySpawn(true);
+      if (hostileCount < HOSTILE_LIMIT) {
+        // 夜晚：洞穴 + 地表
+        if (Math.random() < 0.45) {
+          const p = this._findCaveSpawnPoint();
+          if (p) this.spawn(choose(HOSTILE_KINDS), p.x, p.y, p.z);
+        } else {
+          this._trySpawn(true);
+        }
+      }
     }
   }
 
@@ -570,7 +584,31 @@ export class MobManager {
       if (world.getBlock(ix, sy + 1, iz) !== 0) continue;
       if (world.getBlock(ix, sy + 2, iz) !== 0) continue;
 
+      // 敌对生物需要足够暗（火把附近不刷怪）
+      if (!passive && typeof world.getLight === 'function' && world.getLight(ix, sy + 1, iz) >= 8) continue;
+
       return { x: ix + 0.5, y: sy + 1, z: iz + 0.5 };
+    }
+    return null;
+  }
+
+  _findCaveSpawnPoint() {
+    const world = this.world;
+    const player = this.player;
+    if (!world || !player || typeof world.getBlock !== 'function') return null;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const angle = Math.random() * TAU;
+      const dist = randRange(8, 26);
+      const ix = Math.floor(player.x + Math.sin(angle) * dist);
+      const iz = Math.floor(player.z + Math.cos(angle) * dist);
+      const iy = Math.floor(player.y + randRange(-14, 10));
+      if (iy < 4 || iy > CHUNK_H - 4) continue;
+      if (typeof world.isLoaded === 'function' && !world.isLoaded(ix, iz)) continue;
+      const floor = world.getBlock(ix, iy - 1, iz);
+      if (!floor || floor === 12 || floor === 28) continue;
+      if (world.getBlock(ix, iy, iz) !== 0 || world.getBlock(ix, iy + 1, iz) !== 0) continue;
+      if (typeof world.getLight === 'function' && world.getLight(ix, iy, iz) >= 8) continue;
+      return { x: ix + 0.5, y: iy, z: iz + 0.5 };
     }
     return null;
   }
@@ -619,6 +657,34 @@ export class MobManager {
 
     this._animateMob(mob, dt);
     this._updateTint(mob);
+
+    // 僵尸 / 骷髅白天在露天会燃烧
+    if ((mob.type === 'zombie' || mob.type === 'skeleton') && this.sunElev > 0.35) {
+      if (this._isSkyExposed(mob)) {
+        mob.burnTimer = (mob.burnTimer || 0) + dt;
+        if (mob.burnTimer > 1) {
+          mob.burnTimer = 0;
+          mob.health -= 1;
+          mob.hurtTimer = 0.2;
+          if (this.game.sound) this.game.sound.play('hurt', { volume: 0.18 });
+          if (mob.health <= 0) {
+            this._removeMob(mob, true);
+            return;
+          }
+        }
+      }
+    } else {
+      mob.burnTimer = 0;
+    }
+  }
+
+  _isSkyExposed(mob) {
+    const world = this.world;
+    if (!world || typeof world.getSurfaceY !== 'function') return false;
+    const x = Math.floor(mob.x);
+    const z = Math.floor(mob.z);
+    const top = world.getSurfaceY(x, z);
+    return mob.y >= top - 1;
   }
 
   // ------------------------------------------------------------
