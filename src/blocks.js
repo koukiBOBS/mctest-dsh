@@ -64,6 +64,7 @@ export const BLOCK = Object.freeze({
   DOOR_Z: 56,
   DOOR_X_OPEN: 57,
   DOOR_Z_OPEN: 58,
+  FENCE: 59,
 });
 
 export const BLOCK_DEFS = [];
@@ -242,6 +243,10 @@ def(BLOCK.DOOR_Z_OPEN, 'door_z_open', '门', {
   tiles: { all: 'door' }, model: 'door', doorAxis: 'z', doorOpen: true,
   solid: false, opaque: false, transparent: true, hardness: 0.4, sound: 'wood', drop: 'door',
 });
+def(BLOCK.FENCE, 'fence', '栅栏', {
+  tiles: { all: 'oak_planks' }, model: 'fence', fence: true,
+  solid: true, opaque: false, transparent: true, hardness: 0.4, sound: 'wood', drop: 'fence',
+});
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },
   hardness: 0.1,
@@ -328,6 +333,7 @@ const EXTRA_ITEMS = {
   water_bucket: { display: '水桶', icon: 'water_bucket', maxStack: 1 },
   lava_bucket: { display: '岩浆桶', icon: 'lava_bucket', maxStack: 1 },
   door: { display: '门', icon: 'door', block: BLOCK.DOOR_X },
+  fence: { display: '栅栏', icon: 'fence', block: BLOCK.FENCE },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };

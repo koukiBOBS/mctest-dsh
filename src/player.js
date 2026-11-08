@@ -282,11 +282,14 @@ export class Player {
     const bz1 = Math.floor(maxZ);
 
     for (let bx = bx0; bx <= bx1; bx++) {
-      for (let by = by0; by <= by1; by++) {
+      for (let by = Math.max(0, by0 - 1); by <= by1; by++) {
         for (let bz = bz0; bz <= bz1; bz++) {
-          if (!isSolidBlock(this.world.getBlock(bx, by, bz))) continue;
+          const bid = this.world.getBlock(bx, by, bz);
+          if (!isSolidBlock(bid)) continue;
+          const bdef = getBlockDef(bid);
+          const bh = bdef.fence ? 1.5 : 1;
           if (maxX <= bx || minX >= bx + 1) continue;
-          if (maxY <= by || minY >= by + 1) continue;
+          if (maxY <= by || minY >= by + bh) continue;
           if (maxZ <= bz || minZ >= bz + 1) continue;
 
           if (axis === 'x') {
@@ -301,7 +304,7 @@ export class Player {
             if (this.vy > 0) {
               this.y = by - PLAYER_H - EPS;
             } else {
-              this.y = by + 1 + EPS;
+              this.y = by + bh + EPS;
               this.onGround = true;
             }
             this.vy = 0;

@@ -128,6 +128,7 @@ export const ITEM_ICON_NAMES = [
   'bucket',
   'water_bucket',
   'lava_bucket',
+  'fence',
 ];
 
 /* =====================================================================
@@ -3115,6 +3116,16 @@ const ICON_PAINTERS = {
     fillRect(b, 12, 18, 3, 1, C('#ffd24a'));
     thickLine(b, 9, 12, 15, 5, 1, C('#8a8d94'));
     thickLine(b, 15, 5, 23, 12, 1, C('#8a8d94'));
+  },
+
+  fence(b, rng) {
+    // 两根立柱 + 横杆
+    fillRect(b, 6, 5, 4, 24, C('#8a5a2e'));
+    fillRect(b, 22, 5, 4, 24, C('#8a5a2e'));
+    fillRect(b, 5, 9, 22, 3, C('#a9743f'));
+    fillRect(b, 5, 19, 22, 3, C('#a9743f'));
+    setPx(b, 7, 6, C('#c2924f'));
+    setPx(b, 23, 6, C('#c2924f'));
   },
 
 };

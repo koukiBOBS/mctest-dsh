@@ -189,6 +189,43 @@ function pushCross(buf, lx, ly, lz, wxp, wzp, tileName, light, getLightWorld) {
   }
 }
 
+function pushBoxFaces(buf, lx, ly, lz, x0, y0, z0, x1, y1, z1, tileName, light, getLightWorld, wxp, wzp) {
+  const uv = tileUV(tileName);
+  const cornerUV = [[0, 0], [1, 0], [0, 1], [1, 1]];
+  const sky = Math.max(0.4, Math.min(1, light));
+  const blockLight = Math.min(1, getLightWorld(wxp, ly, wzp) / 15);
+  const faces = [
+    { shade: 0.64, pts: [[x1, y0, z1], [x1, y0, z0], [x1, y1, z1], [x1, y1, z0]] },
+    { shade: 0.64, pts: [[x0, y0, z0], [x0, y0, z1], [x0, y1, z0], [x0, y1, z1]] },
+    { shade: 1.0, pts: [[x0, y1, z1], [x1, y1, z1], [x0, y1, z0], [x1, y1, z0]] },
+    { shade: 0.5, pts: [[x0, y0, z0], [x1, y0, z0], [x0, y0, z1], [x1, y0, z1]] },
+    { shade: 0.82, pts: [[x1, y0, z0], [x0, y0, z0], [x1, y1, z0], [x0, y1, z0]] },
+    { shade: 0.82, pts: [[x0, y0, z1], [x1, y0, z1], [x0, y1, z1], [x1, y1, z1]] },
+  ];
+  for (const face of faces) {
+    const base = buf.count;
+    for (let i = 0; i < 4; i++) {
+      const p = face.pts[i];
+      buf.positions.push(lx + p[0], ly + p[1], lz + p[2]);
+      buf.lights.push(blockLight, sky, face.shade);
+      buf.uvs.push(uv.u0 + cornerUV[i][0] * (uv.u1 - uv.u0), uv.v0 + cornerUV[i][1] * (uv.v1 - uv.v0));
+    }
+    buf.indices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+    buf.count += 4;
+  }
+}
+
+function pushFence(buf, lx, ly, lz, tileName, light, getLightWorld, wxp, wzp) {
+  // 中心立柱
+  pushBoxFaces(buf, lx, ly, lz, 0.4, 0, 0.4, 0.6, 1.5, 0.6, tileName, light, getLightWorld, wxp, wzp);
+  // 横向栏杆（X 方向）
+  pushBoxFaces(buf, lx, ly, lz, 0, 0.35, 0.44, 1, 0.5, 0.56, tileName, light, getLightWorld, wxp, wzp);
+  pushBoxFaces(buf, lx, ly, lz, 0, 0.9, 0.44, 1, 1.05, 0.56, tileName, light, getLightWorld, wxp, wzp);
+  // 纵向栏杆（Z 方向）
+  pushBoxFaces(buf, lx, ly, lz, 0.44, 0.35, 0, 0.56, 0.5, 1, tileName, light, getLightWorld, wxp, wzp);
+  pushBoxFaces(buf, lx, ly, lz, 0.44, 0.9, 0, 0.56, 1.05, 1, tileName, light, getLightWorld, wxp, wzp);
+}
+
 function pushDoor(buf, lx, ly, lz, axis, open, tileName, light, getLightWorld, wxp, wzp) {
   const uv = tileUV(tileName);
   const y0 = 0.02;
@@ -268,6 +305,12 @@ export function buildChunkGeometry(world, chunk) {
         if (def.cross) {
           pushCross(plants, lx, y, lz, x0 + lx, z0 + lz, def.tiles.all, light, getLightWorld);
           quads += 2;
+          continue;
+        }
+
+        if (def.model === 'fence') {
+          pushFence(plants, lx, y, lz, def.tiles.all, light, getLightWorld, x0 + lx, z0 + lz);
+          quads += 6;
           continue;
         }
 

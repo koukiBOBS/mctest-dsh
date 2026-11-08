@@ -560,6 +560,30 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.fenceDemo && state.player) {
+        state.fenceDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+            const bx = Math.floor(p.x + f.x * 5);
+            const bz = Math.floor(p.z + f.z * 5);
+            for (let i = -2; i <= 2; i++) {
+              const x = bx + Math.round(right.x * i);
+              const z = bz + Math.round(right.z * i);
+              const gy = state.world.getSurfaceY(x, z);
+              state.world.setBlock(x, gy + 1, z, BLOCK.FENCE);
+            }
+            state.inventory.setSlot(0, { id: 'fence', count: 16 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            state.chat?.log('演示：已放置 5 格栅栏（高度 1.5 格，跳不过去）');
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
+      }
       if (state.doorDemo && state.player) {
         state.doorDemo = false;
         setTimeout(() => {
@@ -1870,6 +1894,7 @@ function boot() {
   if (params.get('sheardemo') === '1') state.shearDemo = true;
   if (params.get('tntdemo') === '1') state.tntDemo = true;
   if (params.get('doordemo') === '1') state.doorDemo = true;
+  if (params.get('fencedemo') === '1') state.fenceDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {
