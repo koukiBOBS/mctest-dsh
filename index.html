@@ -142,6 +142,16 @@
     <div class="setting-row"><span>音效</span><label class="switch"><input id="set-mute" type="checkbox"><span></span></label></div>
     <div class="setting-row"><span>显示 FPS / 调试</span><label class="switch"><input id="set-debug" type="checkbox"><span></span></label></div>
     <div class="setting-block">
+      <div class="setting-label">存档备份</div>
+      <div class="setting-hint">导出当前存档为 JSON 文件，或从文件导入（覆盖本机存档）。</div>
+      <input id="save-input" type="file" accept=".json,application/json" class="hidden">
+      <div class="pack-actions">
+        <button id="btn-export-save" class="mc-btn small">导出存档</button>
+        <button id="btn-import-save" class="mc-btn small">导入存档…</button>
+      </div>
+      <div id="save-status" class="pack-status">未操作</div>
+    </div>
+    <div class="setting-block">
       <div class="setting-label">原版资源包（可选）</div>
       <div class="setting-hint">选择 MC Java 版资源包 zip 或若干 PNG，只保存在本机，不会上传。</div>
       <input id="pack-input" type="file" accept=".zip,.png,image/png" multiple class="hidden">
@@ -245,6 +255,7 @@
         <p>52. 海里能碰到沉船，宝箱里有海洋之心；/locate shipwreck 可定位</p>
         <p>53. 下落时攻击可打出 1.5 倍暴击；48 格外生物模型会自动隐藏</p>
         <p>54. 沙滩下埋着宝箱，沉船里的藏宝图能指向它；/locate treasure 可定位</p>
+        <p>55. 设置里可导出/导入存档 JSON，方便备份到其他设备</p>
       </div>
     </div>
     <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>

@@ -1104,10 +1104,9 @@ function applyRuntimeSettings() {
 }
 
 // ---------------- 存档 ----------------
-function saveGame() {
-  if (!state.running || !state.world || !state.player || !state.inventory) return false;
-  try {
-    const data = {
+function buildSaveData() {
+  if (!state.running || !state.world || !state.player || !state.inventory) return null;
+  return {
       version: 1,
       seed: state.world.seed,
       mode: state.player.mode,
@@ -1120,13 +1119,62 @@ function saveGame() {
       achievements: state.achievements ? state.achievements.serialize() : [],
       stats: state.stats || null,
       crops: state.world ? state.world.serializeCrops() : [],
-      signs: state.world ? state.world.serializeSigns() : [],
-    };
+    signs: state.world ? state.world.serializeSigns() : [],
+  };
+}
+
+function saveGame() {
+  if (!state.running || !state.world || !state.player || !state.inventory) return false;
+  try {
+    const data = buildSaveData();
+    if (!data) return false;
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     return true;
   } catch (e) {
     showToast('存档失败：本地存储空间不足');
     return false;
+  }
+}
+
+function exportSave() {
+  try {
+    const data = state.running ? buildSaveData() : (() => {
+      try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; }
+    })();
+    if (!data) {
+      showToast('当前没有可导出的存档');
+      return;
+    }
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'minecraft-web-save.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    $('save-status').textContent = '已导出 minecraft-web-save.json';
+    showToast('存档已导出');
+  } catch (e) {
+    showToast('导出失败：' + (e && e.message ? e.message : e));
+  }
+}
+
+async function importSaveFile(file) {
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data || typeof data.seed !== 'number' || !data.player) throw new Error('不是有效的存档文件');
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    $('save-status').textContent = '已导入：' + file.name;
+    showToast('存档已导入，正在载入…');
+    showScreen('title');
+    refreshContinueButton();
+    startGame({ save: data });
+  } catch (e) {
+    $('save-status').textContent = '导入失败';
+    showToast('导入失败：' + (e && e.message ? e.message : e));
   }
 }
 
@@ -3678,6 +3726,13 @@ function bindUI() {
   $('enchant-close').addEventListener('click', closeEnchant);
   $('brew-close').addEventListener('click', closeBrew);
   $('sign-close').addEventListener('click', () => closeSignEditor(false));
+  $('btn-export-save').addEventListener('click', exportSave);
+  $('btn-import-save').addEventListener('click', () => $('save-input').click());
+  $('save-input').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) importSaveFile(file);
+    e.target.value = '';
+  });
   $('lectern-close').addEventListener('click', closeLectern);
   $('beacon-close').addEventListener('click', closeBeacon);
   $('achievements-close').addEventListener('click', closeAchievements);
@@ -3867,6 +3922,7 @@ function boot() {
     state.settings.distance = d;
     syncSettingsUI();
   }
+  if (params.get('settings') === '1') setTimeout(() => openSettings(), 300);
   if (params.get('autostart')) {
     const seed = params.get('seed') ? Number(params.get('seed')) : undefined;
     const mode = params.get('mode') === 'creative' ? 'creative' : 'survival';
