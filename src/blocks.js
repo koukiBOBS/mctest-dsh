@@ -428,6 +428,7 @@ const EXTRA_ITEMS = {
   firework_rocket: { display: '烟花火箭', icon: 'firework_rocket', maxStack: 16 },
   name_tag: { display: '命名牌', icon: 'name_tag', maxStack: 16 },
   shulker_shell: { display: '潜影壳', icon: 'shulker_shell', maxStack: 64 },
+  ink_sac: { display: '墨囊', icon: 'ink_sac', maxStack: 64 },
   glass_bottle: { display: '玻璃瓶', icon: 'glass_bottle', maxStack: 16 },
   water_bottle: { display: '水瓶', icon: 'water_bottle', maxStack: 1 },
   potion_healing: { display: '治疗药水', icon: 'potion_healing', maxStack: 1, potion: 'healing' },

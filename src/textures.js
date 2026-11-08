@@ -171,6 +171,7 @@ export const ITEM_ICON_NAMES = [
   'firework_rocket',
   'name_tag',
   'shulker_shell',
+  'ink_sac',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3587,6 +3588,13 @@ const ICON_PAINTERS = {
     fillPoly(b, [[9, 12], [12, 8], [20, 8], [23, 12], [21, 21], [11, 21]], C('#a06aa8'));
     for (let i = 0; i < 8; i++) setPx(b, 8 + ((rng() * 16) | 0), 9 + ((rng() * 12) | 0), C('#c890d0'));
     fillRect(b, 13, 13, 6, 3, C('#5a3a62'));
+  },
+
+  ink_sac(b, rng) {
+    fillPoly(b, [[8, 10], [16, 5], [24, 10], [23, 22], [16, 27], [9, 22]], C('#1a1a24'));
+    fillPoly(b, [[11, 12], [16, 8], [21, 12], [20, 20], [16, 23], [12, 20]], C('#2e2e3e'));
+    fillRect(b, 14, 3, 4, 5, C('#3a3a4a'));
+    setPx(b, 13, 12, C('#6a6a8a'));
   },
 
 };

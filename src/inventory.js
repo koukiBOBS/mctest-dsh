@@ -669,7 +669,7 @@ function ITEMS_FOR_CREATIVE() {
     'stone_bricks', 'deepslate', 'sculk', 'sculk_sensor', 'trial_spawner', 'campfire', 'bell', 'lectern', 'purpur_block', 'bookshelf', 'sign', 'prismarine', 'sea_lantern', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
     'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
     'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken', 'wheat_seeds', 'wheat',
-    'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread', 'bow', 'flint', 'egg', 'shears', 'bucket', 'water_bucket', 'lava_bucket', 'emerald', 'book', 'fishing_rod', 'cod', 'cooked_cod', 'firework_rocket', 'name_tag', 'shulker_shell', 'glass_bottle', 'water_bottle', 'potion_healing', 'potion_strength', 'potion_speed',
+    'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread', 'bow', 'flint', 'egg', 'shears', 'bucket', 'water_bucket', 'lava_bucket', 'emerald', 'book', 'fishing_rod', 'cod', 'cooked_cod', 'firework_rocket', 'name_tag', 'shulker_shell', 'ink_sac', 'glass_bottle', 'water_bottle', 'potion_healing', 'potion_strength', 'potion_speed',
     'wood_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'diamond_pickaxe',
     'wood_axe', 'stone_axe', 'iron_axe', 'diamond_axe',
     'wood_hoe', 'stone_hoe', 'iron_hoe',

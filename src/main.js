@@ -638,9 +638,11 @@ const ENCHANTS = [
   { id: 'efficiency', name: '效率', desc: '挖掘速度 +35%/级', cost: 3, kind: 'tool' },
   { id: 'sharpness', name: '锋利', desc: '攻击伤害 +1/级', cost: 5, kind: 'weapon' },
   { id: 'unbreaking', name: '耐久', desc: '耐久消耗概率减免', cost: 2, kind: 'tool' },
+  { id: 'protection', name: '保护', desc: '受到伤害 -3%/级', cost: 4, kind: 'armor' },
+  { id: 'fortune', name: '时运', desc: '矿石额外掉落', cost: 6, kind: 'pickaxe' },
 ];
 
-const ENCHANT_NAMES = { efficiency: '效率', sharpness: '锋利', unbreaking: '耐久' };
+const ENCHANT_NAMES = { efficiency: '效率', sharpness: '锋利', unbreaking: '耐久', protection: '保护', fortune: '时运' };
 
 function enchantName(enchant) {
   return (ENCHANT_NAMES[enchant.id] || enchant.id) + ' ' + (['', 'I', 'II', 'III'][enchant.level] || enchant.level);
@@ -697,7 +699,11 @@ function renderEnchantOffers() {
     ? `手持：${itemDisplay(h.id)}${h.enchant ? '（' + enchantName(h.enchant) + '）' : ''} · 经验等级 ${state.player ? state.player.xpLevel : 0}${bonus > 0 ? ' · 书架加成 -' + bonus : ''}`
     : '请手持工具或武器';
   box.innerHTML = ENCHANTS.map((e, i) => {
-    const compatible = !!tool && (e.kind === 'weapon' ? (tool.type === 'sword' || tool.type === 'axe') : tool.type !== 'sword');
+    let compatible;
+    if (e.kind === 'weapon') compatible = !!tool && (tool.type === 'sword' || tool.type === 'axe');
+    else if (e.kind === 'pickaxe') compatible = !!tool && tool.type === 'pickaxe';
+    else if (e.kind === 'armor') compatible = !!(item && item.armor);
+    else compatible = !!tool && tool.type !== 'sword';
     const current = h && h.enchant && h.enchant.id === e.id ? h.enchant.level : 0;
     const cost = Math.max(1, e.cost + current * 2 - bonus);
     const maxed = current >= 3;
@@ -714,13 +720,16 @@ function applyEnchant(index) {
   const h = state.inventory && state.inventory.held;
   if (!offer || !h) return;
   const item = getItem(h.id);
-  if (!item || !item.tool) {
-    showToast('请手持工具或武器');
+  if (!item) {
+    showToast('请手持工具/武器/盔甲');
     return;
   }
-  const compatible = offer.kind === 'weapon'
-    ? (item.tool.type === 'sword' || item.tool.type === 'axe')
-    : item.tool.type !== 'sword';
+  const tool = item.tool;
+  let compatible;
+  if (offer.kind === 'weapon') compatible = !!tool && (tool.type === 'sword' || tool.type === 'axe');
+  else if (offer.kind === 'pickaxe') compatible = !!tool && tool.type === 'pickaxe';
+  else if (offer.kind === 'armor') compatible = !!item.armor;
+  else compatible = !!tool && tool.type !== 'sword';
   if (!compatible) {
     showToast('该附魔不适用于这件物品');
     return;
@@ -1961,7 +1970,9 @@ function updateHUD() {
   $('health-row').innerHTML = healthHTML;
   $('hunger-row').innerHTML = hungerHTML;
   const held = state.inventory && state.inventory.held;
-  $('held-name').textContent = held ? itemDisplay(held.id) + (held.count > 1 ? ' ×' + held.count : '') : '';
+  $('held-name').textContent = held
+    ? itemDisplay(held.id) + (held.count > 1 ? ' ×' + held.count : '') + (held.enchant ? ' · ' + enchantName(held.enchant) : '')
+    : '';
   updateHandItem();
   const xpFill = $('xp-fill');
   const xpLevelEl = $('xp-level');

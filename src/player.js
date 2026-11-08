@@ -501,7 +501,20 @@ export class Player {
       if (hit.id === BLOCK.WHEAT_3 && Math.random() < 0.6) {
         this._dropItem('wheat_seeds', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
       }
-      if (hit.id === BLOCK.GRAVEL && Math.random() < 0.12) {
+      {
+      const heldStack = this.inventory.held;
+      const fortune = heldStack && heldStack.enchant && heldStack.enchant.id === 'fortune' ? heldStack.enchant.level : 0;
+      const oreIds = [BLOCK.COAL_ORE, BLOCK.IRON_ORE, BLOCK.GOLD_ORE, BLOCK.DIAMOND_ORE];
+      if (fortune > 0 && oreIds.includes(hit.id)) {
+        const base = breakDrop(hit.id, this.inventory.held ? this.inventory.held.id : null);
+        if (base && base.id) {
+          for (let i = 0; i < fortune; i++) {
+            if (Math.random() < 0.6) this._dropItem(base.id, 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+          }
+        }
+      }
+    }
+    if (hit.id === BLOCK.GRAVEL && Math.random() < 0.12) {
         this._dropItem('flint', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
       }
       if (tool && def.tool === tool.type) this.inventory.damageHeld(1);
@@ -874,6 +887,13 @@ export class Player {
     if (this.dead || this.mode === 'creative') return;
     const points = this.inventory && this.inventory.armorDefense ? this.inventory.armorDefense() : 0;
     if (points > 0) amount = Math.max(1, amount * (1 - Math.min(0.8, points * 0.04)));
+    let protection = 0;
+    if (this.inventory && this.inventory.armor) {
+      for (const stack of this.inventory.armor) {
+        if (stack && stack.enchant && stack.enchant.id === 'protection') protection += stack.enchant.level;
+      }
+    }
+    if (protection > 0) amount = Math.max(1, amount * (1 - Math.min(0.4, protection * 0.03)));
     this.health -= amount;
     this.hurtFlash = 0.45;
     this.game.sound?.play('hurt', { volume: 0.5 });

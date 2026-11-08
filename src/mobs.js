@@ -142,6 +142,28 @@ export const MOB_TYPES = {
     drops: [],
     colors: { body: 0x14141c, wing: 0x1e1e2a, spine: 0x2a2a3a, eye: 0xd04aff },
   },
+  bat: {
+    id: 'bat',
+    name: '蝙蝠',
+    hostile: false,
+    width: 0.4,
+    height: 0.4,
+    health: 4,
+    speed: 2.0,
+    drops: [],
+    colors: { body: 0x2a2020, wing: 0x3a2a2a, eye: 0xe8a040 },
+  },
+  squid: {
+    id: 'squid',
+    name: '鱿鱼',
+    hostile: false,
+    width: 0.7,
+    height: 0.7,
+    health: 6,
+    speed: 1.0,
+    drops: [{ id: 'ink_sac', min: 1, max: 2 }],
+    colors: { body: 0x3a6a8a, dark: 0x2a4a6a, eye: 0x101010 },
+  },
   villager: {
     id: 'villager',
     name: '村民',
@@ -570,6 +592,10 @@ export class MobManager {
     if (this.mobs.length >= this.maxMobs) return;
 
     const hostileCount = this._countHostile(true);
+    if (Math.random() < 0.2) {
+      const sq = this._findSquidSpawnPoint();
+      if (sq) this.spawn('squid', sq.x, sq.y, sq.z);
+    }
     if (this.sunElev > 0.15) {
       if (this._countHostile(false) < PASSIVE_LIMIT) this._trySpawn(false);
       // 白天也会在阴暗洞穴里刷敌对生物
@@ -578,6 +604,11 @@ export class MobManager {
         if (p) this.spawn(choose(HOSTILE_KINDS), p.x, p.y, p.z);
       }
     } else if (this.sunElev < -0.1) {
+      // 夜晚偶尔生成蝙蝠
+      if (Math.random() < 0.25) {
+        const b = this._findBatSpawnPoint();
+        if (b) this.spawn('bat', b.x, b.y, b.z);
+      }
       if (hostileCount < HOSTILE_LIMIT) {
         // 夜晚：洞穴 + 地表
         if (Math.random() < 0.45) {
@@ -640,6 +671,43 @@ export class MobManager {
     return null;
   }
 
+  _findBatSpawnPoint() {
+    const world = this.world;
+    const player = this.player;
+    if (!world || !player) return null;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 8 + Math.random() * 16;
+      const ix = Math.floor(player.x + Math.sin(angle) * dist);
+      const iz = Math.floor(player.z + Math.cos(angle) * dist);
+      const iy = Math.floor(player.y + (Math.random() - 0.5) * 10);
+      if (iy < 4 || iy > CHUNK_H - 4) continue;
+      if (typeof world.isLoaded === 'function' && !world.isLoaded(ix, iz)) continue;
+      if (world.getBlock(ix, iy, iz) !== 0 || world.getBlock(ix, iy + 1, iz) !== 0) continue;
+      if (typeof world.getLight === 'function' && world.getLight(ix, iy, iz) >= 8) continue;
+      return { x: ix + 0.5, y: iy, z: iz + 0.5 };
+    }
+    return null;
+  }
+
+  _findSquidSpawnPoint() {
+    const world = this.world;
+    const player = this.player;
+    if (!world || !player) return null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 10 + Math.random() * 18;
+      const ix = Math.floor(player.x + Math.sin(angle) * dist);
+      const iz = Math.floor(player.z + Math.cos(angle) * dist);
+      if (typeof world.isLoaded === 'function' && !world.isLoaded(ix, iz)) continue;
+      const iy = SEA_LEVEL - 2 - Math.floor(Math.random() * 6);
+      if (world.getBlock(ix, iy, iz) !== 12) continue;
+      if (world.getBlock(ix, iy + 1, iz) !== 12) continue;
+      return { x: ix + 0.5, y: iy, z: iz + 0.5 };
+    }
+    return null;
+  }
+
   _findCaveSpawnPoint() {
     const world = this.world;
     const player = this.player;
@@ -672,6 +740,16 @@ export class MobManager {
     }
     if (mob.type === 'shulker') {
       this._updateShulker(mob, dt);
+      this._updateTint(mob);
+      return;
+    }
+    if (mob.type === 'bat') {
+      this._updateBat(mob, dt);
+      this._updateTint(mob);
+      return;
+    }
+    if (mob.type === 'squid') {
+      this._updateSquid(mob, dt);
       this._updateTint(mob);
       return;
     }
@@ -793,6 +871,53 @@ export class MobManager {
   // ------------------------------------------------------------
   // AI
   // ------------------------------------------------------------
+  _updateBat(mob, dt) {
+    mob.flap = (mob.flap || 0) + dt * 12;
+    if (mob.batWings) {
+      for (const wing of mob.batWings) {
+        wing.rotation.z = Math.sin(mob.flap) * 0.8 * (wing.userData.side || 1);
+      }
+    }
+    if (mob.homeY === undefined) mob.homeY = mob.y;
+    mob.wanderT = (mob.wanderT || 0) - dt;
+    if (mob.wanderT <= 0) {
+      mob.wanderT = 1 + Math.random() * 2;
+      mob.ai.dirX = Math.sin(Math.random() * Math.PI * 2);
+      mob.ai.dirZ = Math.cos(Math.random() * Math.PI * 2);
+    }
+    mob.x += mob.ai.dirX * 1.8 * dt;
+    mob.z += mob.ai.dirZ * 1.8 * dt;
+    mob.y += (mob.homeY + Math.sin(mob.flap * 0.3) * 0.8 - mob.y) * Math.min(1, dt * 2);
+    mob.yawTarget = Math.atan2(mob.ai.dirX, mob.ai.dirZ);
+    if (mob.group) {
+      mob.group.position.set(mob.x, mob.y, mob.z);
+      mob.group.rotation.y = mob.yawTarget;
+    }
+  }
+
+  _updateSquid(mob, dt) {
+    if (mob.homeY === undefined) mob.homeY = mob.y;
+    mob.wanderT = (mob.wanderT || 0) - dt;
+    if (mob.wanderT <= 0) {
+      mob.wanderT = 1.5 + Math.random() * 2;
+      mob.ai.dirX = Math.sin(Math.random() * Math.PI * 2);
+      mob.ai.dirZ = Math.cos(Math.random() * Math.PI * 2);
+    }
+    mob.x += mob.ai.dirX * 0.7 * dt;
+    mob.z += mob.ai.dirZ * 0.7 * dt;
+    mob.y += (mob.homeY - mob.y) * Math.min(1, dt * 2);
+    if (mob.tentacles) {
+      for (let i = 0; i < mob.tentacles.length; i++) {
+        mob.tentacles[i].rotation.x = Math.sin(mob.flap * 0.8 + i) * 0.25;
+      }
+    }
+    mob.flap = (mob.flap || 0) + dt * 2.5;
+    if (mob.group) {
+      mob.group.position.set(mob.x, mob.y, mob.z);
+      mob.group.rotation.y = Math.atan2(mob.ai.dirX, mob.ai.dirZ);
+    }
+  }
+
   _updateShulker(mob, dt) {
     const player = this.player;
     mob.hoverPhase = (mob.hoverPhase || 0) + dt;
@@ -1538,6 +1663,8 @@ export class MobManager {
       case 'villager': this._modelVillager(mob, root, c); break;
       case 'ender_dragon': this._modelDragon(mob, root, c); break;
       case 'shulker': this._modelShulker(mob, root, c); break;
+      case 'bat': this._modelBat(mob, root, c); break;
+      case 'squid': this._modelSquid(mob, root, c); break;
       default: this._addBox(mob, root, 0xffffff, 0.5, 0.5, 0.5, 0, 0.5, 0); break;
     }
 
@@ -1643,6 +1770,40 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelBat(mob, root, c) {
+    this._addBox(mob, root, c.body, 0.28, 0.24, 0.36, 0, 0.2, 0);
+    const head = this._makeHead(mob, root, c.body, 0.2, 0.2, 0.18, 0, 0.2, 0.2);
+    this._addBox(mob, head, c.wing, 0.1, 0.12, 0.04, -0.06, 0.12, 0);
+    this._addBox(mob, head, c.wing, 0.1, 0.12, 0.04, 0.06, 0.12, 0);
+    this._addBox(mob, head, c.eye, 0.04, 0.04, 0.02, -0.05, 0.02, 0.1);
+    this._addBox(mob, head, c.eye, 0.04, 0.04, 0.02, 0.05, 0.02, 0.1);
+    mob.batWings = [];
+    for (let side = -1; side <= 1; side += 2) {
+      const wing = new THREE.Group();
+      wing.position.set(side * 0.14, 0.26, 0);
+      wing.userData.side = side;
+      root.add(wing);
+      this._addBox(mob, wing, c.wing, 0.7, 0.04, 0.32, side * 0.35, 0, 0);
+      mob.batWings.push(wing);
+    }
+  }
+
+  _modelSquid(mob, root, c) {
+    this._addBox(mob, root, c.body, 0.7, 0.7, 0.7, 0, 0.5, 0);
+    this._addBox(mob, root, c.dark, 0.72, 0.12, 0.72, 0, 0.12, 0);
+    this._addBox(mob, root, c.eye, 0.08, 0.08, 0.04, -0.16, 0.62, 0.34);
+    this._addBox(mob, root, c.eye, 0.08, 0.08, 0.04, 0.16, 0.62, 0.34);
+    mob.tentacles = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const t = new THREE.Group();
+      t.position.set(Math.cos(angle) * 0.22, 0.1, Math.sin(angle) * 0.22);
+      root.add(t);
+      this._addBox(mob, t, c.dark, 0.12, 0.45, 0.12, 0, -0.22, 0);
+      mob.tentacles.push(t);
+    }
   }
 
   _modelShulker(mob, root, c) {
