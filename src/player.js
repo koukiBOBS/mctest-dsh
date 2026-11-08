@@ -962,6 +962,7 @@ export class Player {
     this.hunger = Math.min(20, this.hunger + item.food * 2);
     this.health = Math.min(20, this.health + 2);
     if (held.id === 'golden_apple') this.health = Math.min(20, this.health + 6);
+    this.game.achievements?.onEvent('eat', { id: held.id });
     this.inventory.consumeHeld(1);
     this.game.sound?.play('pop', { volume: 0.5 });
     this.game.onInventoryChange?.();

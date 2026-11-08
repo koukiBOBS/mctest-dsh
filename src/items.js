@@ -37,6 +37,18 @@ export class ItemEntityManager {
     if (!id || count <= 0) return null;
     const tex = this._texture(id);
     if (!tex) return null;
+    if (!opts.noMerge) {
+      for (const other of this.entities) {
+        if (other.id !== id) continue;
+        const dx = other.x - x;
+        const dy = other.y - y;
+        const dz = other.z - z;
+        if (dx * dx + dy * dy + dz * dz < 2.25) {
+          other.count += count;
+          return other;
+        }
+      }
+    }
     if (this.entities.length >= this.maxEntities) {
       this._remove(0);
     }

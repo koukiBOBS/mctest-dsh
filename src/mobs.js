@@ -337,9 +337,14 @@ export class MobManager {
     this._updateLight();
     this._updateSpawning(rawDt);
 
+    this._frame = (this._frame || 0) + 1;
     for (let i = this.mobs.length - 1; i >= 0; i--) {
       const mob = this.mobs[i];
       if (!mob || mob.removed) continue;
+      if (this._frame % 2 === 0 && this.player) {
+        const far = Math.hypot(mob.x - this.player.x, mob.z - this.player.z) > 40;
+        if (far) continue;
+      }
       this._updateMob(mob, dt);
     }
 
@@ -601,6 +606,9 @@ export class MobManager {
       mob.health = 0;
       if (mob.type === 'wither_skeleton') {
         this.game.achievements?.onEvent('wither', {});
+      }
+      if (mob.type === 'blaze') {
+        this.game.achievements?.onEvent('blaze', {});
       }
       if (mob.type === 'ender_dragon') {
         this.game.player?.addXp?.(80);
