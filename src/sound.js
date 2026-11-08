@@ -132,6 +132,7 @@ export class SoundEngine {
         case 'land': this._land(t, volume, pitch, pan); break;
         case 'hurt': this._hurt(t, volume, pitch, pan); break;
         case 'thunder': this._thunder(t, volume, pitch, pan); break;
+        case 'bow': this._bow(t, volume, pitch, pan); break;
         case 'click': this._click(t, volume, pitch, pan); break;
         case 'craft': this._craft(t, volume, pitch, pan); break;
         case 'pop': this._pop(t, volume, pitch, pan); break;
@@ -620,6 +621,40 @@ export class SoundEngine {
   }
 
   // ---------------------------------------------------------------- 环境音
+
+  _bow(t, volume, pitch, pan) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240 * pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(90 * pitch, t + 0.18);
+      g.gain.setValueAtTime(MIN, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.02, volume * 0.5), t + 0.01);
+      g.gain.exponentialRampToValueAtTime(MIN, t + 0.26);
+      let out = g;
+      if (ctx.createStereoPanner) {
+        const panner = ctx.createStereoPanner();
+        panner.pan.value = pan;
+        g.connect(panner);
+        out = panner;
+        out.connect(this._master);
+        osc.onended = () => {
+          for (const n of [osc, g, panner]) { try { n.disconnect(); } catch (e) { /* ignore */ } }
+        };
+      } else {
+        out.connect(this._master);
+        osc.onended = () => {
+          for (const n of [osc, g]) { try { n.disconnect(); } catch (e) { /* ignore */ } }
+        };
+      }
+      osc.connect(g);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    } catch (e) { /* ignore */ }
+  }
 
   _thunder(t, volume, pitch, pan) {
     const ctx = this._ctx;

@@ -117,6 +117,9 @@ export const ITEM_ICON_NAMES = [
   'arrow',
   'clay_ball',
   'bread',
+  'bow',
+  'flint',
+  'egg',
 ];
 
 /* =====================================================================
@@ -2978,6 +2981,28 @@ const ICON_PAINTERS = {
       setPx(b, Math.round(x), Math.round(y) - 4, C('#f6e27a'));
     }
     fillRect(b, 5, 24, 4, 5, C('#9a7c22'));
+  },
+
+  bow(b, rng) {
+    const pts = [[21, 4], [15, 7], [10, 13], [9, 20], [11, 27], [16, 30]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      thickLine(b, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], 3, C('#8a5a2e'));
+    }
+    thickLine(b, 21, 4, 16, 30, 1, C('#efe8d6'));
+    fillRect(b, 7, 15, 4, 6, C('#5f3d1d'));
+    setPx(b, 14, 7, C('#a9743f'));
+  },
+
+  flint(b, rng) {
+    fillPoly(b, [[10, 11], [19, 7], [24, 15], [18, 24], [9, 21]], C('#4a4a52'));
+    fillPoly(b, [[13, 12], [19, 10], [21, 15], [16, 20]], C('#6a6a72'));
+    setPx(b, 15, 13, C('#8a8a92'));
+  },
+
+  egg(b, rng) {
+    fillPoly(b, [[16, 4], [23, 14], [22, 24], [11, 25], [8, 16]], C('#ddd6c6'));
+    fillPoly(b, [[16, 7], [21, 15], [20, 22], [12, 23], [10, 16]], C('#f8f2e4'));
+    setPx(b, 14, 13, C('#ffffff'));
   },
 
 };

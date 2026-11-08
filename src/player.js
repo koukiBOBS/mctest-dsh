@@ -58,6 +58,8 @@ export class Player {
     this.target = null;
     this.mobTarget = null;
     this.attackCooldown = 0;
+    this.chargingBow = false;
+    this.bowCharge = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
     this.breakHeld = false;
@@ -127,6 +129,15 @@ export class Player {
     this._updateMobTarget();
     this._updateBreaking(dt);
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    if (this.chargingBow) {
+      const held = this.inventory.held;
+      if (!held || held.id !== 'bow' || this.dead) {
+        this.chargingBow = false;
+        this.bowCharge = 0;
+      } else {
+        this.bowCharge = Math.min(1, this.bowCharge + dt * 1.1);
+      }
+    }
     if (this.breakHeld && this.mobTarget && this.attackCooldown <= 0) this.attackAction();
     this._updateFootsteps(dt);
 
@@ -471,6 +482,9 @@ export class Player {
       if (hit.id === BLOCK.WHEAT_3 && Math.random() < 0.6) {
         this._dropItem('wheat_seeds', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
       }
+      if (hit.id === BLOCK.GRAVEL && Math.random() < 0.12) {
+        this._dropItem('flint', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+      }
       if (tool && def.tool === tool.type) this.inventory.damageHeld(1);
     }
 
@@ -499,6 +513,32 @@ export class Player {
     }
   }
 
+  startBowCharge() {
+    if (this.dead) return false;
+    const held = this.inventory.held;
+    if (!held || held.id !== 'bow') return false;
+    this.chargingBow = true;
+    this.bowCharge = 0;
+    return true;
+  }
+
+  releaseBow() {
+    if (!this.chargingBow) return false;
+    this.chargingBow = false;
+    const charge = Math.min(1, this.bowCharge);
+    this.bowCharge = 0;
+    if (charge < 0.12) return false;
+    if (this.inventory.countOf('arrow') <= 0) {
+      this.game.toast?.('没有箭可以射');
+      return false;
+    }
+    this.inventory.remove('arrow', 1);
+    const dir = this.forwardVector();
+    this.game.mobs?.shootPlayerArrow({ x: this.x, y: this.eyeY(), z: this.z }, dir, charge);
+    this.game.onInventoryChange?.();
+    return true;
+  }
+
   _useHoe() {
     const hit = this.target;
     if (!hit) return false;
@@ -523,6 +563,7 @@ export class Player {
 
   secondaryAction() {
     if (this.dead) return;
+    if (this.startBowCharge()) return;
     const held = this.inventory.held;
     const heldItem = held ? getItem(held.id) : null;
     if (heldItem && heldItem.tool && heldItem.tool.type === 'hoe') {

@@ -658,6 +658,16 @@ export class MobManager {
     this._animateMob(mob, dt);
     this._updateTint(mob);
 
+    // 鸡会定期下蛋
+    if (mob.type === 'chicken') {
+      if (mob.eggTimer === undefined) mob.eggTimer = 18 + Math.random() * 20;
+      mob.eggTimer -= dt;
+      if (mob.eggTimer <= 0) {
+        mob.eggTimer = 25 + Math.random() * 20;
+        if (this.game.dropItem) this.game.dropItem('egg', mob.x, mob.y + 0.4, mob.z, 1);
+      }
+    }
+
     // 僵尸 / 骷髅白天在露天会燃烧
     if ((mob.type === 'zombie' || mob.type === 'skeleton') && this.sunElev > 0.35) {
       if (this._isSkyExposed(mob)) {
@@ -707,6 +717,14 @@ export class MobManager {
 
     // ---------------- 被动生物 ----------------
     if (!def.hostile) {
+      // 手持小麦/种子时动物会靠近
+      const pInv = player.inventory;
+      const heldItem = pInv && pInv.held ? pInv.held.id : null;
+      if ((heldItem === 'wheat' || heldItem === 'wheat_seeds') && dist < 8 && dist > 1.2) {
+        this._setMove(mob, dx / dist, dz / dist, def.speed * 0.75);
+        this._face(mob, player.x, player.z);
+        return;
+      }
       if (ai.flee > 0) {
         ai.flee -= dt;
         let fx = mob.x - ai.fleeX;
@@ -917,7 +935,25 @@ export class MobManager {
     );
   }
 
-  _spawnArrow(x, y, z, vx, vy, vz) {
+  shootPlayerArrow(origin, dir, charge = 1) {
+    if (!origin || !dir) return;
+    const speed = 22 + 20 * Math.min(1, charge);
+    const dmg = Math.max(1, Math.round(charge * 6));
+    const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z) || 1;
+    this._spawnArrow(
+      origin.x,
+      origin.y,
+      origin.z,
+      (dir.x / len) * speed,
+      (dir.y / len) * speed,
+      (dir.z / len) * speed,
+      'player',
+      dmg,
+    );
+    if (this.game.sound) this.game.sound.play('bow', { volume: 0.6 });
+  }
+
+  _spawnArrow(x, y, z, vx, vy, vz, source = 'skeleton', damage = 2) {
     let mesh = null;
     if (this.scene) {
       mesh = new THREE.Mesh(this._arrowGeo, this._arrowMat);
@@ -925,7 +961,7 @@ export class MobManager {
       this.scene.add(mesh);
     }
 
-    const arrow = { x, y, z, vx, vy, vz, life: ARROW_LIFE, mesh };
+    const arrow = { x, y, z, vx, vy, vz, life: ARROW_LIFE, mesh, source, damage };
     if (mesh) this._orientArrow(arrow);
     this.arrows.push(arrow);
   }
@@ -936,6 +972,18 @@ export class MobManager {
     if (v.lengthSq() < 1e-8) return;
     v.normalize();
     arrow.mesh.quaternion.setFromUnitVectors(this._arrowForward, v);
+  }
+
+  _arrowHitsMob(arrow) {
+    for (const mob of this.mobs) {
+      if (!mob || mob.removed) continue;
+      const halfW = mob.width / 2 + 0.25;
+      if (Math.abs(arrow.x - mob.x) > halfW || Math.abs(arrow.z - mob.z) > halfW) continue;
+      if (arrow.y < mob.y - 0.25 || arrow.y > mob.y + mob.height + 0.25) continue;
+      this.hit(mob, arrow.damage || 2, arrow.vx * 0.05, arrow.vz * 0.05);
+      return true;
+    }
+    return false;
   }
 
   _updateArrows(dt) {
@@ -962,7 +1010,12 @@ export class MobManager {
 
           if (arrow.y < -8) { dead = true; break; }
           if (this._pointSolid(arrow.x, arrow.y, arrow.z)) { dead = true; break; }
-          if (this._arrowHitsPlayer(arrow)) { dead = true; break; }
+          if (arrow.source === 'player') {
+            if (this._arrowHitsMob(arrow)) { dead = true; break; }
+          } else if (this._arrowHitsPlayer(arrow)) {
+            dead = true;
+            break;
+          }
         }
       }
 

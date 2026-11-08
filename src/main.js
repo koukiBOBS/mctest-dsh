@@ -559,6 +559,29 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.bowDemo && state.player) {
+        state.bowDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            state.inventory.setSlot(0, { id: 'bow', count: 1 });
+            state.inventory.setSlot(1, { id: 'arrow', count: 16 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            const f = p.forwardVector();
+            const t = state.world.getSurfaceY(Math.floor(p.x + f.x * 6), Math.floor(p.z + f.z * 6));
+            state.mobs?.spawn('pig', p.x + f.x * 6, t + 1, p.z + f.z * 6);
+            p.startBowCharge();
+            setTimeout(() => {
+              p.bowCharge = 1;
+              p.releaseBow();
+              state.chat?.log('演示：已射出一箭');
+            }, 1200);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
+      }
       if (state.achDemo) {
         state.achDemo = false;
         const list = ['wood', 'workbench', 'pickaxe', 'stone', 'iron'];
@@ -1205,8 +1228,10 @@ function bindMouse() {
       state.player.secondaryAction();
     }
   });
-  window.addEventListener('mouseup', () => {
-    if (state.player) state.player.breakHeld = false;
+  window.addEventListener('mouseup', (e) => {
+    if (!state.player) return;
+    if (e.button === 2) state.player.releaseBow?.();
+    else state.player.breakHeld = false;
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('mousemove', (e) => {
@@ -1561,6 +1586,16 @@ function loop(now) {
     state.containerUI?.update(dt);
   }
 
+  const bowBar = $('bow-charge');
+  if (bowBar) {
+    if (state.player && state.player.chargingBow && !state.thirdPerson) {
+      bowBar.classList.remove('hidden');
+      if (bowBar.firstElementChild) bowBar.firstElementChild.style.width = Math.round(Math.min(1, state.player.bowCharge) * 100) + '%';
+    } else {
+      bowBar.classList.add('hidden');
+    }
+  }
+
   if (state.loading) updateLoading();
 
   if (state.player) {
@@ -1728,6 +1763,7 @@ function boot() {
   if (params.get('mineshaft') === '1') state.tpMineshaft = true;
   if (params.get('water') === '1') state.waterDemo = true;
   if (params.get('temple') === '1') state.tpTemple = true;
+  if (params.get('bowdemo') === '1') state.bowDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

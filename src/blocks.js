@@ -294,6 +294,9 @@ const EXTRA_ITEMS = {
   bread: { display: '面包', icon: 'bread', food: 5 },
   wheat_seeds: { display: '小麦种子', icon: 'wheat_seeds' },
   wheat: { display: '小麦', icon: 'wheat' },
+  bow: { display: '弓', icon: 'bow', maxStack: 1 },
+  flint: { display: '燧石', icon: 'flint' },
+  egg: { display: '鸡蛋', icon: 'egg' },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };

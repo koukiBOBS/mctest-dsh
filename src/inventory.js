@@ -603,7 +603,7 @@ function ITEMS_FOR_CREATIVE() {
     'stone_bricks', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
     'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
     'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken', 'wheat_seeds', 'wheat',
-    'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread',
+    'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread', 'bow', 'flint', 'egg',
     'wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe',
     'wooden_axe', 'stone_axe', 'iron_axe', 'wooden_hoe', 'stone_hoe', 'iron_hoe',
     'wooden_shovel', 'stone_shovel', 'iron_shovel',

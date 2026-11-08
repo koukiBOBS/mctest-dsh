@@ -76,6 +76,27 @@ body {
   margin-top: -1px;
 }
 
+#bow-charge {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 26px);
+  transform: translateX(-50%);
+  width: 64px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#bow-charge i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(#f2d24a, #c99a22);
+}
+
 #debug {
   position: absolute;
   top: 8px;
@@ -1220,7 +1241,28 @@ body.touch #hand-item {
 #held-name {
     bottom: calc(150px + env(safe-area-inset-bottom, 0px));
   }
-  #debug {
+  #bow-charge {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 26px);
+  transform: translateX(-50%);
+  width: 64px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#bow-charge i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(#f2d24a, #c99a22);
+}
+
+#debug {
     max-width: 66vw;
   }
   #chat {

@@ -20,6 +20,8 @@ export const RECIPES = [
   { id: 'iron_hoe', pattern: ['MM', ' S', ' S'], keys: { M: 'iron_ingot', S: 'stick' }, result: { id: 'iron_hoe', count: 1 } },
   { id: 'bed', pattern: ['WWW', 'PPP'], keys: { W: 'wool_white', P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'bed', count: 1 } },
   { id: 'torch', pattern: ['C', 'S'], keys: { C: 'coal', S: 'stick' }, result: { id: 'torch', count: 4 } },
+  { id: 'bow', pattern: [' SC', 'S C', ' SC'], keys: { S: 'stick', C: 'string' }, result: { id: 'bow', count: 1 } },
+  { id: 'arrow', pattern: ['F', 'S', 'E'], keys: { F: 'flint', S: 'stick', E: 'feather' }, result: { id: 'arrow', count: 4 } },
 
   // 石砖
   { id: 'stone_bricks', pattern: ['CC', 'CC'], keys: { C: 'cobblestone' }, result: { id: 'stone_bricks', count: 4 } },
