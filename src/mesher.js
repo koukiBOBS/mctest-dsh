@@ -122,7 +122,8 @@ function pushFace(buf, lx, ly, lz, wxp, wzp, face, tangents, tileName, sky, emis
   const ax = lx + dir[0];
   const ay = ly + dir[1];
   const az = lz + dir[2];
-  const lowered = liquid && dir[1] === 1 && getB(lx, ly + 1, lz) !== selfId;
+  const aboveId = getB(lx, ly + 1, lz);
+  const lowered = liquid && dir[1] === 1 && !(aboveId !== 0 && getBlockDef(aboveId).liquid);
   const [t1, t2] = tangents;
   const blockLight = emissive ? 1 : Math.min(1, getLightWorld(wxp + dir[0], ly + dir[1], wzp + dir[2]) / 15);
 

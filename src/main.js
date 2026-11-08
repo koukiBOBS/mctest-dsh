@@ -546,6 +546,25 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.waterDemo && state.player) {
+        state.waterDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+            const x = Math.floor(p.x + f.x * 3);
+            const z = Math.floor(p.z + f.z * 3);
+            const gy = state.world.getSurfaceY(x, z);
+            state.world.setBlock(x, gy + 1, z, BLOCK.WATER);
+            const lx = x + 3;
+            state.world.setBlock(lx, gy + 1, z, BLOCK.LAVA);
+            state.chat?.log('已放置水源与岩浆（水会流动并生成圆石）');
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 700);
+      }
       if (state.farmDemo && state.player) {
         state.farmDemo = false;
         setTimeout(() => {
@@ -1415,6 +1434,7 @@ function loop(now) {
       }
       state.world.time += dt;
       state.world.updateCrops(dt);
+      state.world.tickWater(dt);
       state.saveClock += dt;
       if (state.saveClock > 30) {
         state.saveClock = 0;
@@ -1594,6 +1614,7 @@ function boot() {
   if (params.get('bed') === '1') state.bedDemo = true;
   if (params.get('farm') === '1') state.farmDemo = true;
   if (params.get('mineshaft') === '1') state.tpMineshaft = true;
+  if (params.get('water') === '1') state.waterDemo = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

@@ -15,6 +15,7 @@ import {
   isSolidBlock,
   isLiquidBlock,
   isOpaqueBlock,
+  isWaterLike,
 } from './blocks.js';
 
 export const CHUNK_SX = 16;
@@ -87,6 +88,8 @@ export class World {
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.crops = new Map(); // "x,y,z" -> 下次生长时间
+    this.waterQueue = new Set();
+    this.waterTimer = 0;
     this._cropClock = 0;
     this.time = 0; // 世界时间（秒），用于昼夜
     this.spawn = { x: 0.5, y: 80, z: 0.5 };
@@ -229,6 +232,7 @@ export class World {
             chunk.maxY = Math.max(chunk.maxY, wy);
             const mdef = getBlockDef(id);
             if (mdef.light > 0) this.lightSources.set(wx + ',' + wy + ',' + wz, mdef.light);
+            if (isWaterLike(id)) this._scheduleWater(wx, wy, wz);
           }
         }
       }
@@ -934,7 +938,7 @@ export class World {
     }
   }
 
-  setBlock(x, y, z, id) {
+  setBlock(x, y, z, id, record = true) {
     if (y < 0 || y >= CHUNK_H) return;
     const cx = x >> 4;
     const cz = z >> 4;
@@ -963,13 +967,15 @@ export class World {
       }
       c.heightMap[lz * CHUNK_SX + lx] = top;
     }
-    // 记录玩家改动
-    let mods = this.modsByChunk.get(k);
-    if (!mods) {
-      mods = new Map();
-      this.modsByChunk.set(k, mods);
+    // 记录玩家改动（水流等临时方块不写入存档）
+    if (record) {
+      let mods = this.modsByChunk.get(k);
+      if (!mods) {
+        mods = new Map();
+        this.modsByChunk.set(k, mods);
+      }
+      mods.set(x + ',' + y + ',' + z, id);
     }
-    mods.set(x + ',' + y + ',' + z, id);
     // 标记需要重新生成网格的区块（含邻接）
     this.dirtyChunks.add(k);
     if (lx === 0) this.dirtyChunks.add(chunkKey(cx - 1, cz));
@@ -994,6 +1000,129 @@ export class World {
     if (lightChanged) this.recomputeLightAroundBlock(x, y, z);
     if (oldId >= BLOCK.WHEAT_0 && oldId <= BLOCK.WHEAT_3) {
       this.crops.delete(x + ',' + y + ',' + z);
+    }
+
+    this._scheduleWater(x, y, z);
+  }
+
+  // ---------- 水流动 ----------
+  _scheduleWater(x, y, z) {
+    const around = [
+      [0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+    ];
+    let nearWater = false;
+    for (const [dx, dy, dz] of around) {
+      if (isWaterLike(this.getBlock(x + dx, y + dy, z + dz))) {
+        nearWater = true;
+        break;
+      }
+    }
+    if (!nearWater) return;
+    for (const [dx, dy, dz] of around) {
+      this.waterQueue.add((x + dx) + ',' + (y + dy) + ',' + (z + dz));
+    }
+  }
+
+  _wq(x, y, z) {
+    if (this.waterQueue.size > 4000) return;
+    this.waterQueue.add(x + ',' + y + ',' + z);
+  }
+
+  tickWater(dt) {
+    if (this.waterQueue.size === 0) return;
+    this.waterTimer += dt;
+    if (this.waterTimer < 0.2) return;
+    this.waterTimer = 0;
+    const batch = [];
+    let n = 0;
+    for (const key of this.waterQueue) {
+      batch.push(key);
+      this.waterQueue.delete(key);
+      if (++n >= 80) break;
+    }
+    for (const key of batch) {
+      const p = key.split(',');
+      this._updateWaterAt(+p[0], +p[1], +p[2]);
+    }
+  }
+
+  _levelOf(id) {
+    if (id === BLOCK.WATER) return 8;
+    if (id >= BLOCK.WATER_FLOW_1 && id <= BLOCK.WATER_FLOW_7) return id - BLOCK.WATER_FLOW_1 + 1;
+    return 0;
+  }
+
+  _flowId(level) {
+    const clamped = Math.max(1, Math.min(7, level));
+    return BLOCK.WATER_FLOW_1 + clamped - 1;
+  }
+
+  _updateWaterAt(x, y, z) {
+    const id = this.getBlock(x, y, z);
+    if (!isWaterLike(id)) return;
+    const level = this._levelOf(id);
+    const dirs = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
+
+    const isLava = (bid) => bid === BLOCK.LAVA;
+    const setFlow = (nx, ny, nz, lvl) => {
+      this.setBlock(nx, ny, nz, this._flowId(lvl), false);
+      this._wq(nx, ny, nz);
+    };
+
+    // 支撑判定（流动水需要有水源/更强的水/上方水）
+    let supported = id === BLOCK.WATER;
+    if (!supported) {
+      const above = this.getBlock(x, y + 1, z);
+      if (isWaterLike(above)) supported = true;
+      else {
+        for (const [dx, dy, dz] of dirs) {
+          const nid = this.getBlock(x + dx, y + dy, z + dz);
+          if (isWaterLike(nid) && this._levelOf(nid) > level) {
+            supported = true;
+            break;
+          }
+        }
+      }
+      if (!supported) {
+        this.setBlock(x, y, z, BLOCK.AIR, false);
+        for (const [dx, dy, dz] of dirs) this._wq(x + dx, y + dy, z + dz);
+        this._wq(x, y + 1, z);
+        return;
+      }
+    }
+
+    const outLevel = level >= 7 ? (id === BLOCK.WATER ? 7 : level) : level;
+    const spreadLevel = outLevel - (id === BLOCK.WATER ? 0 : 1);
+
+    // 向下流
+    const below = this.getBlock(x, y - 1, z);
+    if (below === BLOCK.AIR) {
+      setFlow(x, y - 1, z, 7);
+    } else if (isLava(below)) {
+      this.setBlock(x, y - 1, z, BLOCK.COBBLE, false);
+      this._wq(x, y - 1, z);
+    }
+
+    // 水平扩散
+    const horizontal = id === BLOCK.WATER ? 7 : level - 1;
+    if (horizontal > 0) {
+      for (const [dx, dy, dz] of dirs) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const nz = z + dz;
+        const nid = this.getBlock(nx, ny, nz);
+        if (nid === BLOCK.AIR) {
+          setFlow(nx, ny, nz, horizontal);
+        } else if (isWaterLike(nid)) {
+          const nlevel = this._levelOf(nid);
+          if (nid !== BLOCK.WATER && nlevel < horizontal) {
+            setFlow(nx, ny, nz, horizontal);
+          }
+        } else if (isLava(nid)) {
+          this.setBlock(nx, ny, nz, BLOCK.COBBLE, false);
+          this._wq(nx, ny, nz);
+        }
+      }
     }
   }
 

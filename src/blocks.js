@@ -52,6 +52,13 @@ export const BLOCK = Object.freeze({
   WHEAT_1: 44,
   WHEAT_2: 45,
   WHEAT_3: 46,
+  WATER_FLOW_1: 47,
+  WATER_FLOW_2: 48,
+  WATER_FLOW_3: 49,
+  WATER_FLOW_4: 50,
+  WATER_FLOW_5: 51,
+  WATER_FLOW_6: 52,
+  WATER_FLOW_7: 53,
 });
 
 export const BLOCK_DEFS = [];
@@ -214,6 +221,18 @@ def(BLOCK.FARMLAND, 'farmland', '耕地', {
   tiles: { top: 'farmland_top', bottom: 'dirt', side: 'farmland_side' },
   hardness: 0.6, sound: 'grass', drop: 'dirt',
 });
+for (let level = 1; level <= 7; level++) {
+  def(BLOCK.WATER_FLOW_1 + level - 1, 'water_flow_' + level, '流动的水', {
+    tiles: { all: 'water' },
+    solid: false,
+    opaque: false,
+    transparent: true,
+    liquid: true,
+    hardness: Infinity,
+    sound: 'splash',
+    drop: null,
+  });
+}
 for (let stage = 0; stage < 4; stage++) {
   def(BLOCK.WHEAT_0 + stage, 'wheat_' + stage, '小麦', {
     tiles: { all: 'wheat_stage' + stage },
@@ -321,6 +340,9 @@ export function isOpaqueBlock(id) {
 }
 export function isLiquidBlock(id) {
   return getBlockDef(id).liquid;
+}
+export function isWaterLike(id) {
+  return id === BLOCK.WATER || (id >= BLOCK.WATER_FLOW_1 && id <= BLOCK.WATER_FLOW_7);
 }
 export function isPlantBlock(id) {
   return getBlockDef(id).cross;
