@@ -1458,6 +1458,33 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.biomeDemo && state.player) {
+        const targetBiome = state.biomeDemo;
+        state.biomeDemo = null;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            let found = null;
+            for (let r = 32; r <= 2200 && !found; r += 32) {
+              for (let a = 0; a < 16 && !found; a++) {
+                const ang = (a / 16) * Math.PI * 2;
+                const x = Math.floor(p.x + Math.cos(ang) * r);
+                const z = Math.floor(p.z + Math.sin(ang) * r);
+                if (state.world.columnInfo(x, z).biome === targetBiome) found = { x, z };
+              }
+            }
+            if (found) {
+              const y = state.world.getSurfaceY(found.x, found.z);
+              p.setPosition(found.x + 0.5, y + 1.2, found.z + 0.5);
+              state.chat?.log('演示：已到达 ' + (targetBiome === 'savanna' ? '热带草原' : '黑森林'));
+            } else {
+              state.chat?.log('演示：附近没有找到目标群系');
+            }
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.beaconDemo && state.player) {
         state.beaconDemo = false;
         setTimeout(() => {
@@ -3577,6 +3604,7 @@ function boot() {
   if (params.get('fortress') === '1') state.fortressDemo = true;
   if (params.get('witherboss') === '1') state.witherBossDemo = true;
   if (params.get('beacon') === '1') state.beaconDemo = true;
+  if (params.get('biome')) state.biomeDemo = params.get('biome');
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

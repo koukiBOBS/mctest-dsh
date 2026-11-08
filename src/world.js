@@ -47,6 +47,8 @@ export const BIOME_NAMES = {
   desert: '沙漠',
   snowy: '雪原',
   mountain: '山地',
+  savanna: '热带草原',
+  dark_forest: '黑森林',
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -145,6 +147,8 @@ export class World {
     else if (height > 92) biome = 'mountain';
     else if (temp < -0.28) biome = 'snowy';
     else if (temp > 0.26 && humid < 0.06) biome = 'desert';
+    else if (temp > 0.18 && humid < -0.04) biome = 'savanna';
+    else if (humid > 0.22 && temp > -0.15) biome = 'dark_forest';
     else if (humid > 0.04) biome = 'forest';
     else biome = 'plains';
 
@@ -480,6 +484,18 @@ export class World {
       case 'mountain':
         spruce = 0.006;
         break;
+      case 'savanna':
+        oak = 0.0;
+        birch = 0.0;
+        spruce = 0.0;
+        if (hash2i(gx, gz, this.seed + 21) < 0.025) return 'acacia';
+        return null;
+      case 'dark_forest':
+        oak = 0.006;
+        birch = 0.0;
+        spruce = 0.0;
+        if (hash2i(gx, gz, this.seed + 23) < 0.05) return 'dark_oak';
+        break;
       default:
         return null;
     }
@@ -497,20 +513,32 @@ export class World {
     let trunkH;
     if (kind === 'spruce') trunkH = 7 + Math.floor(rand * 4);
     else if (kind === 'birch') trunkH = 5 + Math.floor(rand * 3);
+    else if (kind === 'acacia') trunkH = 5 + Math.floor(rand * 3);
+    else if (kind === 'dark_oak') trunkH = 6 + Math.floor(rand * 3);
     else trunkH = 4 + Math.floor(rand * 3);
 
     const topY = baseY + trunkH - 1;
     const x0 = chunk.cx * CHUNK_SX;
     const z0 = chunk.cz * CHUNK_SZ;
-    const woodId = kind === 'birch' ? BLOCK.BIRCH_LOG : kind === 'spruce' ? BLOCK.SPRUCE_LOG : BLOCK.LOG;
-    const leafId = kind === 'birch' ? BLOCK.BIRCH_LEAVES : kind === 'spruce' ? BLOCK.SPRUCE_LEAVES : BLOCK.LEAVES;
+    const woodId = kind === 'birch' ? BLOCK.BIRCH_LOG
+      : kind === 'spruce' ? BLOCK.SPRUCE_LOG
+      : kind === 'acacia' ? BLOCK.ACACIA_LOG
+      : kind === 'dark_oak' ? BLOCK.DARK_OAK_LOG
+      : BLOCK.LOG;
+    const leafId = kind === 'birch' ? BLOCK.BIRCH_LEAVES
+      : kind === 'spruce' ? BLOCK.SPRUCE_LEAVES
+      : kind === 'acacia' ? BLOCK.ACACIA_LEAVES
+      : kind === 'dark_oak' ? BLOCK.DARK_OAK_LEAVES
+      : BLOCK.LEAVES;
 
     const replaceable = (cur) =>
       cur === BLOCK.AIR ||
       cur === BLOCK.TALL_GRASS ||
       cur === BLOCK.LEAVES ||
       cur === BLOCK.BIRCH_LEAVES ||
-      cur === BLOCK.SPRUCE_LEAVES;
+      cur === BLOCK.SPRUCE_LEAVES ||
+      cur === BLOCK.ACACIA_LEAVES ||
+      cur === BLOCK.DARK_OAK_LEAVES;
 
     const put = (wx, wy, wz, id, onlyAir) => {
       const lx = wx - x0;
@@ -2620,5 +2648,6 @@ export class World {
 }
 
 function trustBiome(biome) {
-  return biome === 'plains' || biome === 'forest' || biome === 'snowy' || biome === 'mountain';
+  return biome === 'plains' || biome === 'forest' || biome === 'snowy' || biome === 'mountain'
+    || biome === 'savanna' || biome === 'dark_forest';
 }

@@ -92,6 +92,12 @@ export const BLOCK = Object.freeze({
   NETHER_WART: 84,
   WITHER_SKULL: 85,
   BEACON: 86,
+  ACACIA_LOG: 87,
+  ACACIA_LEAVES: 88,
+  ACACIA_PLANKS: 89,
+  DARK_OAK_LOG: 90,
+  DARK_OAK_LEAVES: 91,
+  DARK_OAK_PLANKS: 92,
 });
 
 export const BLOCK_DEFS = [];
@@ -341,6 +347,24 @@ def(BLOCK.NETHER_WART, 'nether_wart', '下界疣', {
 def(BLOCK.WITHER_SKULL, 'wither_skull', '凋灵骷髅头', {
   tiles: { all: 'wither_skull' }, solid: false, opaque: false, transparent: true,
   cross: true, needsSupport: true, hardness: 1.0, sound: 'grass',
+});
+def(BLOCK.ACACIA_LOG, 'acacia_log', '金合欢原木', {
+  tiles: { all: 'acacia_log' }, hardness: 2.0, sound: 'wood',
+});
+def(BLOCK.ACACIA_LEAVES, 'acacia_leaves', '金合欢树叶', {
+  tiles: { all: 'acacia_leaves' }, solid: true, opaque: false, transparent: true, hardness: 0.2, sound: 'grass', drop: null,
+});
+def(BLOCK.ACACIA_PLANKS, 'acacia_planks', '金合欢木板', {
+  tiles: { all: 'acacia_planks' }, hardness: 2.0, sound: 'wood',
+});
+def(BLOCK.DARK_OAK_LOG, 'dark_oak_log', '深色橡木原木', {
+  tiles: { all: 'dark_oak_log' }, hardness: 2.0, sound: 'wood',
+});
+def(BLOCK.DARK_OAK_LEAVES, 'dark_oak_leaves', '深色橡木树叶', {
+  tiles: { all: 'dark_oak_leaves' }, solid: true, opaque: false, transparent: true, hardness: 0.2, sound: 'grass', drop: null,
+});
+def(BLOCK.DARK_OAK_PLANKS, 'dark_oak_planks', '深色橡木木板', {
+  tiles: { all: 'dark_oak_planks' }, hardness: 2.0, sound: 'wood',
 });
 def(BLOCK.BEACON, 'beacon', '信标', {
   tiles: { all: 'beacon' }, hardness: 3.0, sound: 'glass', light: 15,

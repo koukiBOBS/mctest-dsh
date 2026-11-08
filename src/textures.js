@@ -105,6 +105,12 @@ export const TILE_NAMES = [
   'nether_wart',
   'wither_skull',
   'beacon',
+  'acacia_log',
+  'acacia_leaves',
+  'acacia_planks',
+  'dark_oak_log',
+  'dark_oak_leaves',
+  'dark_oak_planks',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2439,6 +2445,62 @@ const TILE_PAINTERS = {
     hline(b, 4, 11, 4, C('#6a6a7a'));
     hline(b, 4, 11, 11, C('#6a6a7a'));
     for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#8a8aa0'));
+  },
+
+  acacia_log(b, rng) {
+    noiseFill(b, rng, [
+      ['#8a6a4a', 6],
+      ['#6a4a2e', 5],
+      ['#a07a52', 3],
+    ]);
+    for (let x = 2; x < 16; x += 5) vline(b, 0, 15, x, C('#5a3a20'));
+    for (let i = 0; i < 8; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#b08a5a'));
+  },
+
+  acacia_leaves(b, rng) {
+    noiseFill(b, rng, [
+      ['#8a9a3a', 6],
+      ['#6a7a2a', 4],
+      ['#a8b84a', 3],
+    ]);
+    for (let i = 0; i < 12; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#c8d860'));
+  },
+
+  acacia_planks(b, rng) {
+    noiseFill(b, rng, [
+      ['#c88a3a', 6],
+      ['#b0782a', 5],
+      ['#d8a04a', 3],
+    ]);
+    for (let y = 3; y < 16; y += 4) hline(b, 0, 15, y, C('#8a5a1e'));
+  },
+
+  dark_oak_log(b, rng) {
+    noiseFill(b, rng, [
+      ['#3a2a1a', 6],
+      ['#2a1a0e', 5],
+      ['#4a3622', 3],
+    ]);
+    for (let x = 3; x < 16; x += 5) vline(b, 0, 15, x, C('#1e1208'));
+    for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#5a4028'));
+  },
+
+  dark_oak_leaves(b, rng) {
+    noiseFill(b, rng, [
+      ['#2a5a2a', 6],
+      ['#1e4a1e', 5],
+      ['#3a7a3a', 3],
+    ]);
+    for (let i = 0; i < 10; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#4a9a4a'));
+  },
+
+  dark_oak_planks(b, rng) {
+    noiseFill(b, rng, [
+      ['#4a3020', 6],
+      ['#3a2418', 5],
+      ['#5a3c28', 3],
+    ]);
+    for (let y = 3; y < 16; y += 4) hline(b, 0, 15, y, C('#2a180e'));
   },
 
 };
