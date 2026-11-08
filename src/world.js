@@ -28,6 +28,12 @@ export const NETHER_ORIGIN = 200000;
 export const NETHER_CHUNK_START = NETHER_ORIGIN >> 4;
 export const NETHER_CHUNK_SIZE = 16;
 export const NETHER_DEST = { x: NETHER_ORIGIN + 128, z: NETHER_ORIGIN + 128 };
+
+// 末地区域
+export const END_ORIGIN = 300000;
+export const END_CHUNK_START = END_ORIGIN >> 4;
+export const END_CHUNK_SIZE = 16;
+export const END_DEST = { x: END_ORIGIN + 128, z: END_ORIGIN + 128 };
 const CHUNK_AREA = CHUNK_SX * CHUNK_SZ;
 
 export const BIOME_NAMES = {
@@ -167,6 +173,33 @@ export class World {
     );
   }
 
+  isEndChunk(cx, cz) {
+    return (
+      cx >= END_CHUNK_START &&
+      cx < END_CHUNK_START + END_CHUNK_SIZE &&
+      cz >= END_CHUNK_START &&
+      cz < END_CHUNK_START + END_CHUNK_SIZE
+    );
+  }
+
+  generateEndChunk(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    for (let lz = 0; lz < CHUNK_SZ; lz++) {
+      for (let lx = 0; lx < CHUNK_SX; lx++) {
+        const wx = x0 + lx;
+        const wz = z0 + lz;
+        const island = hash2i(wx, wz, this.seed + 5000) > 0.22;
+        if (!island) continue;
+        const h = 44 + Math.floor(hash2i(wx, wz, this.seed + 5010) * 14);
+        for (let y = 30; y <= h; y++) chunk.set(lx, y, lz, BLOCK.END_STONE);
+        chunk.heightMap[lz * CHUNK_SX + lx] = h;
+        chunk.maxY = Math.max(chunk.maxY, h);
+      }
+    }
+    chunk.empty = false;
+  }
+
   generateNetherChunk(chunk) {
     const x0 = chunk.cx * CHUNK_SX;
     const z0 = chunk.cz * CHUNK_SZ;
@@ -193,6 +226,26 @@ export class World {
     const chunk = new Chunk(cx, cz);
     const x0 = cx * CHUNK_SX;
     const z0 = cz * CHUNK_SZ;
+
+    if (this.isEndChunk(cx, cz)) {
+      this.generateEndChunk(chunk);
+      const emods = this.modsByChunk.get(chunkKey(cx, cz));
+      if (emods) {
+        for (const [k, id] of emods) {
+          const p = k.split(',');
+          const wx = +p[0];
+          const wy = +p[1];
+          const wz = +p[2];
+          chunk.set(wx - x0, wy, wz - z0, id);
+          if (id !== 0) {
+            chunk.maxY = Math.max(chunk.maxY, wy);
+            const mdef = getBlockDef(id);
+            if (mdef.light > 0) this.lightSources.set(wx + ',' + wy + ',' + wz, mdef.light);
+          }
+        }
+      }
+      return chunk;
+    }
 
     if (this.isNetherChunk(cx, cz)) {
       this.generateNetherChunk(chunk);
@@ -1116,17 +1169,13 @@ export class World {
       [m.centerX, m.centerZ + 34, 4, 4, 5],
     ];
     for (const [cx, cz, hx, hz, hh] of rooms) room(cx, cz, hx, hz, hh);
-    // 末地传送门框架
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dz = -1; dz <= 1; dz++) {
-        if (dx === 0 && dz === 0) {
-          set(m.centerX, baseY + 1, m.centerZ - 3 + dz, BLOCK.GLOWSTONE);
-        } else {
-          set(m.centerX + dx, baseY + 1, m.centerZ - 3 + dz, BLOCK.STONE_BRICKS);
-        }
+    // 末地传送门（5×5 框架 + 3×3 传送门方块）
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        const edge = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+        set(m.centerX + dx, baseY + 1, m.centerZ - 3 + dz, edge ? BLOCK.END_PORTAL_FRAME : BLOCK.END_PORTAL);
       }
     }
-    set(m.centerX, baseY + 2, m.centerZ - 3, BLOCK.GLOWSTONE);
     // 宝箱
     const chests = [
       [m.centerX - 3, baseY + 1, m.centerZ + 3],

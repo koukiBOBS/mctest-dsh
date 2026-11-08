@@ -185,6 +185,7 @@ export class Renderer {
     this.thirdPerson = false;
     this.weatherFactor = 0;
     this.nether = false;
+    this.end = false;
     this.flashFactor = 0;
     this.dayLight = 1;
     this._tileColorCache = new Map();
@@ -369,6 +370,10 @@ export class Renderer {
 
   setNether(on) {
     this.nether = !!on;
+  }
+
+  setEnd(on) {
+    this.end = !!on;
   }
 
   // 动态画质：降低/恢复渲染分辨率（用于低帧率设备）
@@ -590,7 +595,7 @@ export class Renderer {
     );
     const under = eyeBlock === BLOCK.WATER || eyeBlock === BLOCK.LAVA;
     this.underwater = under;
-    this.skyGroup.visible = !under && !this.nether;
+    this.skyGroup.visible = !under && !this.nether && !this.end;
 
     const rain = under ? 0 : clamp(this.weatherFactor || 0, 0, 1);
     const flash = clamp(this.flashFactor || 0, 0, 1);
@@ -605,6 +610,9 @@ export class Renderer {
     if (this.nether) {
       top.setHex(0x2a0d0d);
       bot.setHex(0x4a1610);
+    } else if (this.end) {
+      top.setHex(0x08030f);
+      bot.setHex(0x160b2a);
     }
     this.skyUniforms.topColor.value.copy(top);
     this.skyUniforms.bottomColor.value.copy(bot);
@@ -624,6 +632,10 @@ export class Renderer {
         this.scene.fog.color.setHex(0x3a1410);
         this.scene.fog.near = 5;
         this.scene.fog.far = 46;
+      } else if (this.end) {
+        this.scene.fog.color.setHex(0x120a22);
+        this.scene.fog.near = 6;
+        this.scene.fog.far = 54;
       }
     }
 
@@ -642,8 +654,8 @@ export class Renderer {
     this.skyGroup.position.copy(this.camera.position);
     this.sunSprite.position.set(Math.cos(angle) * 380, Math.sin(angle) * 380, -120);
     this.moonSprite.position.set(-Math.cos(angle) * 380, -Math.sin(angle) * 380, -120);
-    this.sunSprite.visible = !this.nether && sunElev > -0.12;
-    this.moonSprite.visible = !this.nether && sunElev < 0.12;
+    this.sunSprite.visible = !this.nether && !this.end && sunElev > -0.12;
+    this.moonSprite.visible = !this.nether && !this.end && sunElev < 0.12;
     this.starMat.opacity = clamp(nightF * 1.3, 0, 1);
     this.stars.rotation.y += dt * 0.003;
 
@@ -652,7 +664,7 @@ export class Renderer {
     this.cloudTex.offset.x += dt * 0.004;
     this.cloudTex.offset.y += dt * 0.0012;
     this.cloudMat.opacity = Math.min(1, (0.25 + 0.6 * dayF) * (1 + 0.45 * rain) * 0.9);
-    this.clouds.visible = !this.nether;
+    this.clouds.visible = !this.nether && !this.end;
     this.cloudMat.color.setScalar((0.75 + 0.25 * dayF) * (1 - 0.35 * rain));
     this.clouds.visible = !under;
   }

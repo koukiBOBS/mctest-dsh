@@ -2,7 +2,7 @@
 // main.js — 游戏入口：界面状态机、输入、循环、存档、资源包
 // ============================================================
 
-import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST } from './world.js';
+import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST, END_ORIGIN, END_DEST } from './world.js';
 import { Renderer } from './render.js';
 import { Player } from './player.js';
 import { Inventory, InventoryUI, makeHudIcons } from './inventory.js';
@@ -48,6 +48,8 @@ const state = {
   enchantOpen: false,
   brewOpen: false,
   inNether: false,
+  inEnd: false,
+  endReturn: null,
   portalCooldown: 0,
   portalTimer: 0,
   netherReturn: null,
@@ -152,6 +154,7 @@ function enterNether() {
   state.inNether = true;
   state.portalCooldown = 3;
   state.renderer?.setNether(true);
+  state.renderer?.setEnd(false);
   state.achievements?.onEvent('discover', { kind: 'nether' });
   state.chat?.log('你穿过传送门，进入了下界');
   if (state.weather) {
@@ -179,6 +182,67 @@ function exitNether() {
   saveGame();
 }
 
+function buildEndArrival() {
+  const w = state.world;
+  const x = END_DEST.x;
+  const z = END_DEST.z;
+  const y = 60;
+  for (let cx = (x >> 4) - 1; cx <= (x >> 4) + 1; cx++) {
+    for (let cz = (z >> 4) - 1; cz <= (z >> 4) + 1; cz++) w.ensureChunk(cx, cz);
+  }
+  for (let dx = -5; dx <= 5; dx++) {
+    for (let dz = -5; dz <= 5; dz++) {
+      w.setBlock(x + dx, y, z + dz, BLOCK.END_STONE);
+      for (let dy = 1; dy <= 5; dy++) w.setBlock(x + dx, y + dy, z + dz, 0);
+    }
+  }
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dz = -2; dz <= 2; dz++) {
+      const edge = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+      w.setBlock(x + dx, y + 1, z + 2 + dz, edge ? BLOCK.END_PORTAL_FRAME : BLOCK.END_PORTAL);
+    }
+  }
+  return { x: x + 0.5, y: y + 1, z: z - 2.5 };
+}
+
+function enterEnd() {
+  const p = state.player;
+  if (!p) return;
+  state.endReturn = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch };
+  const dest = buildEndArrival();
+  p.setPosition(dest.x, dest.y, dest.z);
+  p.yaw = Math.PI;
+  p.pitch = 0;
+  state.inEnd = true;
+  state.portalCooldown = 3;
+  state.renderer?.setEnd(true);
+  state.achievements?.onEvent('discover', { kind: 'end' });
+  state.chat?.log('你穿过末地传送门，进入了末地');
+  if (state.weather) {
+    try { state.weather.clear(); } catch (e) { /* ignore */ }
+  }
+  updateHUD();
+  saveGame();
+}
+
+function exitEnd() {
+  const p = state.player;
+  if (!p) return;
+  const r = state.endReturn;
+  if (r) {
+    p.setPosition(r.x, r.y + 0.2, r.z);
+    if (typeof r.yaw === 'number') p.yaw = r.yaw;
+  } else {
+    p.setPosition(p.spawn.x, p.spawn.y + 0.5, p.spawn.z);
+  }
+  state.inEnd = false;
+  state.portalCooldown = 3;
+  state.renderer?.setEnd(false);
+  state.chat?.log('你回到了主世界');
+  updateHUD();
+  saveGame();
+}
+
 function checkPortal() {
   if (!state.running || state.paused || state.loading || state.portalCooldown > 0) return;
   const p = state.player;
@@ -188,6 +252,12 @@ function checkPortal() {
   const bz = Math.floor(p.z);
   const feet = Math.floor(p.y + 0.1);
   const head = Math.floor(p.y + 1.5);
+  const endPortal = w.getBlock(bx, feet, bz) === BLOCK.END_PORTAL || w.getBlock(bx, head, bz) === BLOCK.END_PORTAL;
+  if (endPortal) {
+    if (state.inEnd) exitEnd();
+    else enterEnd();
+    return;
+  }
   if (w.getBlock(bx, feet, bz) === BLOCK.NETHER_PORTAL || w.getBlock(bx, head, bz) === BLOCK.NETHER_PORTAL) {
     if (state.inNether) exitNether();
     else enterNether();
@@ -738,9 +808,13 @@ function startGame(opts = {}) {
     if (save.inventory) inventory.deserialize(save.inventory);
     player.loadState(save.player);
     if (save.player && save.player.spawn) player.spawn = { ...save.player.spawn };
-    if (player.x >= NETHER_ORIGIN) {
+    if (player.x >= NETHER_ORIGIN && player.x < END_ORIGIN) {
       state.inNether = true;
       renderer.setNether(true);
+    }
+    if (player.x >= END_ORIGIN) {
+      state.inEnd = true;
+      renderer.setEnd(true);
     }
     else player.spawn = { ...spawn };
     if (!save.player || typeof save.player.x !== 'number') {
@@ -920,6 +994,16 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.endDemo && state.player) {
+        state.endDemo = false;
+        setTimeout(() => {
+          try {
+            enterEnd();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.fireDemo && state.player) {
         state.fireDemo = false;
@@ -2482,6 +2566,7 @@ function boot() {
   if (params.get('nether') === '1') state.netherDemo = true;
   if (params.get('fire') === '1') state.fireDemo = true;
   if (params.get('lightning') === '1') state.lightningDemo = true;
+  if (params.get('end') === '1') state.endDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

@@ -83,6 +83,8 @@ export const TILE_NAMES = [
   'netherrack',
   'nether_portal',
   'fire',
+  'end_stone',
+  'end_portal',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2113,6 +2115,25 @@ const TILE_PAINTERS = {
       }
     }
     for (let i = 0; i < 10; i++) setPx(b, (rng() * 16) | 0, 8 + ((rng() * 8) | 0), C('#fff2b0'));
+  },
+
+  end_stone(b, rng) {
+    noiseFill(b, rng, [
+      ['#d8d0a0', 6],
+      ['#c8c090', 5],
+      ['#e4dcb0', 4],
+    ]);
+    for (let i = 0; i < 8; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#a8a070'));
+  },
+
+  end_portal(b, rng) {
+    fillSolid(b, C('#07030f'));
+    for (let i = 0; i < 26; i++) {
+      const x = (rng() * 16) | 0;
+      const y = (rng() * 16) | 0;
+      const c = rng() < 0.35 ? '#c8a8ff' : rng() < 0.6 ? '#6a4a9a' : '#e8e0ff';
+      setPx(b, x, y, C(c));
+    }
   },
 
 };

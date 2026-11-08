@@ -70,6 +70,9 @@ export const BLOCK = Object.freeze({
   NETHERRACK: 62,
   NETHER_PORTAL: 63,
   FIRE: 64,
+  END_STONE: 65,
+  END_PORTAL: 66,
+  END_PORTAL_FRAME: 67,
 });
 
 export const BLOCK_DEFS = [];
@@ -270,6 +273,16 @@ def(BLOCK.NETHER_PORTAL, 'nether_portal', '下界传送门', {
 def(BLOCK.FIRE, 'fire', '火焰', {
   tiles: { all: 'fire' }, solid: false, opaque: false, transparent: true,
   cross: true, hardness: 0, sound: 'fire', drop: null, light: 15,
+});
+def(BLOCK.END_STONE, 'end_stone', '末地石', {
+  tiles: { all: 'end_stone' }, hardness: 1.2, sound: 'stone',
+});
+def(BLOCK.END_PORTAL, 'end_portal', '末地传送门', {
+  tiles: { all: 'end_portal' }, solid: false, opaque: false, transparent: true,
+  hardness: 0.2, sound: 'glass', drop: null, light: 15,
+});
+def(BLOCK.END_PORTAL_FRAME, 'end_portal_frame', '末地传送门框架', {
+  tiles: { all: 'end_stone' }, hardness: 4, sound: 'stone',
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },
