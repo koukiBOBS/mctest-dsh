@@ -559,6 +559,30 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.shearDemo && state.player) {
+        state.shearDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            state.inventory.setSlot(0, { id: 'shears', count: 1, durability: 238 });
+            state.inventory.setSlot(1, { id: 'bucket', count: 1 });
+            state.inventory.setSlot(2, { id: 'water_bucket', count: 1 });
+            state.inventory.setSlot(3, { id: 'lava_bucket', count: 1 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            const f = p.forwardVector();
+            const tx = p.x + f.x * 3;
+            const tz = p.z + f.z * 3;
+            const ty = state.world.getSurfaceY(Math.floor(tx), Math.floor(tz));
+            const sheep = state.mobs?.spawn('sheep', tx, ty + 1, tz);
+            const n = state.mobs?.shearSheep(sheep) || 0;
+            for (let i = 0; i < n; i++) state.items?.spawn('wool_white', tx, ty + 1.4, tz, 1);
+            state.chat?.log(`演示：剪下 ${n} 个白色羊毛（60–120 秒后重新长毛）`);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
+      }
       if (state.bowDemo && state.player) {
         state.bowDemo = false;
         setTimeout(() => {
@@ -1764,6 +1788,7 @@ function boot() {
   if (params.get('water') === '1') state.waterDemo = true;
   if (params.get('temple') === '1') state.tpTemple = true;
   if (params.get('bowdemo') === '1') state.bowDemo = true;
+  if (params.get('sheardemo') === '1') state.shearDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

@@ -120,6 +120,10 @@ export const ITEM_ICON_NAMES = [
   'bow',
   'flint',
   'egg',
+  'shears',
+  'bucket',
+  'water_bucket',
+  'lava_bucket',
 ];
 
 /* =====================================================================
@@ -3003,6 +3007,42 @@ const ICON_PAINTERS = {
     fillPoly(b, [[16, 4], [23, 14], [22, 24], [11, 25], [8, 16]], C('#ddd6c6'));
     fillPoly(b, [[16, 7], [21, 15], [20, 22], [12, 23], [10, 16]], C('#f8f2e4'));
     setPx(b, 14, 13, C('#ffffff'));
+  },
+
+  shears(b, rng) {
+    thickLine(b, 9, 9, 20, 24, 3, C('#c8c8cc'));
+    thickLine(b, 23, 9, 12, 24, 3, C('#a8a8b0'));
+    fillRect(b, 8, 22, 6, 7, C('#55555c'));
+    fillRect(b, 20, 22, 6, 7, C('#55555c'));
+    setPx(b, 9, 23, C('#8a8a92'));
+    setPx(b, 21, 23, C('#8a8a92'));
+    fillRect(b, 14, 6, 4, 4, C('#6a6a72'));
+  },
+
+  bucket(b, rng) {
+    fillRect(b, 8, 11, 16, 3, C('#b9bcc4'));
+    fillPoly(b, [[8, 14], [24, 14], [21, 27], [11, 27]], C('#a7abb3'));
+    fillPoly(b, [[10, 16], [22, 16], [20, 25], [12, 25]], C('#c2c5cc'));
+    thickLine(b, 9, 12, 15, 5, 1, C('#8a8d94'));
+    thickLine(b, 15, 5, 23, 12, 1, C('#8a8d94'));
+  },
+
+  water_bucket(b, rng) {
+    fillRect(b, 8, 11, 16, 3, C('#b9bcc4'));
+    fillPoly(b, [[8, 14], [24, 14], [21, 27], [11, 27]], C('#a7abb3'));
+    fillPoly(b, [[10, 16], [22, 16], [20, 25], [12, 25]], C('#3d6fd6'));
+    fillRect(b, 12, 17, 4, 1, C('#7fb0ff'));
+    thickLine(b, 9, 12, 15, 5, 1, C('#8a8d94'));
+    thickLine(b, 15, 5, 23, 12, 1, C('#8a8d94'));
+  },
+
+  lava_bucket(b, rng) {
+    fillRect(b, 8, 11, 16, 3, C('#b9bcc4'));
+    fillPoly(b, [[8, 14], [24, 14], [21, 27], [11, 27]], C('#a7abb3'));
+    fillPoly(b, [[10, 16], [22, 16], [20, 25], [12, 25]], C('#e06a1a'));
+    fillRect(b, 12, 18, 3, 1, C('#ffd24a'));
+    thickLine(b, 9, 12, 15, 5, 1, C('#8a8d94'));
+    thickLine(b, 15, 5, 23, 12, 1, C('#8a8d94'));
   },
 
 };

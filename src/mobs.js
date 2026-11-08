@@ -658,6 +658,17 @@ export class MobManager {
     this._animateMob(mob, dt);
     this._updateTint(mob);
 
+    // 羊被剪毛后会重新长毛
+    if (mob.type === 'sheep' && mob.sheared) {
+      mob.woolTimer -= dt;
+      if (mob.woolTimer <= 0) {
+        mob.sheared = false;
+        for (let i = 0; i < (mob.woolMats || []).length; i++) {
+          if (mob.woolBases[i]) mob.woolMats[i].base.copy(mob.woolBases[i]);
+        }
+      }
+    }
+
     // 鸡会定期下蛋
     if (mob.type === 'chicken') {
       if (mob.eggTimer === undefined) mob.eggTimer = 18 + Math.random() * 20;
@@ -1286,6 +1297,7 @@ export class MobManager {
 
     mob.group = root;
     if (this.scene) this.scene.add(root);
+    if (def.id === 'sheep') this._initWool(mob, c);
     return root;
   }
 
@@ -1302,6 +1314,22 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.18, 0.32, 0.18, 0.24, 0.32, -0.29, mob.legs);
     this._addLimb(mob, root, c.leg, 0.18, 0.32, 0.18, -0.24, 0.32, 0.29, mob.legs);
     this._addLimb(mob, root, c.leg, 0.18, 0.32, 0.18, 0.24, 0.32, 0.29, mob.legs);
+  }
+
+  _initWool(mob, c) {
+    const woolHex = new THREE.Color(c.wool).getHex();
+    mob.woolMats = mob.mats.filter((e) => e.base.getHex() === woolHex);
+    mob.woolBases = mob.woolMats.map((e) => e.base.clone());
+    mob.sheared = false;
+    mob.woolTimer = 0;
+  }
+
+  shearSheep(mob) {
+    if (!mob || mob.type !== 'sheep' || mob.sheared) return 0;
+    mob.sheared = true;
+    mob.woolTimer = 60 + Math.random() * 60;
+    for (const entry of mob.woolMats || []) entry.base.setHex(0xd8a6a0);
+    return 1 + Math.floor(Math.random() * 3);
   }
 
   _modelSheep(mob, root, c) {

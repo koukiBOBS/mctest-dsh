@@ -566,6 +566,55 @@ export class Player {
     if (this.startBowCharge()) return;
     const held = this.inventory.held;
     const heldItem = held ? getItem(held.id) : null;
+    const heldId = held ? held.id : null;
+
+    // 剪刀剪羊毛
+    if (heldId === 'shears' && this.mobTarget && this.mobTarget.type === 'sheep') {
+      const wool = this.game.mobs?.shearSheep?.(this.mobTarget) || 0;
+      if (wool > 0) {
+        this._dropItem('wool_white', wool, this.mobTarget.x, this.mobTarget.y + 0.6, this.mobTarget.z);
+        this.inventory.damageHeld(1);
+        this.game.sound?.play('click', { volume: 0.45 });
+        this.game.onInventoryChange?.();
+        return;
+      }
+    }
+
+    // 桶：装水 / 装岩浆
+    if (heldId === 'bucket') {
+      const dir = this.forwardVector();
+      const hit = this.world.raycast(this.x, this.eyeY(), this.z, dir.x, dir.y, dir.z, 5, true);
+      if (hit && (isWaterLike(hit.id) || hit.id === BLOCK.LAVA)) {
+        const isWater = isWaterLike(hit.id);
+        this.world.setBlock(hit.x, hit.y, hit.z, 0);
+        this.inventory.consumeHeld(1);
+        this.inventory.add(isWater ? 'water_bucket' : 'lava_bucket', 1);
+        this.game.sound?.play('splash', { volume: 0.5, pitch: isWater ? 1 : 0.6 });
+        this.game.onInventoryChange?.();
+        return;
+      }
+    }
+
+    // 倒水 / 倒岩浆
+    if (heldId === 'water_bucket' || heldId === 'lava_bucket') {
+      const hit = this.target;
+      if (hit) {
+        const px = hit.x + hit.nx;
+        const py = hit.y + hit.ny;
+        const pz = hit.z + hit.nz;
+        if (this.world.getBlock(px, py, pz) === 0) {
+          const isWater = heldId === 'water_bucket';
+          this.world.setBlock(px, py, pz, isWater ? BLOCK.WATER : BLOCK.LAVA);
+          if (this.mode === 'survival') {
+            this.inventory.consumeHeld(1);
+            this.inventory.add('bucket', 1);
+          }
+          this.game.sound?.play('splash', { volume: 0.5, pitch: isWater ? 1 : 0.6 });
+          this.game.onInventoryChange?.();
+          return;
+        }
+      }
+    }
     if (heldItem && heldItem.tool && heldItem.tool.type === 'hoe') {
       if (this._useHoe()) return;
     }

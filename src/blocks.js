@@ -297,6 +297,10 @@ const EXTRA_ITEMS = {
   bow: { display: '弓', icon: 'bow', maxStack: 1 },
   flint: { display: '燧石', icon: 'flint' },
   egg: { display: '鸡蛋', icon: 'egg' },
+  shears: { display: '剪刀', icon: 'shears', maxStack: 1, durability: 238, tool: { type: 'shears', tier: 1, speed: 1 } },
+  bucket: { display: '桶', icon: 'bucket', maxStack: 16 },
+  water_bucket: { display: '水桶', icon: 'water_bucket', maxStack: 1 },
+  lava_bucket: { display: '岩浆桶', icon: 'lava_bucket', maxStack: 1 },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };

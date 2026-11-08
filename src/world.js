@@ -1365,7 +1365,7 @@ export class World {
   }
 
   // ---------- 射线拾取（体素 DDA） ----------
-  raycast(ox, oy, oz, dx, dy, dz, maxDist = 6) {
+  raycast(ox, oy, oz, dx, dy, dz, maxDist = 6, includeLiquids = false) {
     let x = Math.floor(ox);
     let y = Math.floor(oy);
     let z = Math.floor(oz);
@@ -1384,7 +1384,7 @@ export class World {
 
     // 起点就在方块内
     const startId = this.getBlock(x, y, z);
-    if (startId !== 0 && !isLiquidBlock(startId)) {
+    if (startId !== 0 && (includeLiquids || !isLiquidBlock(startId))) {
       return { x, y, z, nx: -stepX, ny: 0, nz: 0, id: startId, dist: 0 };
     }
 
@@ -1411,7 +1411,7 @@ export class World {
         continue;
       }
       const id = this.getBlock(x, y, z);
-      if (id !== 0 && !isLiquidBlock(id)) {
+      if (id !== 0 && (includeLiquids || !isLiquidBlock(id))) {
         return { x, y, z, nx, ny, nz, id, dist: t };
       }
     }
