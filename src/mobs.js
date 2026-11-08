@@ -297,7 +297,7 @@ export class MobManager {
   // ------------------------------------------------------------
   // 生成 / 移除
   // ------------------------------------------------------------
-  spawn(type, x, y, z) {
+  spawn(type, x, y, z, opts = {}) {
     const def = MOB_TYPES[type];
     if (!def) return null;
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return null;
@@ -349,6 +349,9 @@ export class MobManager {
       arms: [],
       mats: [],
       _matCache: new Map(),
+      isBaby: !!opts.baby,
+      growTimer: opts.baby ? 60 + Math.random() * 40 : 0,
+      loveTimer: 0,
     };
     mob.yawTarget = mob.yaw;
     if (type === 'villager') {
@@ -356,6 +359,7 @@ export class MobManager {
     }
 
     this._buildModel(mob);
+    if (mob.isBaby && mob.group) mob.group.scale.setScalar(0.55);
     this.mobs.push(mob);
     return mob;
   }
@@ -654,6 +658,14 @@ export class MobManager {
       return;
     }
     if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
+    if (mob.loveTimer > 0) mob.loveTimer = Math.max(0, mob.loveTimer - dt);
+    if (mob.isBaby) {
+      mob.growTimer -= dt;
+      if (mob.growTimer <= 0) {
+        mob.isBaby = false;
+        if (mob.group) mob.group.scale.setScalar(1);
+      }
+    }
     if (mob.jumpCd > 0) mob.jumpCd = Math.max(0, mob.jumpCd - dt);
     if (mob.ai.attackCd > 0) mob.ai.attackCd = Math.max(0, mob.ai.attackCd - dt);
     if (mob.ai.shootCd > 0) mob.ai.shootCd = Math.max(0, mob.ai.shootCd - dt);
@@ -985,6 +997,41 @@ export class MobManager {
       this._stop(mob);
       if (dist < 12) this._face(mob, player.x, player.z);
     }
+  }
+
+  feed(mob, itemId) {
+    if (!mob || mob.removed) return null;
+    const foods = { pig: 'apple', cow: 'wheat', sheep: 'wheat', chicken: 'wheat_seeds' };
+    if (foods[mob.type] !== itemId) return null;
+    if (mob.isBaby) return 'baby';
+    if (mob.loveTimer > 0) return 'already';
+    mob.loveTimer = 8;
+    let partner = null;
+    let bestD = 8 * 8;
+    for (const other of this.mobs) {
+      if (!other || other === mob || other.removed) continue;
+      if (other.type !== mob.type || other.isBaby || other.loveTimer <= 0) continue;
+      const d = (other.x - mob.x) ** 2 + (other.z - mob.z) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        partner = other;
+      }
+    }
+    if (partner) {
+      mob.loveTimer = 0;
+      partner.loveTimer = 0;
+      const bx = (mob.x + partner.x) / 2;
+      const bz = (mob.z + partner.z) / 2;
+      const baby = this.spawn(mob.type, bx, mob.y, bz, { baby: true });
+      if (baby) {
+        this.game.chat?.log('💕 生出了一只小' + (mob.def ? mob.def.name : '动物'));
+        this.game.achievements?.onEvent('breed', {});
+        this._playSound('pop', 0.4);
+        return 'bred';
+      }
+    }
+    this._playSound('pop', 0.25);
+    return 'love';
   }
 
   _nearestVillager(mob, maxDist) {

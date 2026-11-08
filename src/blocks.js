@@ -393,6 +393,7 @@ const EXTRA_ITEMS = {
   fishing_rod: { display: '钓竿', icon: 'fishing_rod', maxStack: 1, durability: 64, tool: { type: 'rod', tier: 1, speed: 1 } },
   cod: { display: '生鳕鱼', icon: 'cod', food: 2 },
   cooked_cod: { display: '熟鳕鱼', icon: 'cooked_cod', food: 5 },
+  firework_rocket: { display: '烟花火箭', icon: 'firework_rocket', maxStack: 16 },
   glass_bottle: { display: '玻璃瓶', icon: 'glass_bottle', maxStack: 16 },
   water_bottle: { display: '水瓶', icon: 'water_bottle', maxStack: 1 },
   potion_healing: { display: '治疗药水', icon: 'potion_healing', maxStack: 1, potion: 'healing' },

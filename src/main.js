@@ -316,6 +316,31 @@ const BREWS = [
   { id: 'potion_speed', name: '迅捷药水', ingredient: 'feather', desc: '20 秒移速 +35%' },
 ];
 
+function launchFirework() {
+  const p = state.player;
+  if (!p || !state.inventory) return;
+  if (state.inventory.countOf('firework_rocket') <= 0) return;
+  state.inventory.remove('firework_rocket', 1);
+  const dir = p.forwardVector();
+  const x = p.x + dir.x * 3;
+  const z = p.z + dir.z * 3;
+  const y = p.y + 7;
+  if (state.renderer) {
+    const colors = [BLOCK.WOOL, BLOCK.GLOWSTONE, BLOCK.BRICK, BLOCK.LEAVES];
+    for (let i = 0; i < 8; i++) {
+      state.renderer.spawnBreakParticles(
+        x + (Math.random() - 0.5) * 3,
+        y + (Math.random() - 0.5) * 2,
+        z + (Math.random() - 0.5) * 3,
+        colors[i % colors.length],
+      );
+    }
+  }
+  state.sound?.play('thunder', { volume: 0.25 });
+  state.chat?.log('🎆 烟花绽放！');
+  updateHUD();
+}
+
 function startFishing() {
   const p = state.player;
   const w = state.world;
@@ -846,6 +871,7 @@ function startGame(opts = {}) {
   game.openBrew = () => openBrew();
   game.openSignEditor = (x, y, z) => openSignEditor(x, y, z);
   game.startFishing = () => startFishing();
+  game.launchFirework = () => launchFirework();
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
 
   const mobs = new MobManager(game, {
@@ -1118,6 +1144,44 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.breedDemo && state.player) {
+        state.breedDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+            const tx = p.x + f.x * 4;
+            const tz = p.z + f.z * 4;
+            const ty = state.world.getSurfaceY(Math.floor(tx), Math.floor(tz));
+            const cow1 = state.mobs?.spawn('cow', tx - right.x * 1.5, ty + 1, tz - right.z * 1.5);
+            const cow2 = state.mobs?.spawn('cow', tx + right.x * 1.5, ty + 1, tz + right.z * 1.5);
+            state.inventory.add('wheat', 8);
+            state.onInventoryChange?.();
+            if (cow1) state.mobs.feed(cow1, 'wheat');
+            if (cow2) {
+              state.mobs.feed(cow2, 'wheat');
+              state.chat?.log('演示：两只牛生出了一只幼崽');
+            }
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
+      if (state.fireworkDemo && state.player) {
+        state.fireworkDemo = false;
+        setTimeout(() => {
+          try {
+            state.inventory.add('firework_rocket', 8);
+            state.inventory.setSlot(1, { id: 'firework_rocket', count: 8 });
+            state.inventory.selectSlot(1);
+            state.inventory.notify();
+            launchFirework();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.fishDemo && state.player) {
         state.fishDemo = false;
@@ -2847,6 +2911,8 @@ function boot() {
   if (params.get('monument') === '1') state.tpMonument = true;
   if (params.get('sign') === '1') state.signDemo = true;
   if (params.get('fish') === '1') state.fishDemo = true;
+  if (params.get('breed') === '1') state.breedDemo = true;
+  if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;

@@ -160,6 +160,7 @@ export const ITEM_ICON_NAMES = [
   'fishing_rod',
   'cod',
   'cooked_cod',
+  'firework_rocket',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3445,6 +3446,15 @@ const ICON_PAINTERS = {
     fillPoly(b, [[26, 15], [30, 11], [30, 19]], C('#8a5218'));
     setPx(b, 10, 15, C('#1a1a1a'));
     setPx(b, 16, 13, C('#f0c070'));
+  },
+
+  firework_rocket(b, rng) {
+    fillRect(b, 13, 8, 6, 18, C('#c83a3a'));
+    fillPoly(b, [[13, 8], [16, 2], [19, 8]], C('#e8c04a'));
+    fillRect(b, 13, 12, 6, 2, C('#f0e8d0'));
+    fillRect(b, 11, 25, 3, 4, C('#8a5a2e'));
+    fillRect(b, 18, 25, 3, 4, C('#8a5a2e'));
+    setPx(b, 15, 10, C('#ff9a9a'));
   },
 
 };

@@ -605,6 +605,25 @@ export class Player {
   secondaryAction() {
     if (this.dead) return;
 
+    // 喂食动物
+    if (this.mobTarget && this.inventory.held) {
+      const result = this.game.mobs?.feed?.(this.mobTarget, this.inventory.held.id);
+      if (result) {
+        if (result === 'baby') this.game.toast?.('幼崽还不能繁殖');
+        else {
+          if (this.mode === 'survival') this.inventory.consumeHeld(1);
+          this.game.onInventoryChange?.();
+        }
+        return;
+      }
+    }
+
+    // 放烟花
+    if (this.inventory.held && this.inventory.held.id === 'firework_rocket') {
+      this.game.launchFirework?.();
+      return;
+    }
+
     // 钓竿抛竿
     if (this.inventory.held && this.inventory.held.id === 'fishing_rod') {
       this.game.startFishing?.();
