@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import { CHUNK_H, SEA_LEVEL } from './world.js';
+import { BLOCK } from './blocks.js';
 
 const TAU = Math.PI * 2;
 
@@ -669,8 +670,24 @@ export class MobManager {
     this._animateMob(mob, dt);
     this._updateTint(mob);
 
-    // 羊被剪毛后会重新长毛
+    // 羊被剪毛后会吃草快速长回羊毛
     if (mob.type === 'sheep' && mob.sheared) {
+      mob.eatTimer = (mob.eatTimer === undefined ? 4 : mob.eatTimer) - dt;
+      if (mob.eatTimer <= 0) {
+        mob.eatTimer = 6 + Math.random() * 6;
+        const world = this.world;
+        const bx = Math.floor(mob.x);
+        const bz = Math.floor(mob.z);
+        const by = Math.floor(mob.y) - 1;
+        if (world && typeof world.getBlock === 'function' && world.getBlock(bx, by, bz) === BLOCK.GRASS) {
+          world.setBlock(bx, by, bz, BLOCK.DIRT);
+          mob.sheared = false;
+          for (let i = 0; i < (mob.woolMats || []).length; i++) {
+            if (mob.woolBases[i]) mob.woolMats[i].base.copy(mob.woolBases[i]);
+          }
+          this._playSound('place_grass', 0.35);
+        }
+      }
       mob.woolTimer -= dt;
       if (mob.woolTimer <= 0) {
         mob.sheared = false;
@@ -784,6 +801,29 @@ export class MobManager {
     }
 
     // ---------------- 敌对生物 ----------------
+    if (def.id === 'zombie') {
+      const villager = this._nearestVillager(mob, 14);
+      if (villager && (playerUnavailable || dist > 7)) {
+        const vdx = villager.x - mob.x;
+        const vdz = villager.z - mob.z;
+        const vd = Math.sqrt(vdx * vdx + vdz * vdz);
+        if (vd > 1.35) this._setMove(mob, vdx / vd, vdz / vd, def.speed);
+        else this._stop(mob);
+        this._face(mob, villager.x, villager.z);
+        if (vd < 1.9 && ai.attackCd <= 0) {
+          ai.attackCd = 1.0;
+          villager.health -= 2;
+          villager.hurtTimer = 0.3;
+          villager.ai.flee = 4;
+          villager.ai.fleeX = mob.x;
+          villager.ai.fleeZ = mob.z;
+          this._playSound('hurt', 0.2);
+          if (villager.health <= 0) this._removeMob(villager, false);
+        }
+        return;
+      }
+    }
+
     if (playerUnavailable) {
       if (def.id === 'creeper') ai.fuse = 0;
       this._stop(mob);
@@ -864,6 +904,20 @@ export class MobManager {
       this._stop(mob);
       if (dist < 12) this._face(mob, player.x, player.z);
     }
+  }
+
+  _nearestVillager(mob, maxDist) {
+    let best = null;
+    let bestD = maxDist * maxDist;
+    for (const other of this.mobs) {
+      if (!other || other.removed || other.type !== 'villager' || other.health <= 0) continue;
+      const d = (other.x - mob.x) ** 2 + (other.z - mob.z) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = other;
+      }
+    }
+    return best;
   }
 
   _setMove(mob, dirX, dirZ, speed) {
@@ -1104,10 +1158,16 @@ export class MobManager {
       else blocked = true;
     }
 
-    if (blocked && mob.onGround && mob.jumpCd <= 0) {
-      mob.vy = JUMP_V;
-      mob.onGround = false;
-      mob.jumpCd = 0.7;
+    if (blocked) {
+      if (mob.type === 'spider') {
+        // 蜘蛛会沿着墙向上爬
+        mob.vy = Math.max(mob.vy, 3.6);
+        mob.onGround = false;
+      } else if (mob.onGround && mob.jumpCd <= 0) {
+        mob.vy = JUMP_V;
+        mob.onGround = false;
+        mob.jumpCd = 0.7;
+      }
     }
 
     // 重力
