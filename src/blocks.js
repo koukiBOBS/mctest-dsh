@@ -350,6 +350,14 @@ const EXTRA_ITEMS = {
   potion_healing: { display: '治疗药水', icon: 'potion_healing', maxStack: 1, potion: 'healing' },
   potion_strength: { display: '力量药水', icon: 'potion_strength', maxStack: 1, potion: 'strength' },
   potion_speed: { display: '迅捷药水', icon: 'potion_speed', maxStack: 1, potion: 'speed' },
+  iron_helmet: { display: '铁头盔', icon: 'iron_helmet', maxStack: 1, armor: { slot: 0, points: 2 } },
+  iron_chestplate: { display: '铁胸甲', icon: 'iron_chestplate', maxStack: 1, armor: { slot: 1, points: 6 } },
+  iron_leggings: { display: '铁护腿', icon: 'iron_leggings', maxStack: 1, armor: { slot: 2, points: 5 } },
+  iron_boots: { display: '铁靴子', icon: 'iron_boots', maxStack: 1, armor: { slot: 3, points: 2 } },
+  diamond_helmet: { display: '钻石头盔', icon: 'diamond_helmet', maxStack: 1, armor: { slot: 0, points: 3 } },
+  diamond_chestplate: { display: '钻石胸甲', icon: 'diamond_chestplate', maxStack: 1, armor: { slot: 1, points: 8 } },
+  diamond_leggings: { display: '钻石护腿', icon: 'diamond_leggings', maxStack: 1, armor: { slot: 2, points: 6 } },
+  diamond_boots: { display: '钻石靴子', icon: 'diamond_boots', maxStack: 1, armor: { slot: 3, points: 3 } },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };
@@ -360,6 +368,7 @@ export const TOOL_TIERS = {
   wood: { tier: 1, speed: 3, uses: 60, display: '木' },
   stone: { tier: 2, speed: 5, uses: 132, display: '石' },
   iron: { tier: 3, speed: 8, uses: 251, display: '铁' },
+  diamond: { tier: 4, speed: 12, uses: 1561, display: '钻石' },
 };
 export const TOOL_TYPES = {
   pickaxe: { display: '镐', speedTool: true },
@@ -383,7 +392,7 @@ for (const [matName, mat] of Object.entries(TOOL_TIERS)) {
 }
 
 // 工具挖掘速度倍率（按 tier 索引，tier 1..3）
-export const TOOL_SPEED_MULT = [0, 3, 5, 8];
+export const TOOL_SPEED_MULT = [0, 3, 5, 8, 12];
 
 export function getBlockDef(id) {
   return BLOCK_DEFS[id] || BLOCK_DEFS[0];

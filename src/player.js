@@ -383,9 +383,9 @@ export class Player {
     let base = 1;
     if (item && item.tool) {
       const t = item.tool;
-      if (t.type === 'sword') base = [0, 4, 5, 6][t.tier] || 1;
-      else if (t.type === 'axe') base = [0, 3, 4, 5][t.tier] || 2;
-      else base = [0, 2, 3, 4][t.tier] || 1;
+      if (t.type === 'sword') base = [0, 4, 5, 6, 7][t.tier] || 1;
+      else if (t.type === 'axe') base = [0, 3, 4, 5, 6][t.tier] || 2;
+      else base = [0, 2, 3, 4, 5][t.tier] || 1;
     }
     const held2 = this.inventory.held;
     if (held2 && held2.enchant && held2.enchant.id === 'sharpness') base += held2.enchant.level;
@@ -815,6 +815,8 @@ export class Player {
 
   damage(amount, reason) {
     if (this.dead || this.mode === 'creative') return;
+    const points = this.inventory && this.inventory.armorDefense ? this.inventory.armorDefense() : 0;
+    if (points > 0) amount = Math.max(1, amount * (1 - Math.min(0.8, points * 0.04)));
     this.health -= amount;
     this.hurtFlash = 0.45;
     this.game.sound?.play('hurt', { volume: 0.5 });

@@ -789,6 +789,26 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.armorDemo && state.player) {
+        state.armorDemo = false;
+        setTimeout(() => {
+          try {
+            state.inventory.armor = [
+              { id: 'diamond_helmet', count: 1 },
+              { id: 'diamond_chestplate', count: 1 },
+              { id: 'diamond_leggings', count: 1 },
+              { id: 'diamond_boots', count: 1 },
+            ];
+            state.inventory.setSlot(0, { id: 'diamond_sword', count: 1, durability: 1561 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            state.chat?.log('演示：已穿戴全套钻石盔甲（防御 20，减伤 80%）');
+            openInventory(2);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.brewDemo && state.player) {
         state.brewDemo = false;
         setTimeout(() => {
@@ -2292,6 +2312,7 @@ function boot() {
   if (params.get('trade') === '1') state.tradeDemo = true;
   if (params.get('enchant') === '1') state.enchantDemo = true;
   if (params.get('brew') === '1') state.brewDemo = true;
+  if (params.get('armor') === '1') state.armorDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

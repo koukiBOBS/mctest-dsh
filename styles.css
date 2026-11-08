@@ -1465,3 +1465,18 @@ body.touch #xp-bar {
   color: #cfe8c8;
   text-align: center;
 }
+
+/* ---------------- 盔甲槽 ---------------- */
+.armor-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.armor-label {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #bbb;
+}

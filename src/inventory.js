@@ -77,6 +77,7 @@ export class Inventory {
   constructor(opts = {}) {
     this.mode = opts.mode || 'survival';
     this.slots = new Array(36).fill(null); // 0..8 快捷栏，9..35 主背包
+    this.armor = new Array(4).fill(null); // 头盔 / 胸甲 / 护腿 / 靴子
     this.hotbarIndex = 0;
     this.craftGrid = new Array(9).fill(null);
     this.craftSize = 2;
@@ -100,6 +101,16 @@ export class Inventory {
     if (i < 0 || i > 8) return;
     this.hotbarIndex = i;
     this.notify();
+  }
+
+  armorDefense() {
+    let points = 0;
+    for (const s of this.armor) {
+      if (!s) continue;
+      const item = getItem(s.id);
+      if (item && item.armor) points += item.armor.points;
+    }
+    return points;
   }
 
   setSlot(i, stack) {
@@ -192,11 +203,27 @@ export class Inventory {
   }
 
   serialize() {
-    return this.slots.map((s) => (s ? { id: s.id, count: s.count, dur: s.dur, enchant: s.enchant ? { ...s.enchant } : undefined } : null));
+    const pack = (s) => (s ? { id: s.id, count: s.count, dur: s.dur, enchant: s.enchant ? { ...s.enchant } : undefined } : null);
+    return {
+      slots: this.slots.map(pack),
+      armor: this.armor.map(pack),
+    };
   }
 
-  deserialize(arr) {
-    if (!Array.isArray(arr)) return;
+  deserialize(data) {
+    const arr = Array.isArray(data) ? data : data && Array.isArray(data.slots) ? data.slots : null;
+    if (!arr) return;
+    this.armor = new Array(4).fill(null);
+    if (!Array.isArray(data) && Array.isArray(data.armor)) {
+      for (let i = 0; i < 4; i++) {
+        const s = data.armor[i];
+        if (s && getItem(s.id)) {
+          const stack = { id: s.id, count: 1 };
+          if (s.enchant && s.enchant.id) stack.enchant = { ...s.enchant };
+          this.armor[i] = stack;
+        }
+      }
+    }
     this.slots = new Array(36).fill(null);
     for (let i = 0; i < 36 && i < arr.length; i++) {
       const s = arr[i];
@@ -339,6 +366,34 @@ export class InventoryUI {
   }
 
   _onSlotClick(kind, idOrIndex) {
+    if (kind === 'armor') {
+      const i = +idOrIndex;
+      const s = this.inv.armor[i];
+      if (!s) return;
+      const empty = this.inv.slots.findIndex((x) => !x);
+      if (empty < 0) return;
+      this.inv.slots[empty] = s;
+      this.inv.armor[i] = null;
+      this.inv.notify();
+      this.sound?.play('click', { volume: 0.25 });
+      this.refresh();
+      return;
+    }
+    if (kind === 'inv') {
+      const i = +idOrIndex;
+      const s = this.inv.slots[i];
+      const item = s ? getItem(s.id) : null;
+      if (item && item.armor) {
+        const slot = item.armor.slot;
+        const old = this.inv.armor[slot];
+        this.inv.armor[slot] = s;
+        this.inv.slots[i] = old || null;
+        this.inv.notify();
+        this.sound?.play('click', { volume: 0.3 });
+        this.refresh();
+        return;
+      }
+    }
     if (kind === 'creative') {
       const id = idOrIndex;
       const item = getItem(id);
@@ -525,6 +580,10 @@ export class InventoryUI {
     const { grid, w, h } = this._craftGridInput();
     const result = matchRecipe(grid, w, h);
 
+    let armorSlots = '';
+    for (let i = 0; i < 4; i++) {
+      armorSlots += this._slotHTML({ kind: 'armor', attrs: `data-index="${i}"`, stack: this.inv.armor[i], small: true });
+    }
     let invSlots = '';
     for (let i = 9; i < 36; i++) {
       invSlots += this._slotHTML({ kind: 'inv', attrs: `data-index="${i}"`, stack: this.inv.slots[i] });
@@ -546,9 +605,10 @@ export class InventoryUI {
             : '<div class="slot result" data-kind="result" data-index="0"></div>'}
         </div>
       </div>
+      <div class="armor-row">${armorSlots}<span class="armor-label">盔甲</span></div>
       <div class="inv-grid">${invSlots}</div>
       <div class="hotbar-row">${hotbarSlots}</div>
-      <div class="inv-hint">点击拿起/放下 · 长按分一半 · 2×2 合成在工作台外可用</div>
+      <div class="inv-hint">点击拿起/放下 · 长按分一半 · 点击盔甲可直接穿戴</div>
     `;
   }
 
@@ -569,8 +629,13 @@ export class InventoryUI {
     for (let i = 0; i < 9; i++) {
       hotbarSlots += this._slotHTML({ kind: 'inv', attrs: `data-index="${i}"`, stack: this.inv.slots[i], small: true });
     }
+    let armorSlots = '';
+    for (let i = 0; i < 4; i++) {
+      armorSlots += this._slotHTML({ kind: 'armor', attrs: `data-index="${i}"`, stack: this.inv.armor[i], small: true });
+    }
     this.bodyEl.innerHTML = `
       <div class="creative-title">创造物品栏 · 点击放入快捷栏</div>
+      <div class="armor-row">${armorSlots}<span class="armor-label">盔甲</span></div>
       <div class="creative-grid">${html}</div>
       <div class="hotbar-row">${hotbarSlots}</div>
     `;
@@ -605,10 +670,13 @@ function ITEMS_FOR_CREATIVE() {
     'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
     'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken', 'wheat_seeds', 'wheat',
     'feather', 'leather', 'bone', 'string', 'gunpowder', 'rotten_flesh', 'arrow', 'bread', 'bow', 'flint', 'egg', 'shears', 'bucket', 'water_bucket', 'lava_bucket', 'emerald', 'glass_bottle', 'water_bottle', 'potion_healing', 'potion_strength', 'potion_speed',
-    'wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe',
-    'wooden_axe', 'stone_axe', 'iron_axe', 'wooden_hoe', 'stone_hoe', 'iron_hoe',
-    'wooden_shovel', 'stone_shovel', 'iron_shovel',
-    'wooden_sword', 'stone_sword', 'iron_sword',
+    'wood_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'diamond_pickaxe',
+    'wood_axe', 'stone_axe', 'iron_axe', 'diamond_axe',
+    'wood_hoe', 'stone_hoe', 'iron_hoe',
+    'wood_shovel', 'stone_shovel', 'iron_shovel', 'diamond_shovel',
+    'wood_sword', 'stone_sword', 'iron_sword', 'diamond_sword',
+    'iron_helmet', 'iron_chestplate', 'iron_leggings', 'iron_boots',
+    'diamond_helmet', 'diamond_chestplate', 'diamond_leggings', 'diamond_boots',
   ]) ids.push(id);
   _creativeIds = ids;
   return ids;

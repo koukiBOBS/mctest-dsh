@@ -135,6 +135,18 @@ export const ITEM_ICON_NAMES = [
   'potion_healing',
   'potion_strength',
   'potion_speed',
+  'diamond_pickaxe',
+  'diamond_axe',
+  'diamond_shovel',
+  'diamond_sword',
+  'iron_helmet',
+  'iron_chestplate',
+  'iron_leggings',
+  'iron_boots',
+  'diamond_helmet',
+  'diamond_chestplate',
+  'diamond_leggings',
+  'diamond_boots',
 ];
 
 /* =====================================================================
@@ -2212,6 +2224,12 @@ const MAT = {
     dark: C('#a8a8a8'),
     line: C('#5f5f5f'),
   },
+  diamond: {
+    base: C('#4aedd9'),
+    light: C('#9afff0'),
+    dark: C('#2bb8a8'),
+    line: C('#0e5a52'),
+  },
 };
 
 const MAT_WOOD_DARK = {
@@ -2345,6 +2363,47 @@ const SHOVEL_HEAD = [
   [10, 8],
 ];
 
+
+
+/** 简易盔甲图标：helmet / chestplate / leggings / boots。 */
+function paintArmorPiece(b, kind, main, light, dark) {
+  const M = C(main);
+  const L = C(light);
+  const D = C(dark);
+  const K = C('#1a1a1a');
+  if (kind === 'helmet') {
+    fillRect(b, 7, 8, 18, 9, M);
+    fillRect(b, 8, 6, 16, 4, L);
+    fillRect(b, 9, 12, 14, 6, D);
+    fillRect(b, 10, 13, 4, 4, K);
+    fillRect(b, 18, 13, 4, 4, K);
+    fillRect(b, 6, 15, 3, 7, M);
+    fillRect(b, 23, 15, 3, 7, M);
+  } else if (kind === 'chestplate') {
+    fillRect(b, 8, 9, 16, 15, M);
+    fillRect(b, 4, 10, 5, 6, M);
+    fillRect(b, 23, 10, 5, 6, M);
+    fillRect(b, 9, 8, 14, 3, L);
+    fillRect(b, 13, 9, 6, 3, K);
+    fillRect(b, 8, 22, 16, 3, D);
+  } else if (kind === 'leggings') {
+    fillRect(b, 8, 8, 16, 6, M);
+    fillRect(b, 8, 8, 6, 18, M);
+    fillRect(b, 18, 8, 6, 18, M);
+    fillRect(b, 8, 7, 16, 3, L);
+    fillRect(b, 14, 14, 4, 12, K);
+    fillRect(b, 8, 24, 6, 3, D);
+    fillRect(b, 18, 24, 6, 3, D);
+  } else {
+    fillRect(b, 7, 15, 8, 8, M);
+    fillRect(b, 17, 15, 8, 8, M);
+    fillRect(b, 7, 14, 8, 3, L);
+    fillRect(b, 17, 14, 8, 3, L);
+    fillRect(b, 6, 22, 10, 4, D);
+    fillRect(b, 16, 22, 10, 4, D);
+    fillRect(b, 13, 15, 6, 2, K);
+  }
+}
 
 /** 锄头图标：木柄 + 弯头。 */
 function paintHoe(b, mat) {
@@ -3182,6 +3241,43 @@ const ICON_PAINTERS = {
     fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#2fb8c8'));
     setPx(b, 14, 18, C('#a8f0ff'));
     fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  diamond_pickaxe(b, rng) {
+    paintTool(b, MAT.diamond, 'pickaxe');
+  },
+  diamond_axe(b, rng) {
+    paintTool(b, MAT.diamond, 'axe');
+  },
+  diamond_shovel(b, rng) {
+    paintTool(b, MAT.diamond, 'shovel');
+  },
+  diamond_sword(b, rng) {
+    paintTool(b, MAT.diamond, 'sword');
+  },
+  iron_helmet(b, rng) {
+    paintArmorPiece(b, 'helmet', '#d8d8d8', '#f0f0f0', '#8a8a8a');
+  },
+  iron_chestplate(b, rng) {
+    paintArmorPiece(b, 'chestplate', '#d8d8d8', '#f0f0f0', '#8a8a8a');
+  },
+  iron_leggings(b, rng) {
+    paintArmorPiece(b, 'leggings', '#d8d8d8', '#f0f0f0', '#8a8a8a');
+  },
+  iron_boots(b, rng) {
+    paintArmorPiece(b, 'boots', '#d8d8d8', '#f0f0f0', '#8a8a8a');
+  },
+  diamond_helmet(b, rng) {
+    paintArmorPiece(b, 'helmet', '#4aedd9', '#9afff0', '#2bb8a8');
+  },
+  diamond_chestplate(b, rng) {
+    paintArmorPiece(b, 'chestplate', '#4aedd9', '#9afff0', '#2bb8a8');
+  },
+  diamond_leggings(b, rng) {
+    paintArmorPiece(b, 'leggings', '#4aedd9', '#9afff0', '#2bb8a8');
+  },
+  diamond_boots(b, rng) {
+    paintArmorPiece(b, 'boots', '#4aedd9', '#9afff0', '#2bb8a8');
   },
 
 };
