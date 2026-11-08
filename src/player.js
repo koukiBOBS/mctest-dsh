@@ -60,6 +60,8 @@ export class Player {
     this.attackCooldown = 0;
     this.chargingBow = false;
     this.bowCharge = 0;
+    this.xp = 0;
+    this.xpLevel = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
     this.breakHeld = false;
@@ -373,13 +375,16 @@ export class Player {
   _attackDamage() {
     const held = this.inventory.held;
     const item = held ? getItem(held.id) : null;
+    let base = 1;
     if (item && item.tool) {
       const t = item.tool;
-      if (t.type === 'sword') return [0, 4, 5, 6][t.tier] || 1;
-      if (t.type === 'axe') return [0, 3, 4, 5][t.tier] || 2;
-      return [0, 2, 3, 4][t.tier] || 1;
+      if (t.type === 'sword') base = [0, 4, 5, 6][t.tier] || 1;
+      else if (t.type === 'axe') base = [0, 3, 4, 5][t.tier] || 2;
+      else base = [0, 2, 3, 4][t.tier] || 1;
     }
-    return 1;
+    const held2 = this.inventory.held;
+    if (held2 && held2.enchant && held2.enchant.id === 'sharpness') base += held2.enchant.level;
+    return base;
   }
 
   attackAction() {
@@ -453,7 +458,11 @@ export class Player {
       this.breakTarget = { ...this.target };
       this.breakProgress = 0;
     }
-    const total = breakTimeSeconds(this.target.id, heldId);
+    let total = breakTimeSeconds(this.target.id, heldId);
+    const heldStack = this.inventory.held;
+    if (heldStack && heldStack.enchant && heldStack.enchant.id === 'efficiency') {
+      total /= 1 + 0.35 * heldStack.enchant.level;
+    }
     this.breakProgress += dt / Math.max(0.05, total);
     if (Math.random() < dt * 6) {
       this.game.renderer?.spawnBreakParticles(this.target.x, this.target.y, this.target.z, this.target.id);
@@ -496,6 +505,10 @@ export class Player {
     this.game.renderer?.spawnBreakParticles(hit.x, hit.y, hit.z, hit.id);
     this.game.sound?.play(breakSoundName(hit.id), { volume: 0.55 });
     this.game.achievements?.onEvent('mine', { id: hit.id, name: def.name });
+    if (hit.id === BLOCK.COAL_ORE) this.addXp(4);
+    else if (hit.id === BLOCK.IRON_ORE) this.addXp(5);
+    else if (hit.id === BLOCK.GOLD_ORE) this.addXp(6);
+    else if (hit.id === BLOCK.DIAMOND_ORE) this.addXp(8);
     if (hit.id === BLOCK.WHEAT_3) this.game.achievements?.onEvent('harvest', {});
     this.game.onInventoryChange?.();
   }
@@ -542,6 +555,24 @@ export class Player {
     return true;
   }
 
+  xpNeeded() {
+    return 7 + this.xpLevel * 2;
+  }
+
+  addXp(amount) {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    this.xp += amount;
+    let leveled = false;
+    while (this.xp >= this.xpNeeded() && this.xpLevel < 30) {
+      this.xp -= this.xpNeeded();
+      this.xpLevel += 1;
+      leveled = true;
+    }
+    if (this.xpLevel >= 30) this.xp = Math.min(this.xp, this.xpNeeded());
+    if (leveled) this.game.sound?.play('pop', { volume: 0.45 });
+    this.game.onHealthChange?.();
+  }
+
   _useHoe() {
     const hit = this.target;
     if (!hit) return false;
@@ -582,6 +613,11 @@ export class Player {
 
     if (this.mobTarget && this.mobTarget.type === 'villager' && this.mobTarget.health > 0) {
       this.game.openTrade?.(this.mobTarget);
+      return;
+    }
+
+    if (this.target && this.target.id === BLOCK.ENCHANTING_TABLE) {
+      this.game.openEnchant?.();
       return;
     }
 
@@ -772,6 +808,8 @@ export class Player {
       pitch: this.pitch,
       health: this.health,
       hunger: this.hunger,
+      xp: this.xp,
+      xpLevel: this.xpLevel,
       mode: this.mode,
       flying: this.flying,
       spawn: { ...this.spawn },
@@ -787,6 +825,8 @@ export class Player {
     if (typeof s.pitch === 'number') this.pitch = s.pitch;
     if (typeof s.health === 'number') this.health = s.health;
     if (typeof s.hunger === 'number') this.hunger = s.hunger;
+    if (typeof s.xp === 'number') this.xp = s.xp;
+    if (typeof s.xpLevel === 'number') this.xpLevel = s.xpLevel;
     if (s.mode === 'creative' || s.mode === 'survival') this.mode = s.mode;
     this.flying = !!s.flying && this.mode === 'creative';
     if (s.spawn) this.spawn = { ...s.spawn };

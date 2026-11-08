@@ -1374,3 +1374,72 @@ body.touch #hand-item {
   color: #aaa;
   text-align: center;
 }
+
+
+/* ---------------- 经验条与附魔 ---------------- */
+#xp-bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  width: 260px;
+  max-width: 60vw;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid #232323;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+#xp-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(#8cf06a, #3da82a);
+  border-radius: 2px;
+}
+
+#xp-level {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+  color: #8fff6a;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 #000;
+}
+
+body.touch #xp-bar {
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  width: 180px;
+}
+
+#enchant-held {
+  margin: 8px 0 2px;
+  font-size: 12px;
+  color: #cfe8c8;
+  text-align: center;
+}
+
+.enchant-name {
+  min-width: 90px;
+  text-align: left;
+  color: #a8f090;
+}
+
+.enchant-desc {
+  flex: 1;
+  font-size: 12px;
+  color: #bbb;
+  text-align: left;
+}
+
+.enchant-cost {
+  color: #f2d24a;
+  min-width: 46px;
+  text-align: right;
+}
+
+.trade-offer[disabled] {
+  opacity: 0.45;
+}

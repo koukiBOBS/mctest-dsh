@@ -65,6 +65,7 @@ export const BLOCK = Object.freeze({
   DOOR_X_OPEN: 57,
   DOOR_Z_OPEN: 58,
   FENCE: 59,
+  ENCHANTING_TABLE: 60,
 });
 
 export const BLOCK_DEFS = [];
@@ -246,6 +247,10 @@ def(BLOCK.DOOR_Z_OPEN, 'door_z_open', '门', {
 def(BLOCK.FENCE, 'fence', '栅栏', {
   tiles: { all: 'oak_planks' }, model: 'fence', fence: true,
   solid: true, opaque: false, transparent: true, hardness: 0.4, sound: 'wood', drop: 'fence',
+});
+def(BLOCK.ENCHANTING_TABLE, 'enchanting_table', '附魔台', {
+  tiles: { top: 'obsidian', bottom: 'obsidian', side: 'oak_planks' },
+  hardness: 1.2, sound: 'wood',
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },

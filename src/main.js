@@ -9,7 +9,7 @@ import { Inventory, InventoryUI, makeHudIcons } from './inventory.js';
 import { SoundEngine } from './sound.js';
 import { ItemEntityManager } from './items.js';
 import { MobManager } from './mobs.js';
-import { BLOCK, getBlockDef, itemDisplay } from './blocks.js';
+import { BLOCK, getBlockDef, itemDisplay, getItem } from './blocks.js';
 import * as RP from './resourcepack.js';
 import { ChatUI } from './chat.js';
 import { ContainerManager, ContainerUI } from './containers.js';
@@ -45,6 +45,7 @@ const state = {
   discoverTimer: 0,
   tradeOpen: false,
   tradeMob: null,
+  enchantOpen: false,
   villagerTimer: 0,
   playerModel: null,
   thirdPerson: false,
@@ -77,6 +78,98 @@ const TRADES = [
   { cost: { id: 'emerald', count: 3 }, result: { id: 'diamond', count: 1 } },
   { cost: { id: 'coal', count: 12 }, result: { id: 'emerald', count: 1 } },
 ];
+
+const ENCHANTS = [
+  { id: 'efficiency', name: '效率', desc: '挖掘速度 +35%/级', cost: 3, kind: 'tool' },
+  { id: 'sharpness', name: '锋利', desc: '攻击伤害 +1/级', cost: 5, kind: 'weapon' },
+  { id: 'unbreaking', name: '耐久', desc: '耐久消耗概率减免', cost: 2, kind: 'tool' },
+];
+
+const ENCHANT_NAMES = { efficiency: '效率', sharpness: '锋利', unbreaking: '耐久' };
+
+function enchantName(enchant) {
+  return (ENCHANT_NAMES[enchant.id] || enchant.id) + ' ' + (['', 'I', 'II', 'III'][enchant.level] || enchant.level);
+}
+
+function openEnchant() {
+  if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
+  if (state.enchantOpen) return;
+  state.enchantOpen = true;
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-enchant').classList.remove('hidden');
+  renderEnchantOffers();
+}
+
+function closeEnchant() {
+  if (!state.enchantOpen) return;
+  state.enchantOpen = false;
+  state.paused = false;
+  $('screen-enchant').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+}
+
+function renderEnchantOffers() {
+  const heldBox = $('enchant-held');
+  const box = $('enchant-offers');
+  if (!heldBox || !box) return;
+  const h = state.inventory && state.inventory.held;
+  const item = h ? getItem(h.id) : null;
+  const tool = item && item.tool;
+  heldBox.textContent = h
+    ? `手持：${itemDisplay(h.id)}${h.enchant ? '（' + enchantName(h.enchant) + '）' : ''} · 经验等级 ${state.player ? state.player.xpLevel : 0}`
+    : '请手持工具或武器';
+  box.innerHTML = ENCHANTS.map((e, i) => {
+    const compatible = !!tool && (e.kind === 'weapon' ? (tool.type === 'sword' || tool.type === 'axe') : tool.type !== 'sword');
+    const current = h && h.enchant && h.enchant.id === e.id ? h.enchant.level : 0;
+    const cost = e.cost + current * 2;
+    const maxed = current >= 3;
+    return `<button class="trade-offer" data-enchant="${i}" ${compatible && !maxed ? '' : 'disabled'}>`
+      + `<span class="enchant-name">${e.name} ${maxed ? 'MAX' : ['I', 'II', 'III'][current]}</span>`
+      + `<span class="enchant-desc">${e.desc}</span>`
+      + `<span class="enchant-cost">${maxed ? '已满级' : cost + ' 级'}</span>`
+      + `</button>`;
+  }).join('');
+}
+
+function applyEnchant(index) {
+  const offer = ENCHANTS[index];
+  const h = state.inventory && state.inventory.held;
+  if (!offer || !h) return;
+  const item = getItem(h.id);
+  if (!item || !item.tool) {
+    showToast('请手持工具或武器');
+    return;
+  }
+  const compatible = offer.kind === 'weapon'
+    ? (item.tool.type === 'sword' || item.tool.type === 'axe')
+    : item.tool.type !== 'sword';
+  if (!compatible) {
+    showToast('该附魔不适用于这件物品');
+    return;
+  }
+  const current = h.enchant && h.enchant.id === offer.id ? h.enchant.level : 0;
+  if (current >= 3) {
+    showToast('该附魔已经满级');
+    return;
+  }
+  const cost = offer.cost + current * 2;
+  if (!state.player || state.player.xpLevel < cost) {
+    showToast('经验等级不足：需要 ' + cost + ' 级');
+    return;
+  }
+  state.player.xpLevel -= cost;
+  h.enchant = { id: offer.id, level: current + 1 };
+  state.sound?.play('craft', { volume: 0.6 });
+  state.achievements?.onEvent('enchant', {});
+  showToast('附魔成功：' + offer.name + ' ' + ['I', 'II', 'III'][current]);
+  updateHUD();
+  renderEnchantOffers();
+}
 
 function renderTradeOffers() {
   const box = $('trade-offers');
@@ -368,6 +461,7 @@ function startGame(opts = {}) {
   game.explode = (x, y, z, power = 3) => explode(x, y, z, power);
   game.igniteTNT = (x, y, z) => igniteTNT(x, y, z);
   game.openTrade = (mob) => openTrade(mob);
+  game.openEnchant = () => openEnchant();
 
   const mobs = new MobManager(game, {
     maxMobs: state.isTouch ? 14 : 24,
@@ -624,6 +718,22 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.enchantDemo && state.player) {
+        state.enchantDemo = false;
+        setTimeout(() => {
+          try {
+            state.player.xpLevel = 12;
+            state.inventory.setSlot(0, { id: 'iron_pickaxe', count: 1, durability: 250 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            updateHUD();
+            openEnchant();
+            setTimeout(() => applyEnchant(0), 1500);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.tradeDemo && state.player) {
         state.tradeDemo = false;
@@ -970,6 +1080,13 @@ function updateHUD() {
   const held = state.inventory && state.inventory.held;
   $('held-name').textContent = held ? itemDisplay(held.id) + (held.count > 1 ? ' ×' + held.count : '') : '';
   updateHandItem();
+  const xpFill = $('xp-fill');
+  const xpLevelEl = $('xp-level');
+  if (xpFill && state.player) {
+    const need = state.player.xpNeeded ? state.player.xpNeeded() : 7;
+    xpFill.style.width = Math.round(Math.min(1, state.player.xp / Math.max(1, need)) * 100) + '%';
+  }
+  if (xpLevelEl && state.player) xpLevelEl.textContent = String(state.player.xpLevel);
   state.invUI?.renderHotbar();
 }
 
@@ -1263,6 +1380,10 @@ function handleEscape() {
   if (!state.running) {
     if (!$('screen-settings').classList.contains('hidden')) closeSettings();
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
+    return;
+  }
+  if (state.enchantOpen) {
+    closeEnchant();
     return;
   }
   if (state.tradeOpen) {
@@ -1928,6 +2049,13 @@ function bindUI() {
   $('btn-hud-inv').addEventListener('click', () => openInventory(2));
   $('btn-hud-menu').addEventListener('click', () => setPaused(true));
   $('trade-close').addEventListener('click', closeTrade);
+  $('enchant-close').addEventListener('click', closeEnchant);
+  $('enchant-offers').addEventListener('click', (e) => {
+    const btn = e.target.closest('.trade-offer');
+    if (!btn || btn.disabled) return;
+    const index = Number(btn.dataset.enchant);
+    if (Number.isFinite(index)) applyEnchant(index);
+  });
   $('trade-offers').addEventListener('click', (e) => {
     const btn = e.target.closest('.trade-offer');
     if (!btn) return;
@@ -2041,6 +2169,7 @@ function boot() {
   if (params.get('fencedemo') === '1') state.fenceDemo = true;
   if (params.get('stronghold') === '1') state.tpStronghold = true;
   if (params.get('trade') === '1') state.tradeDemo = true;
+  if (params.get('enchant') === '1') state.enchantDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

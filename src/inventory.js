@@ -192,7 +192,7 @@ export class Inventory {
   }
 
   serialize() {
-    return this.slots.map((s) => (s ? { id: s.id, count: s.count, dur: s.dur } : null));
+    return this.slots.map((s) => (s ? { id: s.id, count: s.count, dur: s.dur, enchant: s.enchant ? { ...s.enchant } : undefined } : null));
   }
 
   deserialize(arr) {
@@ -203,6 +203,7 @@ export class Inventory {
       if (s && getItem(s.id)) {
         const stack = { id: s.id, count: Math.max(1, Math.min(9999, s.count | 0)) };
         if (getItem(s.id).durability) stack.dur = typeof s.dur === 'number' ? s.dur : getItem(s.id).durability;
+        if (s.enchant && s.enchant.id) stack.enchant = { id: s.enchant.id, level: Math.max(1, Math.min(3, s.enchant.level | 0)) };
         this.slots[i] = stack;
       }
     }
@@ -599,7 +600,7 @@ function ITEMS_FOR_CREATIVE() {
     'spruce_log', 'spruce_leaves', 'spruce_planks',
     'glass', 'water', 'bedrock', 'clay', 'cactus',
     'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'snow', 'ice',
-    'crafting_table', 'furnace', 'chest', 'bed', 'farmland', 'door', 'fence', 'torch', 'tnt', 'rose', 'dandelion', 'tall_grass',
+    'crafting_table', 'furnace', 'chest', 'bed', 'farmland', 'door', 'fence', 'enchanting_table', 'torch', 'tnt', 'rose', 'dandelion', 'tall_grass',
     'stone_bricks', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
     'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
     'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken', 'wheat_seeds', 'wheat',
