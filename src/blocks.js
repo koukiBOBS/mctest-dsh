@@ -67,6 +67,8 @@ export const BLOCK = Object.freeze({
   FENCE: 59,
   ENCHANTING_TABLE: 60,
   BREWING_STAND: 61,
+  NETHERRACK: 62,
+  NETHER_PORTAL: 63,
 });
 
 export const BLOCK_DEFS = [];
@@ -256,6 +258,13 @@ def(BLOCK.ENCHANTING_TABLE, 'enchanting_table', '附魔台', {
 def(BLOCK.BREWING_STAND, 'brewing_stand', '酿造台', {
   tiles: { top: 'cobble', bottom: 'cobble', side: 'oak_planks' },
   hardness: 1.0, sound: 'wood',
+});
+def(BLOCK.NETHERRACK, 'netherrack', '下界岩', {
+  tiles: { all: 'netherrack' }, hardness: 0.4, sound: 'stone',
+});
+def(BLOCK.NETHER_PORTAL, 'nether_portal', '下界传送门', {
+  tiles: { all: 'nether_portal' }, solid: false, opaque: false, transparent: true,
+  hardness: 0.2, sound: 'glass', drop: null, light: 11,
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },

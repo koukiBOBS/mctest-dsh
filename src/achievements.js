@@ -24,6 +24,7 @@ export const ACHIEVEMENTS = [
   { id: 'trade', name: '讨价还价', desc: '和村民完成一次交易' },
   { id: 'enchant', name: '附魔大师', desc: '在附魔台为物品附魔一次' },
   { id: 'brew', name: '魔药学家', desc: '在酿造台酿造一瓶药水' },
+  { id: 'nether', name: '下界之旅', desc: '穿过下界传送门进入下界' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -139,6 +140,7 @@ export class Achievements {
         else if (data.kind === 'temple') this.unlock('temple');
         else if (data.kind === 'igloo') this.unlock('igloo');
         else if (data.kind === 'stronghold') this.unlock('stronghold');
+        else if (data.kind === 'nether') this.unlock('nether');
         break;
       default:
         break;

@@ -637,6 +637,11 @@ export class Player {
     const heldItem = held ? getItem(held.id) : null;
     const heldId = held ? held.id : null;
 
+    // 燧石点燃下界传送门框架
+    if (heldId === 'flint' && this.target && this.target.id === BLOCK.OBSIDIAN) {
+      if (this.game.lightPortal?.(this.target.x, this.target.y, this.target.z)) return;
+    }
+
     // 燧石点燃 TNT
     if (heldId === 'flint' && this.target && this.target.id === BLOCK.TNT) {
       this.game.igniteTNT?.(this.target.x, this.target.y, this.target.z);

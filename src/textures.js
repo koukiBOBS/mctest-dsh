@@ -80,6 +80,8 @@ export const TILE_NAMES = [
   'tnt_top',
   'tnt_bottom',
   'door',
+  'netherrack',
+  'nether_portal',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -148,6 +150,10 @@ export const ITEM_ICON_NAMES = [
   'diamond_leggings',
   'diamond_boots',
 ];
+export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
+export const ATLAS_W = TILE_PX * ATLAS_COLS;
+export const ATLAS_H = TILE_PX * ATLAS_ROWS;
+
 
 /* =====================================================================
  * 1. Deterministic randomness
@@ -2071,6 +2077,31 @@ const TILE_PAINTERS = {
     setPx(b, 12, 8, C('#c8c8c8'));
   },
 
+  netherrack(b, rng) {
+    noiseFill(b, rng, [
+      ['#5a1f1f', 6],
+      ['#6e2626', 5],
+      ['#481717', 4],
+    ]);
+    for (let i = 0; i < 10; i++) {
+      const x = (rng() * 16) | 0;
+      const y = (rng() * 16) | 0;
+      setPx(b, x, y, C('#3a1010'));
+      setPx(b, (x + 1) & 15, y, C('#7c2e2e'));
+    }
+  },
+
+  nether_portal(b, rng) {
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const v = Math.sin((x + y * 0.7) * 0.9) + Math.cos((x * 0.6 - y) * 0.8);
+        const c = v > 0.6 ? '#b06cff' : v > -0.2 ? '#7b3bd6' : '#4a1f8a';
+        setPx(b, x, y, C(c));
+      }
+    }
+    for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#e0c4ff'));
+  },
+
 };
 
 function paintTile(name) {
@@ -2083,7 +2114,7 @@ function paintTile(name) {
 
 /** Build the 128x128 atlas. Tile i goes to col=i%8, row=floor(i/8). */
 export function buildAtlas() {
-  const atlas = makeBuf(ATLAS_SIZE, ATLAS_SIZE);
+  const atlas = makeBuf(ATLAS_W, ATLAS_H);
   for (let i = 0; i < TILE_NAMES.length; i++) {
     const tile = paintTile(TILE_NAMES[i]);
     const ox = (i % ATLAS_COLS) * TILE_PX;
@@ -2091,7 +2122,7 @@ export function buildAtlas() {
     // Straight pixel copy: a tile can never spill into its neighbour.
     for (let y = 0; y < TILE_PX; y++) {
       const src = y * TILE_PX * 4;
-      const dst = ((oy + y) * ATLAS_SIZE + ox) * 4;
+      const dst = ((oy + y) * ATLAS_W + ox) * 4;
       atlas.data.set(tile.data.subarray(src, src + TILE_PX * 4), dst);
     }
   }

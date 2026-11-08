@@ -22,6 +22,12 @@ export const CHUNK_SX = 16;
 export const CHUNK_SZ = 16;
 export const CHUNK_H = 128;
 export const SEA_LEVEL = 62;
+
+// 下界区域（同一世界的远端坐标，避免额外的世界切换系统）
+export const NETHER_ORIGIN = 200000;
+export const NETHER_CHUNK_START = NETHER_ORIGIN >> 4;
+export const NETHER_CHUNK_SIZE = 16;
+export const NETHER_DEST = { x: NETHER_ORIGIN + 128, z: NETHER_ORIGIN + 128 };
 const CHUNK_AREA = CHUNK_SX * CHUNK_SZ;
 
 export const BIOME_NAMES = {
@@ -152,10 +158,62 @@ export class World {
     return this.chunks.get(chunkKey(cx, cz)) || null;
   }
 
+  isNetherChunk(cx, cz) {
+    return (
+      cx >= NETHER_CHUNK_START &&
+      cx < NETHER_CHUNK_START + NETHER_CHUNK_SIZE &&
+      cz >= NETHER_CHUNK_START &&
+      cz < NETHER_CHUNK_START + NETHER_CHUNK_SIZE
+    );
+  }
+
+  generateNetherChunk(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    for (let lz = 0; lz < CHUNK_SZ; lz++) {
+      for (let lx = 0; lx < CHUNK_SX; lx++) {
+        const wx = x0 + lx;
+        const wz = z0 + lz;
+        const h = 33 + Math.floor(hash2i(wx, wz, this.seed + 4000) * 7);
+        for (let y = 0; y <= h; y++) {
+          chunk.set(lx, y, lz, y <= 30 ? BLOCK.LAVA : BLOCK.NETHERRACK);
+        }
+        // 下界顶层岩壳
+        for (let y = 100; y < CHUNK_H; y++) {
+          chunk.set(lx, y, lz, BLOCK.NETHERRACK);
+        }
+        chunk.heightMap[lz * CHUNK_SX + lx] = h;
+      }
+    }
+    chunk.maxY = CHUNK_H - 1;
+    chunk.empty = false;
+  }
+
   generateChunk(cx, cz) {
     const chunk = new Chunk(cx, cz);
     const x0 = cx * CHUNK_SX;
     const z0 = cz * CHUNK_SZ;
+
+    if (this.isNetherChunk(cx, cz)) {
+      this.generateNetherChunk(chunk);
+      const nmods = this.modsByChunk.get(chunkKey(cx, cz));
+      if (nmods) {
+        for (const [k, id] of nmods) {
+          const p = k.split(',');
+          const wx = +p[0];
+          const wy = +p[1];
+          const wz = +p[2];
+          chunk.set(wx - x0, wy, wz - z0, id);
+          if (id !== 0) {
+            chunk.maxY = Math.max(chunk.maxY, wy);
+            const mdef = getBlockDef(id);
+            if (mdef.light > 0) this.lightSources.set(wx + ',' + wy + ',' + wz, mdef.light);
+            if (isWaterLike(id)) this._scheduleWater(wx, wy, wz);
+          }
+        }
+      }
+      return chunk;
+    }
 
     // 1) 基础地形 + 矿石 + 洞穴 + 水
     for (let lz = 0; lz < CHUNK_SZ; lz++) {

@@ -2,7 +2,7 @@
 // main.js — 游戏入口：界面状态机、输入、循环、存档、资源包
 // ============================================================
 
-import { World, BIOME_NAMES, CHUNK_H } from './world.js';
+import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST } from './world.js';
 import { Renderer } from './render.js';
 import { Player } from './player.js';
 import { Inventory, InventoryUI, makeHudIcons } from './inventory.js';
@@ -47,6 +47,10 @@ const state = {
   tradeMob: null,
   enchantOpen: false,
   brewOpen: false,
+  inNether: false,
+  portalCooldown: 0,
+  portalTimer: 0,
+  netherReturn: null,
   villagerTimer: 0,
   playerModel: null,
   thirdPerson: false,
@@ -70,6 +74,123 @@ function showScreen(name) {
   for (const id of ['title', 'loading', 'pause', 'settings', 'help', 'inventory', 'death']) {
     const el = $('screen-' + id);
     if (el) el.classList.toggle('hidden', id !== name);
+  }
+}
+
+function isPortalFrameAt(x0, y0, z0, axis) {
+  const w = state.world;
+  if (!w) return false;
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 5; j++) {
+      const x = axis === 'x' ? x0 + i : x0;
+      const z = axis === 'x' ? z0 : z0 + i;
+      const id = w.getBlock(x, y0 + j, z);
+      const border = i === 0 || i === 3 || j === 0 || j === 4;
+      if (border ? id !== BLOCK.OBSIDIAN : id !== BLOCK.AIR) return false;
+    }
+  }
+  return true;
+}
+
+function tryLightPortal(cx, cy, cz) {
+  const w = state.world;
+  if (!w) return false;
+  for (const axis of ['x', 'z']) {
+    for (let ox = -3; ox <= 0; ox++) {
+      for (let oy = -4; oy <= 0; oy++) {
+        const x0 = axis === 'x' ? cx + ox : cx;
+        const z0 = axis === 'z' ? cz + ox : cz;
+        const y0 = cy + oy;
+        if (!isPortalFrameAt(x0, y0, z0, axis)) continue;
+        for (let i = 1; i < 3; i++) {
+          for (let j = 1; j < 4; j++) {
+            const x = axis === 'x' ? x0 + i : x0;
+            const z = axis === 'x' ? z0 : z0 + i;
+            w.setBlock(x, y0 + j, z, BLOCK.NETHER_PORTAL);
+          }
+        }
+        state.sound?.play('open', { volume: 0.6, pitch: 0.6 });
+        showToast('下界传送门已激活');
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function buildNetherArrival() {
+  const w = state.world;
+  const x = NETHER_DEST.x;
+  const z = NETHER_DEST.z;
+  const y = 41;
+  for (let cx = (x >> 4) - 1; cx <= (x >> 4) + 1; cx++) {
+    for (let cz = (z >> 4) - 1; cz <= (z >> 4) + 1; cz++) w.ensureChunk(cx, cz);
+  }
+  for (let dx = -3; dx <= 3; dx++) {
+    for (let dz = -3; dz <= 3; dz++) {
+      w.setBlock(x + dx, y - 1, z + dz, BLOCK.OBSIDIAN);
+      for (let dy = 0; dy <= 4; dy++) w.setBlock(x + dx, y + dy, z + dz, 0);
+    }
+  }
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 5; j++) {
+      const border = i === 0 || i === 3 || j === 0 || j === 4;
+      w.setBlock(x - 2 + i, y + j, z, border ? BLOCK.OBSIDIAN : BLOCK.NETHER_PORTAL);
+    }
+  }
+  return { x: x + 0.5, y, z: z + 2.5 };
+}
+
+function enterNether() {
+  const p = state.player;
+  if (!p) return;
+  state.netherReturn = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch };
+  const dest = buildNetherArrival();
+  p.setPosition(dest.x, dest.y, dest.z);
+  p.yaw = 0;
+  p.pitch = 0;
+  state.inNether = true;
+  state.portalCooldown = 3;
+  state.renderer?.setNether(true);
+  state.achievements?.onEvent('discover', { kind: 'nether' });
+  state.chat?.log('你穿过传送门，进入了下界');
+  if (state.weather) {
+    try { state.weather.clear(); } catch (e) { /* ignore */ }
+  }
+  updateHUD();
+  saveGame();
+}
+
+function exitNether() {
+  const p = state.player;
+  if (!p) return;
+  const r = state.netherReturn;
+  if (r) {
+    p.setPosition(r.x, r.y + 0.2, r.z);
+    if (typeof r.yaw === 'number') p.yaw = r.yaw;
+  } else {
+    p.setPosition(p.spawn.x, p.spawn.y + 0.5, p.spawn.z);
+  }
+  state.inNether = false;
+  state.portalCooldown = 3;
+  state.renderer?.setNether(false);
+  state.chat?.log('你回到了主世界');
+  updateHUD();
+  saveGame();
+}
+
+function checkPortal() {
+  if (!state.running || state.paused || state.loading || state.portalCooldown > 0) return;
+  const p = state.player;
+  const w = state.world;
+  if (!p || !w || p.dead) return;
+  const bx = Math.floor(p.x);
+  const bz = Math.floor(p.z);
+  const feet = Math.floor(p.y + 0.1);
+  const head = Math.floor(p.y + 1.5);
+  if (w.getBlock(bx, feet, bz) === BLOCK.NETHER_PORTAL || w.getBlock(bx, head, bz) === BLOCK.NETHER_PORTAL) {
+    if (state.inNether) exitNether();
+    else enterNether();
   }
 }
 
@@ -532,6 +653,7 @@ function startGame(opts = {}) {
   game.openTrade = (mob) => openTrade(mob);
   game.openEnchant = () => openEnchant();
   game.openBrew = () => openBrew();
+  game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
 
   const mobs = new MobManager(game, {
     maxMobs: state.isTouch ? 14 : 24,
@@ -610,6 +732,10 @@ function startGame(opts = {}) {
     if (save.inventory) inventory.deserialize(save.inventory);
     player.loadState(save.player);
     if (save.player && save.player.spawn) player.spawn = { ...save.player.spawn };
+    if (player.x >= NETHER_ORIGIN) {
+      state.inNether = true;
+      renderer.setNether(true);
+    }
     else player.spawn = { ...spawn };
     if (!save.player || typeof save.player.x !== 'number') {
       player.setPosition(spawn.x, spawn.y + 0.4, spawn.z);
@@ -788,6 +914,16 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.netherDemo && state.player) {
+        state.netherDemo = false;
+        setTimeout(() => {
+          try {
+            enterNether();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.armorDemo && state.player) {
         state.armorDemo = false;
@@ -2030,6 +2166,12 @@ function loop(now) {
       state.player.update(dt);
       state.playerModel?.update(dt, state.player, state.renderer ? state.renderer.dayLight : 1);
       state.mobs?.update(dt);
+      if (state.portalCooldown > 0) state.portalCooldown = Math.max(0, state.portalCooldown - dt);
+      state.portalTimer += dt;
+      if (state.portalTimer > 0.25) {
+        state.portalTimer = 0;
+        checkPortal();
+      }
       state.villagerTimer += dt;
       if (state.villagerTimer > 6) {
         state.villagerTimer = 0;
@@ -2313,6 +2455,7 @@ function boot() {
   if (params.get('enchant') === '1') state.enchantDemo = true;
   if (params.get('brew') === '1') state.brewDemo = true;
   if (params.get('armor') === '1') state.armorDemo = true;
+  if (params.get('nether') === '1') state.netherDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

@@ -10,6 +10,7 @@ import { BLOCK, getBlockDef, isOpaqueBlock } from './blocks.js';
 import { CHUNK_SX, CHUNK_SZ, CHUNK_H, blockIndex } from './world.js';
 
 const ATLAS_COLS = 8;
+const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 const TILE_MAP = new Map();
 TILE_NAMES.forEach((n, i) => TILE_MAP.set(n, i));
 
@@ -25,8 +26,9 @@ function tileUV(name) {
   const i = tileIndex(name);
   const col = i % ATLAS_COLS;
   const row = Math.floor(i / ATLAS_COLS);
-  const s = 1 / ATLAS_COLS;
-  return { u0: col * s, v0: 1 - (row + 1) * s, u1: (col + 1) * s, v1: 1 - row * s };
+  const su = 1 / ATLAS_COLS;
+  const sv = 1 / ATLAS_ROWS;
+  return { u0: col * su, v0: 1 - (row + 1) * sv, u1: (col + 1) * su, v1: 1 - row * sv };
 }
 
 // 顶点顺序：左下、右下、左上、右上（从外侧看 CCW）
