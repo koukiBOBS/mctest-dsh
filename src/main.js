@@ -218,6 +218,12 @@ function enterEnd() {
   state.inEnd = true;
   state.portalCooldown = 3;
   state.renderer?.setEnd(true);
+  if (state.mobs && !state.mobs.mobs.some((m) => m.type === 'ender_dragon')) {
+    const dragon = state.mobs.spawn('ender_dragon', dest.x, dest.y + 7, dest.z + 4);
+    if (dragon) {
+      state.chat?.log('末地中央盘踞着末影龙……');
+    }
+  }
   state.achievements?.onEvent('discover', { kind: 'end' });
   state.chat?.log('你穿过末地传送门，进入了末地');
   if (state.weather) {
@@ -998,6 +1004,17 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.dragonDemo && state.player) {
+        state.dragonDemo = false;
+        setTimeout(() => {
+          try {
+            enterEnd();
+            state.player.pitch = 0.35;
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.endDemo && state.player) {
         state.endDemo = false;
@@ -2373,6 +2390,17 @@ function loop(now) {
       effEl.classList.add('hidden');
     }
   }
+  const bossBar = $('boss-bar');
+  if (bossBar) {
+    const dragon = state.mobs && state.mobs.mobs ? state.mobs.mobs.find((m) => m.type === 'ender_dragon' && !m.removed) : null;
+    if (dragon && state.running) {
+      bossBar.classList.remove('hidden');
+      const fill = $('boss-fill');
+      if (fill) fill.style.width = Math.round(Math.max(0, dragon.health / dragon.maxHealth) * 100) + '%';
+    } else {
+      bossBar.classList.add('hidden');
+    }
+  }
   const bowBar = $('bow-charge');
   if (bowBar) {
     if (state.player && state.player.chargingBow && !state.thirdPerson) {
@@ -2589,6 +2617,7 @@ function boot() {
   if (params.get('fire') === '1') state.fireDemo = true;
   if (params.get('lightning') === '1') state.lightningDemo = true;
   if (params.get('end') === '1') state.endDemo = true;
+  if (params.get('dragon') === '1') state.dragonDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

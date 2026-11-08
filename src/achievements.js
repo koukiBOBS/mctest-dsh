@@ -28,6 +28,7 @@ export const ACHIEVEMENTS = [
   { id: 'end', name: '末地之旅', desc: '穿过末地传送门进入末地' },
   { id: 'full_armor', name: '全副武装', desc: '穿满头盔、胸甲、护腿和靴子' },
   { id: 'hunter10', name: '怪物杀手', desc: '累计击杀 10 只敌对生物' },
+  { id: 'dragon', name: '屠龙者', desc: '击败末影龙' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -112,6 +113,9 @@ export class Achievements {
       case 'kill':
         if (data.hostile) this.unlock('hunter');
         if ((data.kills || 0) >= 10) this.unlock('hunter10');
+        break;
+      case 'dragon':
+        this.unlock('dragon');
         break;
       case 'armor':
         if (data.full) this.unlock('full_armor');

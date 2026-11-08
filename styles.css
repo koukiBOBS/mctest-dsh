@@ -1480,3 +1480,39 @@ body.touch #xp-bar {
   font-size: 11px;
   color: #bbb;
 }
+
+
+/* ---------------- 末影龙血条 ---------------- */
+#boss-bar {
+  position: absolute;
+  top: 7%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(64vw, 420px);
+  text-align: center;
+  pointer-events: none;
+}
+
+.boss-name {
+  font-size: 13px;
+  color: #e8c8ff;
+  text-shadow: 1px 1px 0 #000;
+  margin-bottom: 3px;
+  letter-spacing: 2px;
+}
+
+.boss-track {
+  height: 9px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #4a2a5a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#boss-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(#c86aff, #7a2ac8);
+  transition: width 0.15s linear;
+}

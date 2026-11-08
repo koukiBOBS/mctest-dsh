@@ -120,6 +120,17 @@ export const MOB_TYPES = {
     ],
     colors: { body: 0x2f2f2f, white: 0xf1f1ec, snout: 0xd9a3a5, horn: 0xd9d5c5, leg: 0x3a3a3a, eye: 0x111111 },
   },
+  ender_dragon: {
+    id: 'ender_dragon',
+    name: '末影龙',
+    hostile: true,
+    width: 2.6,
+    height: 1.8,
+    health: 200,
+    speed: 6,
+    drops: [],
+    colors: { body: 0x14141c, wing: 0x1e1e2a, spine: 0x2a2a3a, eye: 0xd04aff },
+  },
   villager: {
     id: 'villager',
     name: '村民',
@@ -501,6 +512,11 @@ export class MobManager {
 
     if (mob.health <= 0) {
       mob.health = 0;
+      if (mob.type === 'ender_dragon') {
+        this.game.player?.addXp?.(80);
+        this.game.achievements?.onEvent('dragon', {});
+        this.game.chat?.log('末影龙被击败了！');
+      }
       this._removeMob(mob, true);
       return true;
     }
@@ -629,6 +645,11 @@ export class MobManager {
   // 单只生物更新
   // ------------------------------------------------------------
   _updateMob(mob, dt) {
+    if (mob.type === 'ender_dragon') {
+      this._updateDragon(mob, dt);
+      this._updateTint(mob);
+      return;
+    }
     if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
     if (mob.jumpCd > 0) mob.jumpCd = Math.max(0, mob.jumpCd - dt);
     if (mob.ai.attackCd > 0) mob.ai.attackCd = Math.max(0, mob.ai.attackCd - dt);
@@ -739,6 +760,63 @@ export class MobManager {
   // ------------------------------------------------------------
   // AI
   // ------------------------------------------------------------
+  _updateDragon(mob, dt) {
+    const player = this.player;
+    mob.flap = (mob.flap || 0) + dt * 6;
+    if (mob.wings) {
+      for (let i = 0; i < mob.wings.length; i++) {
+        const wing = mob.wings[i];
+        const side = wing.userData.side || 1;
+        wing.rotation.z = Math.sin(mob.flap + i * 0.5) * 0.5 * side;
+      }
+    }
+    if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
+    if (!player || player.dead) {
+      mob.y += Math.sin(mob.flap * 0.3) * 0.01;
+      return;
+    }
+
+    mob.phaseTimer = (mob.phaseTimer || 7) - dt;
+    if (mob.phaseTimer <= 0) {
+      mob.diving = !mob.diving;
+      mob.phaseTimer = mob.diving ? 3.2 : 6 + Math.random() * 3;
+    }
+
+    const dx = player.x - mob.x;
+    const dz = player.z - mob.z;
+    const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
+    const targetY = player.y + (mob.diving ? 1.4 : 6.5);
+    const speed = mob.diving ? 9 : 5;
+    mob.x += (dx / dist) * Math.min(speed, dist * 1.5) * dt;
+    mob.z += (dz / dist) * Math.min(speed, dist * 1.5) * dt;
+    mob.y += (targetY - mob.y) * Math.min(1, dt * 2.2);
+    mob.yaw = Math.atan2(dx, dz);
+    mob.yawTarget = mob.yaw;
+    if (mob.group) {
+      mob.group.position.set(mob.x, mob.y, mob.z);
+      mob.group.rotation.y = mob.yaw;
+    }
+
+    if (mob.diving && dist < 2.8 && Math.abs(mob.y - player.y) < 3.2 && (mob.attackCd || 0) <= 0) {
+      mob.attackCd = 2.2;
+      player.damage(6, '被末影龙撞死了');
+      if (typeof player.vx === 'number') {
+        player.vx += (dx / dist) * 7;
+        player.vz += (dz / dist) * 7;
+        player.vy = 5;
+      }
+    }
+    if (mob.attackCd > 0) mob.attackCd -= dt;
+
+    if (mob.health <= 0) {
+      if (player.addXp) player.addXp(80);
+      this.game.achievements?.onEvent('dragon', {});
+      this.game.chat?.log('末影龙被击败了！');
+      this._removeMob(mob, false);
+      return;
+    }
+  }
+
   _updateAI(mob, dt) {
     const def = mob.def;
     const ai = mob.ai;
@@ -1364,6 +1442,7 @@ export class MobManager {
       case 'creeper': this._modelCreeper(mob, root, c); break;
       case 'spider': this._modelSpider(mob, root, c); break;
       case 'villager': this._modelVillager(mob, root, c); break;
+      case 'ender_dragon': this._modelDragon(mob, root, c); break;
       default: this._addBox(mob, root, 0xffffff, 0.5, 0.5, 0.5, 0, 0.5, 0); break;
     }
 
@@ -1458,6 +1537,28 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelDragon(mob, root, c) {
+    this._addBox(mob, root, c.body, 2.2, 1.1, 3.0, 0, 0.9, 0);
+    this._addBox(mob, root, c.spine, 0.6, 0.5, 3.2, 0, 1.5, 0);
+    const head = this._makeHead(mob, root, c.body, 1.1, 0.9, 1.3, 0, 1.2, 2.0);
+    this._addBox(mob, head, c.eye, 0.18, 0.12, 0.05, -0.25, 0.12, 0.68);
+    this._addBox(mob, head, c.eye, 0.18, 0.12, 0.05, 0.25, 0.12, 0.68);
+    this._addBox(mob, head, c.spine, 0.5, 0.2, 0.2, 0, 0.35, 0.2);
+    mob.wings = [];
+    for (let side = -1; side <= 1; side += 2) {
+      const wing = new THREE.Group();
+      wing.position.set(side * 1.1, 1.35, 0);
+      wing.userData.side = side;
+      root.add(wing);
+      this._addBox(mob, wing, c.wing, 3.4, 0.12, 1.8, side * 1.75, 0, 0);
+      this._addBox(mob, wing, c.spine, 3.2, 0.08, 0.1, side * 1.7, 0.08, 0.6);
+      mob.wings.push(wing);
+    }
+    for (let i = 0; i < 3; i++) {
+      this._addBox(mob, root, c.body, 0.7 - i * 0.15, 0.5, 1.2, 0, 0.9, -2 - i * 1.1);
+    }
   }
 
   _modelVillager(mob, root, c) {
