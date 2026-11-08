@@ -121,7 +121,7 @@ export class ChatUI {
       switch (cmd) {
         case 'help':
           this.log('命令：/gamemode <survival|creative> · /give <物品> [数量] · /time set <day|night|noon|midnight>');
-          this.log('/tp <x> <y> <z> · /weather <clear|rain|thunder|snow> · /locate village|dungeon');
+          this.log('/tp <x> <y> <z> · /weather <clear|rain|thunder|snow> · /locate village|dungeon|mineshaft');
           break;
         case 'gamemode': {
           const m = (parts[0] || '').toLowerCase();
@@ -195,12 +195,16 @@ export class ChatUI {
             const v = this.game.world.findNearestVillage(p.x, p.z);
             if (!v) this.log('附近没有找到村庄', 'err');
             else this.log(`最近的村庄：${v.centerX}, ${v.floorY}, ${v.centerZ}（约 ${Math.round(Math.hypot(v.centerX - p.x, v.centerZ - p.z))} 格）`);
+          } else if (what === 'mineshaft') {
+            const m = this.game.world.findNearestMineshaft(p.x, p.z);
+            if (!m) this.log('附近没有找到矿洞', 'err');
+            else this.log(`最近的矿洞：${m.centerX}, ${m.y}, ${m.centerZ}（约 ${Math.round(Math.hypot(m.centerX - p.x, m.centerZ - p.z))} 格）`);
           } else if (what === 'dungeon') {
             const d = this.game.world.findNearestDungeon(p.x, p.z);
             if (!d) this.log('附近没有找到地牢', 'err');
             else this.log(`最近的地牢：${d.x}, ${d.y}, ${d.z}（约 ${Math.round(Math.hypot(d.x - p.x, d.z - p.z))} 格）`);
           } else {
-            this.log('用法：/locate village|dungeon', 'err');
+            this.log('用法：/locate village|dungeon|mineshaft', 'err');
           }
           break;
         }

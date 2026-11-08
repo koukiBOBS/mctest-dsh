@@ -561,7 +561,7 @@ function updateLoading() {
           }
         }, 700);
       }
-      if (state.tpVillage || state.tpDungeon) {
+      if (state.tpVillage || state.tpDungeon || state.tpMineshaft) {
         setTimeout(() => {
           try {
             const p = state.player;
@@ -573,6 +573,10 @@ function updateLoading() {
             if (state.tpDungeon) {
               const d = state.world.findNearestDungeon(p.x, p.z);
               if (d) target = { x: d.x + 0.5, y: d.y + 0.2, z: d.z + 0.5, label: `地牢 ${d.x}, ${d.y}, ${d.z}` };
+            }
+            if (state.tpMineshaft) {
+              const m = state.world.findNearestMineshaft(p.x, p.z);
+              if (m) target = { x: m.centerX + 0.5, y: m.y + 0.2, z: m.centerZ + 0.5, label: `矿洞 ${m.centerX}, ${m.y}, ${m.centerZ}` };
             }
             if (target) {
               state.world.ensureChunk(Math.floor(target.x) >> 4, Math.floor(target.z) >> 4);
@@ -587,6 +591,7 @@ function updateLoading() {
           }
           state.tpVillage = false;
           state.tpDungeon = false;
+          state.tpMineshaft = false;
         }, 900);
       }
       if (state.spawnTorches && state.player) {
@@ -747,6 +752,23 @@ function openContainer(hit) {
   hideTouch(true);
   $('hud').classList.add('hidden');
   state.containerUI.show(open.key, open.type);
+}
+
+function spawnDungeonMobs() {
+  const p = state.player;
+  const w = state.world;
+  const m = state.mobs;
+  if (!p || !w || !m || p.dead || p.mode === 'creative') return;
+  if (m.count() >= 18) return;
+  for (const d of w.dungeons.values()) {
+    const dist = Math.hypot(d.x - p.x, d.z - p.z);
+    if (dist > 26) continue;
+    if (!w.isLoaded(d.x, d.z)) continue;
+    const type = ['zombie', 'skeleton', 'spider'][Math.floor(Math.random() * 3)];
+    const x = d.x + (Math.random() - 0.5) * 6;
+    const z = d.z + (Math.random() - 0.5) * 6;
+    if (m.spawn(type, x, d.y, z)) state.chat?.log('地牢里出现了' + ({ zombie: '僵尸', skeleton: '骷髅', spider: '蜘蛛' }[type] || type));
+  }
 }
 
 function sleepInBed(hit) {
@@ -1334,6 +1356,11 @@ function loop(now) {
       state.player.update(dt);
       state.playerModel?.update(dt, state.player, state.renderer ? state.renderer.dayLight : 1);
       state.mobs?.update(dt);
+      state.dungeonSpawnTimer = (state.dungeonSpawnTimer || 0) + dt;
+      if (state.dungeonSpawnTimer > 6) {
+        state.dungeonSpawnTimer = 0;
+        spawnDungeonMobs();
+      }
       state.items?.update(dt);
       state.weather?.update(dt);
       state.world.time += dt;
@@ -1512,6 +1539,7 @@ function boot() {
   if (params.get('thirdperson') === '1') state.startThirdPerson = true;
   if (params.get('bed') === '1') state.bedDemo = true;
   if (params.get('farm') === '1') state.farmDemo = true;
+  if (params.get('mineshaft') === '1') state.tpMineshaft = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

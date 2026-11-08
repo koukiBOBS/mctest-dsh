@@ -83,6 +83,8 @@ export class World {
     this.modsByChunk = new Map(); // chunkKey -> Map("x,y,z" -> id)
     this.lightSources = new Map(); // "x,y,z" -> light level
     this.villageCache = new Map();
+    this.mineshaftCache = new Map();
+    this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.crops = new Map(); // "x,y,z" -> 下次生长时间
     this._cropClock = 0;
@@ -415,6 +417,7 @@ export class World {
 
   generateStructures(chunk) {
     this.stampVillages(chunk);
+    this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
   }
 
@@ -609,6 +612,7 @@ export class World {
         }
       }
     }
+    this.dungeons.set(chunkKey(chunk.cx, chunk.cz), { x: cx, y, z: cz });
     const chestX = cx + 2;
     const chestZ = cz + 2;
     this.chunkSet(chunk, chestX, y, chestZ, BLOCK.CHEST);
@@ -626,6 +630,102 @@ export class World {
     if (r(9) < 0.12) loot.push({ id: 'diamond', count: 1 });
     if (r(10) < 0.5) loot.push({ id: 'arrow', count: 4 + Math.floor(r(11) * 8) });
     return loot;
+  }
+
+  // ---------------- 矿洞（废弃矿井） ----------------
+  getMineshaft(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.mineshaftCache.has(key)) return this.mineshaftCache.get(key);
+    if (this.mineshaftCache.size > 600) this.mineshaftCache.clear();
+    const h = (n) => hash2i(cx * 13 + n, cz * 29 - n, this.seed + 1100 + n);
+    let m = null;
+    if (h(1) < 0.32) {
+      const centerX = Math.round(cx * 128 + 30 + h(2) * 60);
+      const centerZ = Math.round(cz * 128 + 30 + h(3) * 60);
+      const y = 15 + Math.floor(h(4) * 20);
+      m = {
+        centerX,
+        centerZ,
+        y,
+        minX: centerX - 27,
+        maxX: centerX + 27,
+        minZ: centerZ - 27,
+        maxZ: centerZ + 27,
+      };
+    }
+    this.mineshaftCache.set(key, m);
+    return m;
+  }
+
+  stampMineshafts(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 128);
+    const ccz = Math.floor(z0 / 128);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getMineshaft(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampMineshaft(chunk, m);
+      }
+    }
+  }
+
+  stampMineshaft(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const carve = (x, z) => {
+      for (let dy = 0; dy < 3; dy++) set(x, m.y + dy, z, BLOCK.AIR);
+      set(x, m.y + 3, z, BLOCK.STONE);
+      set(x, m.y - 1, z, BLOCK.PLANKS);
+    };
+    // 主矿道（沿 X）
+    for (let x = m.centerX - 24; x <= m.centerX + 24; x++) {
+      for (let dz = -1; dz <= 1; dz++) carve(x, m.centerZ + dz);
+    }
+    // 分支矿道（沿 Z）
+    for (const bx of [-16, -8, 8, 16]) {
+      for (let z = m.centerZ - 9; z <= m.centerZ + 9; z++) {
+        for (let dx = -1; dx <= 1; dx++) carve(m.centerX + bx + dx, z);
+      }
+    }
+    // 木支架
+    for (let x = m.centerX - 24; x <= m.centerX + 24; x += 6) {
+      for (const dz of [-1, 1]) {
+        for (let dy = 0; dy < 3; dy++) set(x, m.y + dy, m.centerZ + dz, BLOCK.LOG);
+      }
+      for (let dz = -1; dz <= 1; dz++) set(x, m.y + 3, m.centerZ + dz, BLOCK.PLANKS);
+    }
+    // 分支尽头支撑
+    for (const bx of [-16, -8, 8, 16]) {
+      for (const zEnd of [m.centerZ - 9, m.centerZ + 9]) {
+        for (const dx of [-1, 1]) {
+          for (let dy = 0; dy < 3; dy++) set(m.centerX + bx + dx, m.y + dy, zEnd, BLOCK.LOG);
+        }
+        for (let dx = -1; dx <= 1; dx++) set(m.centerX + bx + dx, m.y + 3, zEnd, BLOCK.PLANKS);
+      }
+    }
+  }
+
+  findNearestMineshaft(x, z) {
+    const ccx = Math.floor(x / 128);
+    const ccz = Math.floor(z / 128);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -10; dx <= 10; dx++) {
+      for (let dz = -10; dz <= 10; dz++) {
+        const m = this.getMineshaft(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
   }
 
   takeStructureLoot(key) {
