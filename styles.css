@@ -1625,3 +1625,11 @@ body.touch #xp-bar {
 .ach-name { font-size: 13px; color: #fff; }
 .ach-desc { font-size: 11px; color: #b8b8b8; }
 .stats-box { padding: 8px; background: #151515; border: 1px solid #3a3a3a; font-size: 12px; line-height: 1.6; color: #c8c8c8; }
+
+
+.title-version {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #b8b8b8;
+  text-shadow: 2px 2px 0 #000;
+}
