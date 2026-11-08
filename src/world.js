@@ -49,6 +49,7 @@ export const BIOME_NAMES = {
   mountain: '山地',
   savanna: '热带草原',
   dark_forest: '黑森林',
+  bamboo_jungle: '竹林',
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -148,6 +149,7 @@ export class World {
     else if (temp < -0.28) biome = 'snowy';
     else if (temp > 0.26 && humid < 0.06) biome = 'desert';
     else if (temp > 0.18 && humid < -0.04) biome = 'savanna';
+    else if (humid > 0.32 && temp > -0.05) biome = 'bamboo_jungle';
     else if (humid > 0.22 && temp > -0.15) biome = 'dark_forest';
     else if (humid > 0.04) biome = 'forest';
     else biome = 'plains';
@@ -496,6 +498,12 @@ export class World {
         spruce = 0.0;
         if (hash2i(gx, gz, this.seed + 23) < 0.05) return 'dark_oak';
         break;
+      case 'bamboo_jungle':
+        oak = 0.004;
+        birch = 0.0;
+        spruce = 0.0;
+        if (hash2i(gx, gz, this.seed + 24) < 0.14) return 'bamboo';
+        break;
       default:
         return null;
     }
@@ -539,6 +547,29 @@ export class World {
       cur === BLOCK.SPRUCE_LEAVES ||
       cur === BLOCK.ACACIA_LEAVES ||
       cur === BLOCK.DARK_OAK_LEAVES;
+
+    if (kind === 'bamboo') {
+      const stalks = 2 + Math.floor(rand * 4);
+      for (let s = 0; s < stalks; s++) {
+        const ox = Math.round((hash2i(gx + s, gz + s * 3, this.seed + 900) - 0.5) * 4);
+        const oz = Math.round((hash2i(gx - s * 2, gz + s, this.seed + 901) - 0.5) * 4);
+        const height = 2 + Math.floor(hash2i(gx + ox, gz + oz, this.seed + 902) * 4);
+        const bx = gx + ox;
+        const bz = gz + oz;
+        const info2 = this.columnInfo(bx, bz);
+        const by = info2.height + 1;
+        for (let y = by; y < by + height; y++) {
+          const lx = bx - x0;
+          const lz = bz - z0;
+          if (lx < 0 || lx >= CHUNK_SX || lz < 0 || lz >= CHUNK_SZ || y >= CHUNK_H) continue;
+          const cur = chunk.get(lx, y, lz);
+          if (cur !== BLOCK.AIR && cur !== BLOCK.TALL_GRASS) continue;
+          chunk.set(lx, y, lz, BLOCK.BAMBOO);
+          chunk.maxY = Math.max(chunk.maxY, y);
+        }
+      }
+      return;
+    }
 
     const put = (wx, wy, wz, id, onlyAir) => {
       const lx = wx - x0;
@@ -2649,5 +2680,5 @@ export class World {
 
 function trustBiome(biome) {
   return biome === 'plains' || biome === 'forest' || biome === 'snowy' || biome === 'mountain'
-    || biome === 'savanna' || biome === 'dark_forest';
+    || biome === 'savanna' || biome === 'dark_forest' || biome === 'bamboo_jungle';
 }

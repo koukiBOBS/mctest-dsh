@@ -111,6 +111,7 @@ export const TILE_NAMES = [
   'dark_oak_log',
   'dark_oak_leaves',
   'dark_oak_planks',
+  'bamboo',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2501,6 +2502,20 @@ const TILE_PAINTERS = {
       ['#5a3c28', 3],
     ]);
     for (let y = 3; y < 16; y += 4) hline(b, 0, 15, y, C('#2a180e'));
+  },
+
+  bamboo(b, rng) {
+    for (let i = 0; i < 3; i++) {
+      const x = 3 + i * 4 + ((rng() * 2) | 0);
+      vline(b, 0, 15, x, C('#4a8a2a'));
+      vline(b, 0, 15, x + 1, C('#6aa83a'));
+      for (let y = 2; y < 16; y += 4) {
+        setPx(b, x, y, C('#2e6a1e'));
+        setPx(b, x + 1, y, C('#2e6a1e'));
+      }
+    }
+    setPx(b, 6, 4, C('#8ac84a'));
+    setPx(b, 11, 9, C('#8ac84a'));
   },
 
 };

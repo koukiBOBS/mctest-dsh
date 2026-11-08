@@ -98,6 +98,7 @@ export const BLOCK = Object.freeze({
   DARK_OAK_LOG: 90,
   DARK_OAK_LEAVES: 91,
   DARK_OAK_PLANKS: 92,
+  BAMBOO: 93,
 });
 
 export const BLOCK_DEFS = [];
@@ -365,6 +366,10 @@ def(BLOCK.DARK_OAK_LEAVES, 'dark_oak_leaves', '深色橡木树叶', {
 });
 def(BLOCK.DARK_OAK_PLANKS, 'dark_oak_planks', '深色橡木木板', {
   tiles: { all: 'dark_oak_planks' }, hardness: 2.0, sound: 'wood',
+});
+def(BLOCK.BAMBOO, 'bamboo', '竹子', {
+  tiles: { all: 'bamboo' }, solid: false, opaque: false, transparent: true,
+  cross: true, needsSupport: true, hardness: 0.2, sound: 'grass', drop: 'bamboo',
 });
 def(BLOCK.BEACON, 'beacon', '信标', {
   tiles: { all: 'beacon' }, hardness: 3.0, sound: 'glass', light: 15,

@@ -158,6 +158,17 @@ export const MOB_TYPES = {
     drops: [{ id: 'blaze_rod', min: 1, max: 2 }],
     colors: { body: 0xf0c040, core: 0xffe08a, dark: 0xb87810, eye: 0x2a1a0a },
   },
+  panda: {
+    id: 'panda',
+    name: '熊猫',
+    hostile: false,
+    width: 1.1,
+    height: 1.2,
+    health: 20,
+    speed: 0.85,
+    drops: [{ id: 'bamboo', min: 1, max: 2 }],
+    colors: { white: 0xf0f0f0, black: 0x1a1a1a, eye: 0x101010, pink: 0xd8a0a0 },
+  },
   iron_golem: {
     id: 'iron_golem',
     name: '铁傀儡',
@@ -673,6 +684,13 @@ export class MobManager {
     if (this.sunElev > 0.15) {
       if (this._countHostile(false) < PASSIVE_LIMIT) this._trySpawn(false);
       // 白天也会在阴暗洞穴里刷敌对生物
+      if (Math.random() < 0.18 && typeof this.world.columnInfo === 'function') {
+        const info = this.world.columnInfo(Math.floor(this.player.x), Math.floor(this.player.z));
+        if (info.biome === 'bamboo_jungle') {
+          const pt = this._findSpawnPoint(true);
+          if (pt) this.spawn('panda', pt.x, pt.y, pt.z);
+        }
+      }
       if (hostileCount < HOSTILE_LIMIT && Math.random() < 0.6) {
         const p = this._findCaveSpawnPoint();
         if (p) this.spawn(choose(HOSTILE_KINDS), p.x, p.y, p.z);
@@ -1365,7 +1383,7 @@ export class MobManager {
 
   feed(mob, itemId) {
     if (!mob || mob.removed) return null;
-    const foods = { pig: 'apple', cow: 'wheat', sheep: 'wheat', chicken: 'wheat_seeds' };
+    const foods = { pig: 'apple', cow: 'wheat', sheep: 'wheat', chicken: 'wheat_seeds', panda: 'bamboo' };
     if (foods[mob.type] !== itemId) return null;
     if (mob.isBaby) return 'baby';
     if (mob.loveTimer > 0) return 'already';
@@ -1912,6 +1930,7 @@ export class MobManager {
       case 'wither': this._modelWither(mob, root, c); break;
       case 'wither_skeleton': this._modelWitherSkeleton(mob, root, c); break;
       case 'blaze': this._modelBlaze(mob, root, c); break;
+      case 'panda': this._modelPanda(mob, root, c); break;
       case 'iron_golem': this._modelIronGolem(mob, root, c); break;
       case 'bat': this._modelBat(mob, root, c); break;
       case 'squid': this._modelSquid(mob, root, c); break;
@@ -2063,6 +2082,18 @@ export class MobManager {
       this._addBox(mob, root, c.body, 0.12, 0.9, 0.12, px, 1.0, pz);
       this._addBox(mob, root, c.core, 0.08, 0.25, 0.08, px, 1.55, pz);
     }
+  }
+
+  _modelPanda(mob, root, c) {
+    this._addBox(mob, root, c.white, 0.9, 0.7, 1.2, 0, 0.7, 0);
+    this._addLimb(mob, root, c.black, 0.28, 0.4, 0.3, -0.3, 0.4, 0, mob.legs);
+    this._addLimb(mob, root, c.black, 0.28, 0.4, 0.3, 0.3, 0.4, 0, mob.legs);
+    const head = this._makeHead(mob, root, c.white, 0.8, 0.65, 0.6, 0, 1.1, 0.6);
+    this._addBox(mob, head, c.black, 0.18, 0.18, 0.08, -0.33, 0.32, 0);
+    this._addBox(mob, head, c.black, 0.18, 0.18, 0.08, 0.33, 0.32, 0);
+    this._addBox(mob, head, c.black, 0.2, 0.14, 0.04, -0.16, 0.02, 0.31);
+    this._addBox(mob, head, c.black, 0.2, 0.14, 0.04, 0.16, 0.02, 0.31);
+    this._addBox(mob, head, c.pink, 0.1, 0.08, 0.03, 0, -0.1, 0.31);
   }
 
   _modelIronGolem(mob, root, c) {

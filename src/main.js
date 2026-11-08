@@ -1458,6 +1458,35 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.pandaDemo && state.player) {
+        state.pandaDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            let found = null;
+            for (let r = 32; r <= 2400 && !found; r += 32) {
+              for (let a = 0; a < 16 && !found; a++) {
+                const ang = (a / 16) * Math.PI * 2;
+                const x = Math.floor(p.x + Math.cos(ang) * r);
+                const z = Math.floor(p.z + Math.sin(ang) * r);
+                if (state.world.columnInfo(x, z).biome === 'bamboo_jungle') found = { x, z };
+              }
+            }
+            if (found) {
+              const y = state.world.getSurfaceY(found.x, found.z);
+              p.setPosition(found.x + 0.5, y + 1.2, found.z + 0.5);
+              const panda = state.mobs?.spawn('panda', found.x + 0.5, y + 1, found.z + 4.5);
+              if (panda) state.chat?.log('演示：一只熊猫出现在竹林里');
+            } else {
+              state.chat?.log('演示：附近没有找到竹林');
+            }
+            state.inventory.add('bamboo', 8);
+            state.onInventoryChange?.();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.biomeDemo && state.player) {
         const targetBiome = state.biomeDemo;
         state.biomeDemo = null;
@@ -3283,6 +3312,14 @@ function loop(now) {
         if (armor && armor.length === 4 && armor.every(Boolean)) {
           state.achievements?.onEvent('armor', { full: true });
         }
+        if (state.mobs && state.mobs.mobs) {
+          for (const m of state.mobs.mobs) {
+            if (m.type === 'panda' && !m.removed && Math.hypot(m.x - state.player.x, m.z - state.player.z) < 16) {
+              state.achievements?.onEvent('panda', {});
+              break;
+            }
+          }
+        }
       }
       state.saveClock += dt;
       if (state.saveClock > 30) {
@@ -3605,6 +3642,7 @@ function boot() {
   if (params.get('witherboss') === '1') state.witherBossDemo = true;
   if (params.get('beacon') === '1') state.beaconDemo = true;
   if (params.get('biome')) state.biomeDemo = params.get('biome');
+  if (params.get('panda') === '1') state.pandaDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
