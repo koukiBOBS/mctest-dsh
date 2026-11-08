@@ -138,6 +138,11 @@
       <option value="4">4 · 远</option>
       <option value="5">5 · 很远（吃性能）</option>
     </select></div>
+    <div class="setting-row"><span>画质预设</span><select id="set-quality">
+      <option value="auto" selected>自动（按 FPS 调节）</option>
+      <option value="high">高（100%）</option>
+      <option value="low">低（60%，更流畅）</option>
+    </select></div>
     <div class="setting-row"><span>主音量</span><input id="set-volume" type="range" min="0" max="1" step="0.05" value="0.7"></div>
     <div class="setting-row"><span>音效</span><label class="switch"><input id="set-mute" type="checkbox"><span></span></label></div>
     <div class="setting-row"><span>显示 FPS / 调试</span><label class="switch"><input id="set-debug" type="checkbox"><span></span></label></div>
@@ -257,6 +262,7 @@
         <p>54. 沙滩下埋着宝箱，沉船里的藏宝图能指向它；/locate treasure 可定位</p>
         <p>55. 设置里可导出/导入存档 JSON，方便备份到其他设备</p>
         <p>56. 村民可用面包繁殖；牧师与屠夫提供新的交易选项</p>
+        <p>57. 设置里可切换画质预设（自动 / 高 / 低），手机卡顿时选低</p>
       </div>
     </div>
     <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>

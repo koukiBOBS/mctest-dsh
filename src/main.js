@@ -71,7 +71,7 @@ const state = {
   baseDistance: 3,
   adaptiveDistance: 3,
   isTouch: false,
-  settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false },
+  settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false, quality: 'auto' },
   overlayReturn: 'title',
   lastTime: 0,
   fps: 0,
@@ -1110,6 +1110,7 @@ function loadSettings() {
 function syncSettingsUI() {
   $('set-sens').value = String(state.settings.sens);
   $('set-distance').value = String(state.settings.distance);
+  $('set-quality').value = state.settings.quality || 'auto';
   $('set-volume').value = String(state.settings.volume);
   $('set-mute').checked = !!state.settings.mute;
   $('set-debug').checked = !!state.settings.debug;
@@ -1118,6 +1119,11 @@ function syncSettingsUI() {
 function applyRuntimeSettings() {
   if (state.player) state.player.lookSensitivity = 0.0024 * state.settings.sens;
   if (state.renderer) state.renderer.setRenderDistance(state.settings.distance);
+  if (state.renderer && state.settings.quality && state.settings.quality !== 'auto') {
+    state.qualityScale = state.settings.quality === 'high' ? 1 : 0.6;
+    state.renderer.setQualityScale(state.qualityScale);
+    state.weather?.setDensity(state.qualityScale);
+  }
   if (state.world) state.world.renderDistance = state.settings.distance;
   state.baseDistance = state.settings.distance;
   state.adaptiveDistance = state.settings.distance;
@@ -3316,6 +3322,10 @@ function bindSettings() {
     if (state.player) state.player.lookSensitivity = 0.0024 * state.settings.sens;
     saveSettings();
   });
+  $('set-quality').addEventListener('change', (e) => {
+    state.settings.quality = e.target.value;
+    applyRuntimeSettings();
+  });
   $('set-distance').addEventListener('change', (e) => {
     state.settings.distance = +e.target.value;
     applyRuntimeSettings();
@@ -3520,12 +3530,12 @@ function loop(now) {
       if (state.qualityTimer > 6) {
         state.qualityTimer = 0;
         if (state.renderer && state.renderer.setQualityScale) {
-          if (state.fps > 0 && state.fps < 38 && state.qualityScale > 0.55) {
+          if (state.settings.quality === 'auto' && state.fps > 0 && state.fps < 38 && state.qualityScale > 0.55) {
             state.qualityScale = Math.max(0.55, state.qualityScale - 0.15);
             state.renderer.setQualityScale(state.qualityScale);
             state.weather?.setDensity(state.qualityScale);
             showToast('性能不足：已自动降低渲染分辨率');
-          } else if (state.fps > 56 && state.qualityScale < 1) {
+          } else if (state.settings.quality === 'auto' && state.fps > 56 && state.qualityScale < 1) {
             state.qualityScale = Math.min(1, state.qualityScale + 0.05);
             state.renderer.setQualityScale(state.qualityScale);
             state.weather?.setDensity(state.qualityScale);
