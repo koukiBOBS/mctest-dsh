@@ -416,6 +416,23 @@ export class World {
       }
     }
 
+    // 3b2) 平原/森林南瓜
+    for (let lz = 0; lz < CHUNK_SZ; lz++) {
+      for (let lx = 0; lx < CHUNK_SX; lx++) {
+        const wx = x0 + lx;
+        const wz = z0 + lz;
+        const h = chunk.heightMap[lz * CHUNK_SX + lx];
+        if (h <= SEA_LEVEL) continue;
+        const info = this.columnInfo(wx, wz);
+        if (info.biome !== 'plains' && info.biome !== 'forest') continue;
+        if (chunk.get(lx, h, lz) !== BLOCK.GRASS) continue;
+        if (chunk.get(lx, h + 1, lz) !== BLOCK.AIR) continue;
+        if (hash2i(wx, wz, this.seed + 777) > 0.0016) continue;
+        chunk.set(lx, h + 1, lz, BLOCK.PUMPKIN);
+        chunk.maxY = Math.max(chunk.maxY, h + 1);
+      }
+    }
+
     // 3c) 结构（村庄/地牢）
     this.generateStructures(chunk);
 

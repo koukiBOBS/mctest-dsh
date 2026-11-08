@@ -413,6 +413,59 @@ function closeLectern() {
   if (state.isTouch) hideTouch(false);
 }
 
+function trySummonGolem(x, y, z) {
+  const w = state.world;
+  if (!w) return false;
+  const B = BLOCK.IRON_BLOCK;
+  if (w.getBlock(x, y - 1, z) !== B) return false;
+  if (w.getBlock(x, y - 2, z) !== B) return false;
+  if (w.getBlock(x - 1, y - 2, z) !== B) return false;
+  if (w.getBlock(x + 1, y - 2, z) !== B) return false;
+  w.setBlock(x, y, z, 0);
+  w.setBlock(x, y - 1, z, 0);
+  w.setBlock(x, y - 2, z, 0);
+  w.setBlock(x - 1, y - 2, z, 0);
+  w.setBlock(x + 1, y - 2, z, 0);
+  const golem = state.mobs?.spawn('iron_golem', x + 0.5, y - 1, z + 0.5);
+  if (golem) {
+    state.chat?.log('铁傀儡被召唤了！');
+    state.achievements?.onEvent('golem', {});
+    state.sound?.play('pop', { volume: 0.5 });
+    return true;
+  }
+  return false;
+}
+
+function ensureVillageDefense() {
+  const p = state.player;
+  const w = state.world;
+  const mobs = state.mobs;
+  if (!p || !w || !mobs) return;
+  let villager = null;
+  for (const m of mobs.mobs) {
+    if (m.type === 'villager' && !m.removed) {
+      villager = m;
+      break;
+    }
+  }
+  if (!villager) return;
+  let hostileNear = false;
+  for (const m of mobs.mobs) {
+    if (!m || m.removed || !m.def || !m.def.hostile) continue;
+    if (Math.hypot(m.x - villager.x, m.z - villager.z) < 24) {
+      hostileNear = true;
+      break;
+    }
+  }
+  if (!hostileNear) return;
+  if (mobs.mobs.some((m) => m.type === 'iron_golem' && !m.removed)) return;
+  const x = Math.floor(villager.x + (Math.random() - 0.5) * 8);
+  const z = Math.floor(villager.z + (Math.random() - 0.5) * 8);
+  const y = w.getSurfaceY(x, z) + 1;
+  const golem = mobs.spawn('iron_golem', x + 0.5, y, z + 0.5);
+  if (golem) state.chat?.log('村庄陷入危险，铁傀儡苏醒了！');
+}
+
 function launchFirework() {
   const p = state.player;
   if (!p || !state.inventory) return;
@@ -1069,6 +1122,7 @@ function startGame(opts = {}) {
   game.startFishing = () => startFishing();
   game.launchFirework = () => launchFirework();
   game.useCampfire = (hit) => useCampfire(hit);
+  game.trySummonGolem = (x, y, z) => trySummonGolem(x, y, z);
   game.ringBell = (hit) => ringBell(hit);
   game.openLectern = (hit) => openLectern(hit);
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
@@ -1343,6 +1397,29 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.golemDemo && state.player) {
+        state.golemDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 5);
+            const z = Math.floor(p.z + f.z * 5);
+            const gy = state.world.getSurfaceY(x, z) + 1;
+            state.world.setBlock(x, gy, z, BLOCK.IRON_BLOCK);
+            state.world.setBlock(x, gy + 1, z, BLOCK.IRON_BLOCK);
+            state.world.setBlock(x - 1, gy, z, BLOCK.IRON_BLOCK);
+            state.world.setBlock(x + 1, gy, z, BLOCK.IRON_BLOCK);
+            state.world.setBlock(x, gy + 2, z, BLOCK.PUMPKIN);
+            trySummonGolem(x, gy + 2, z);
+            state.inventory.setSlot(0, { id: 'iron_block', count: 16 });
+            state.inventory.setSlot(1, { id: 'pumpkin', count: 4 });
+            state.inventory.notify();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.elytraDemo && state.player) {
         state.elytraDemo = false;
@@ -2936,6 +3013,11 @@ function loop(now) {
         state.villagerTimer = 0;
         ensureVillagers();
       }
+      state.golemTimer = (state.golemTimer || 0) + dt;
+      if (state.golemTimer > 8) {
+        state.golemTimer = 0;
+        ensureVillageDefense();
+      }
       state.shulkerTimer = (state.shulkerTimer || 0) + dt;
       if (state.shulkerTimer > 8) {
         state.shulkerTimer = 0;
@@ -3341,6 +3423,7 @@ function boot() {
   if (params.get('potion') === '1') state.potionDemo = true;
   if (params.get('elytra') === '1') state.elytraDemo = true;
   if (params.get('ship') === '1') state.shipDemo = true;
+  if (params.get('golem') === '1') state.golemDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

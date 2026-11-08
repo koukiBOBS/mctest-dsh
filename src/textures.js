@@ -97,6 +97,9 @@ export const TILE_NAMES = [
   'bell',
   'lectern_top',
   'purpur',
+  'iron_block',
+  'pumpkin_top',
+  'pumpkin_face',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2325,6 +2328,44 @@ const TILE_PAINTERS = {
       setPx(b, x, y, C('#c890d0'));
       if (rng() < 0.35) setPx(b, (x + 1) & 15, y, C('#7a4a82'));
     }
+  },
+
+  iron_block(b, rng) {
+    noiseFill(b, rng, [
+      ['#c8c8c8', 6],
+      ['#b0b0b0', 5],
+      ['#e0e0e0', 3],
+    ]);
+    fillRect(b, 1, 1, 14, 14, C('#d8d8d8'));
+    for (let y = 3; y < 16; y += 5) hline(b, 1, 14, y, C('#a0a0a0'));
+    for (let x = 3; x < 16; x += 5) vline(b, 1, 14, x, C('#a0a0a0'));
+    setPx(b, 4, 4, C('#f4f4f4'));
+  },
+
+  pumpkin_top(b, rng) {
+    noiseFill(b, rng, [
+      ['#d87a1e', 6],
+      ['#c06a14', 4],
+      ['#e8902a', 3],
+    ]);
+    fillRect(b, 6, 5, 4, 4, C('#5a7a2a'));
+    fillRect(b, 7, 3, 2, 3, C('#7a9a3a'));
+    hline(b, 0, 15, 12, C('#a85a10'));
+  },
+
+  pumpkin_face(b, rng) {
+    noiseFill(b, rng, [
+      ['#d87a1e', 6],
+      ['#c06a14', 4],
+      ['#e8902a', 3],
+    ]);
+    // 眼睛
+    fillPoly(b, [[3, 5], [6, 4], [6, 8], [3, 7]], C('#2a1a0a'));
+    fillPoly(b, [[10, 4], [13, 5], [13, 7], [10, 8]], C('#2a1a0a'));
+    // 嘴
+    fillRect(b, 4, 10, 8, 2, C('#2a1a0a'));
+    fillRect(b, 6, 9, 4, 1, C('#2a1a0a'));
+    hline(b, 0, 15, 13, C('#a85a10'));
   },
 
 };

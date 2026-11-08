@@ -24,6 +24,7 @@ export const RECIPES = [
   { id: 'arrow', pattern: ['F', 'S', 'E'], keys: { F: 'flint', S: 'stick', E: 'feather' }, result: { id: 'arrow', count: 4 } },
   { id: 'fence', pattern: ['PSP', 'PSP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'], S: 'stick' }, result: { id: 'fence', count: 3 } },
   { id: 'door', pattern: ['PP', 'PP', 'PP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'door', count: 3 } },
+  { id: 'iron_block', pattern: ['III', 'III', 'III'], keys: { I: 'iron_ingot' }, result: { id: 'iron_block', count: 1 } },
   { id: 'campfire', pattern: [' S ', 'SCS', 'LLL'], keys: { S: 'stick', C: 'coal', L: ['oak_log', 'birch_log', 'spruce_log'] }, result: { id: 'campfire', count: 1 } },
   { id: 'bell', pattern: [' G ', 'GGG', ' S '], keys: { G: 'gold_ingot', S: 'stick' }, result: { id: 'bell', count: 1 } },
   { id: 'lectern', pattern: ['PPP', 'PBP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'], B: 'book' }, result: { id: 'lectern', count: 1 } },

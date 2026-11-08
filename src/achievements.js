@@ -37,6 +37,7 @@ export const ACHIEVEMENTS = [
   { id: 'trial', name: '试炼挑战者', desc: '发现一座试炼密室' },
   { id: 'end_city', name: '末地之城', desc: '发现末地城' },
   { id: 'elytra', name: '自由滑翔', desc: '获得鞘翅' },
+  { id: 'golem', name: '村庄守护者', desc: '召唤一只铁傀儡' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -124,6 +125,9 @@ export class Achievements {
         break;
       case 'breed':
         this.unlock('breed');
+        break;
+      case 'golem':
+        this.unlock('golem');
         break;
       case 'elytra':
         this.unlock('elytra');

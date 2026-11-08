@@ -85,6 +85,8 @@ export const BLOCK = Object.freeze({
   BELL: 77,
   LECTERN: 78,
   PURPUR_BLOCK: 79,
+  IRON_BLOCK: 80,
+  PUMPKIN: 81,
 });
 
 export const BLOCK_DEFS = [];
@@ -320,6 +322,12 @@ def(BLOCK.SCULK_SENSOR, 'sculk_sensor', '幽匿感测体', {
 });
 def(BLOCK.TRIAL_SPAWNER, 'trial_spawner', '试炼刷怪笼', {
   tiles: { all: 'trial_spawner' }, hardness: 2.5, sound: 'stone', light: 6,
+});
+def(BLOCK.IRON_BLOCK, 'iron_block', '铁块', {
+  tiles: { all: 'iron_block' }, hardness: 3.0, sound: 'stone',
+});
+def(BLOCK.PUMPKIN, 'pumpkin', '南瓜', {
+  tiles: { top: 'pumpkin_top', bottom: 'pumpkin_top', side: 'pumpkin_face' }, hardness: 0.6, sound: 'wood',
 });
 def(BLOCK.PURPUR_BLOCK, 'purpur_block', '紫珀块', {
   tiles: { all: 'purpur' }, hardness: 1.5, sound: 'stone',

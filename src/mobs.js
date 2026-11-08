@@ -120,6 +120,17 @@ export const MOB_TYPES = {
     ],
     colors: { body: 0x2f2f2f, white: 0xf1f1ec, snout: 0xd9a3a5, horn: 0xd9d5c5, leg: 0x3a3a3a, eye: 0x111111 },
   },
+  iron_golem: {
+    id: 'iron_golem',
+    name: '铁傀儡',
+    hostile: false,
+    width: 1.4,
+    height: 2.4,
+    health: 100,
+    speed: 1.4,
+    drops: [{ id: 'iron_ingot', min: 3, max: 5 }],
+    colors: { body: 0xd8d8d8, light: 0xf0f0f0, dark: 0x9a9a9a, eye: 0x2a2a2a, vine: 0x5a8a3a },
+  },
   shulker: {
     id: 'shulker',
     name: '潜影贝',
@@ -535,7 +546,7 @@ export class MobManager {
 
     if (def.hostile) {
       mob.ai.angry = true;
-    } else {
+    } else if (mob.type !== 'iron_golem') {
       mob.ai.flee = 3;
       mob.ai.fleeX = this.player ? this.player.x : mob.x;
       mob.ai.fleeZ = this.player ? this.player.z : mob.z;
@@ -743,6 +754,10 @@ export class MobManager {
       this._updateTint(mob);
       return;
     }
+    if (mob.type === 'iron_golem') {
+      this._updateIronGolem(mob, dt);
+      return;
+    }
     if (mob.type === 'bat') {
       this._updateBat(mob, dt);
       this._updateTint(mob);
@@ -871,6 +886,47 @@ export class MobManager {
   // ------------------------------------------------------------
   // AI
   // ------------------------------------------------------------
+  _updateIronGolem(mob, dt) {
+    if (mob.attackCd > 0) mob.attackCd -= dt;
+    if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
+    let target = null;
+    let bestD = 14 * 14;
+    for (const other of this.mobs) {
+      if (!other || other.removed || other === mob) continue;
+      if (!other.def || !other.def.hostile) continue;
+      const d = (other.x - mob.x) ** 2 + (other.z - mob.z) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        target = other;
+      }
+    }
+    if (target) {
+      const dx = target.x - mob.x;
+      const dz = target.z - mob.z;
+      const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
+      if (dist > 1.7) this._setMove(mob, dx / dist, dz / dist, mob.def.speed);
+      else this._stop(mob);
+      this._face(mob, target.x, target.z);
+      if (dist < 2.4 && mob.attackCd <= 0) {
+        mob.attackCd = 1.5;
+        this.hit(target, 8, (dx / dist) * 0.7, (dz / dist) * 0.7);
+        this._playSound('hurt', 0.4);
+      }
+    } else {
+      mob.ai.wander -= dt;
+      if (mob.ai.wander <= 0) {
+        mob.ai.wander = 3 + Math.random() * 5;
+        mob.ai.dirX = Math.sin(Math.random() * Math.PI * 2);
+        mob.ai.dirZ = Math.cos(Math.random() * Math.PI * 2);
+      }
+      this._setMove(mob, mob.ai.dirX, mob.ai.dirZ, mob.def.speed * 0.45);
+    }
+    this._applyPhysics(mob, dt);
+    if (mob.removed) return;
+    this._animateMob(mob, dt);
+    this._updateTint(mob);
+  }
+
   _updateBat(mob, dt) {
     mob.flap = (mob.flap || 0) + dt * 12;
     if (mob.batWings) {
@@ -1663,6 +1719,7 @@ export class MobManager {
       case 'villager': this._modelVillager(mob, root, c); break;
       case 'ender_dragon': this._modelDragon(mob, root, c); break;
       case 'shulker': this._modelShulker(mob, root, c); break;
+      case 'iron_golem': this._modelIronGolem(mob, root, c); break;
       case 'bat': this._modelBat(mob, root, c); break;
       case 'squid': this._modelSquid(mob, root, c); break;
       default: this._addBox(mob, root, 0xffffff, 0.5, 0.5, 0.5, 0, 0.5, 0); break;
@@ -1770,6 +1827,21 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelIronGolem(mob, root, c) {
+    this._addLimb(mob, root, c.dark, 0.42, 1.0, 0.45, -0.34, 1.0, 0, mob.legs);
+    this._addLimb(mob, root, c.dark, 0.42, 1.0, 0.45, 0.34, 1.0, 0, mob.legs);
+    this._addBox(mob, root, c.body, 1.2, 1.05, 0.8, 0, 1.6, 0);
+    this._addBox(mob, root, c.light, 1.0, 0.16, 0.7, 0, 2.1, 0);
+    this._addLimb(mob, root, c.body, 0.34, 1.25, 0.4, -0.78, 2.05, 0, mob.arms);
+    this._addLimb(mob, root, c.body, 0.34, 1.25, 0.4, 0.78, 2.05, 0, mob.arms);
+    const head = this._makeHead(mob, root, c.body, 0.68, 0.62, 0.62, 0, 2.3, 0);
+    this._addBox(mob, head, c.eye, 0.1, 0.08, 0.03, -0.16, 0.1, 0.32);
+    this._addBox(mob, head, c.eye, 0.1, 0.08, 0.03, 0.16, 0.1, 0.32);
+    this._addBox(mob, head, c.dark, 0.18, 0.14, 0.06, 0, -0.14, 0.32);
+    this._addBox(mob, head, c.vine, 0.5, 0.1, 0.1, 0, 0.25, 0.3);
+    this._addBox(mob, root, c.vine, 0.55, 0.12, 0.12, 0, 2.2, 0.34);
   }
 
   _modelBat(mob, root, c) {
