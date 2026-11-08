@@ -93,6 +93,9 @@ export const TILE_NAMES = [
   'sculk',
   'sculk_sensor',
   'trial_spawner',
+  'campfire',
+  'bell',
+  'lectern_top',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2260,6 +2263,47 @@ const TILE_PAINTERS = {
     fillRect(b, 6, 5, 4, 8, C('#e06a1a'));
     fillRect(b, 7, 7, 2, 5, C('#ffd24a'));
     setPx(b, 8, 8, C('#fff2b0'));
+  },
+
+  campfire(b, rng) {
+    noiseFill(b, rng, [
+      ['#4a3020', 6],
+      ['#3a2418', 4],
+      ['#5a3a24', 3],
+    ]);
+    // 交叉原木
+    for (let i = 0; i < 4; i++) hline(b, 1, 14, 4 + i * 3, C('#6b4423'));
+    // 火焰/余烬
+    fillRect(b, 5, 8, 6, 4, C('#e06a1a'));
+    fillRect(b, 6, 9, 4, 3, C('#ffb040'));
+    fillRect(b, 7, 10, 2, 2, C('#ffe08a'));
+    for (let i = 0; i < 8; i++) setPx(b, (rng() * 16) | 0, 6 + ((rng() * 6) | 0), C('#ff7a2a'));
+  },
+
+  bell(b, rng) {
+    fillSolid(b, C('#2a2a30'));
+    fillPoly(b, [[5, 6], [11, 6], [13, 12], [3, 12]], C('#d8b84a'));
+    fillRect(b, 6, 12, 4, 2, C('#b8983a'));
+    fillRect(b, 7, 14, 2, 2, C('#8a6a2a'));
+    fillRect(b, 7, 2, 2, 4, C('#8a6a2a'));
+    setPx(b, 6, 8, C('#f0e08a'));
+    setPx(b, 9, 8, C('#f0e08a'));
+  },
+
+  lectern_top(b, rng) {
+    noiseFill(b, rng, [
+      ['#a9743f', 6],
+      ['#8a5a2e', 4],
+      ['#b9854c', 3],
+    ]);
+    // 打开的书
+    fillRect(b, 3, 4, 10, 9, C('#f0e8d0'));
+    fillRect(b, 3, 4, 1, 9, C('#8a5a2e'));
+    fillRect(b, 12, 4, 1, 9, C('#8a5a2e'));
+    for (let y = 6; y < 12; y += 2) {
+      hline(b, 4, 7, y, C('#8a7a5a'));
+      hline(b, 8, 11, y, C('#8a7a5a'));
+    }
   },
 
 };

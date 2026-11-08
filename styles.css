@@ -1590,3 +1590,17 @@ body.touch #xp-bar {
 #name-save {
   width: 100%;
 }
+
+
+#lectern-text {
+  margin-top: 8px;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 8px;
+  background: #1e1a14;
+  border: 1px solid #6a5a3a;
+  color: #f0e2b8;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-line;
+}

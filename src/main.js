@@ -52,6 +52,8 @@ const state = {
   fishing: null,
   nameMob: null,
   enchantTable: null,
+  lecternOpen: false,
+  campfireTimers: [],
   inNether: false,
   inEnd: false,
   endReturn: null,
@@ -340,6 +342,73 @@ const BREWS = [
   { id: 'potion_strength', name: '力量药水', ingredient: 'beef', desc: '20 秒攻击 +3' },
   { id: 'potion_speed', name: '迅捷药水', ingredient: 'feather', desc: '20 秒移速 +35%' },
 ];
+
+const LECTERN_PAGES = [
+  '很久以前，这片土地由巨龙守护。\n勇者们穿过黑曜石之门，在末地打败了它。',
+  '传说远古城市的地下埋藏着会发光的幽匿，\n它们能听见最轻的脚步声。',
+  '村民之间流传着一句话：\n“别在雷雨天站在山顶上。”',
+  '一位矿工写道：\n“向下挖到第十层时，我听见了岩浆的呼吸。”',
+];
+
+function useCampfire(hit) {
+  const p = state.player;
+  if (!p) return;
+  const cooked = {
+    beef: 'cooked_beef',
+    porkchop: 'cooked_porkchop',
+    chicken: 'cooked_chicken',
+    cod: 'cooked_cod',
+  };
+  const held = p.inventory && p.inventory.held;
+  if (held && cooked[held.id]) {
+    const out = cooked[held.id];
+    if (p.mode === 'survival') p.inventory.consumeHeld(1);
+    state.campfireTimers.push({ t: 5, out, x: hit.x + 0.5, y: hit.y + 0.6, z: hit.z + 0.5 });
+    state.chat?.log('食物放上了营火……');
+    state.sound?.play('pop', { volume: 0.3 });
+    state.onInventoryChange?.();
+    return;
+  }
+  showToast('营火噼啪作响（拿着生肉/鱼右键可烤）');
+  state.sound?.play('pop', { volume: 0.2 });
+}
+
+function ringBell(hit) {
+  state.sound?.play('open', { volume: 0.7, pitch: 0.35 });
+  state.chat?.log('🔔 钟声响起，村民们四散躲避！');
+  if (state.mobs && state.mobs.mobs) {
+    for (const mob of state.mobs.mobs) {
+      if (!mob || mob.type !== 'villager' || mob.removed) continue;
+      if (Math.hypot(mob.x - hit.x, mob.z - hit.z) > 24) continue;
+      mob.ai.flee = 6;
+      mob.ai.fleeX = hit.x;
+      mob.ai.fleeZ = hit.z;
+    }
+  }
+}
+
+function openLectern() {
+  if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
+  if (state.lecternOpen) return;
+  state.lecternOpen = true;
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-lectern').classList.remove('hidden');
+  const el = $('lectern-text');
+  if (el) el.textContent = LECTERN_PAGES[Math.floor(Math.random() * LECTERN_PAGES.length)];
+}
+
+function closeLectern() {
+  if (!state.lecternOpen) return;
+  state.lecternOpen = false;
+  state.paused = false;
+  $('screen-lectern').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+}
 
 function launchFirework() {
   const p = state.player;
@@ -986,6 +1055,9 @@ function startGame(opts = {}) {
   game.openNameTag = (mob) => openNameTagEditor(mob);
   game.startFishing = () => startFishing();
   game.launchFirework = () => launchFirework();
+  game.useCampfire = (hit) => useCampfire(hit);
+  game.ringBell = (hit) => ringBell(hit);
+  game.openLectern = (hit) => openLectern(hit);
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
 
   const mobs = new MobManager(game, {
@@ -1258,6 +1330,31 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.campfireDemo && state.player) {
+        state.campfireDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+            const bx = Math.floor(p.x + f.x * 5);
+            const bz = Math.floor(p.z + f.z * 5);
+            const gy = state.world.getSurfaceY(bx, bz);
+            state.world.setBlock(bx, gy + 1, bz, BLOCK.CAMPFIRE);
+            state.world.setBlock(bx + Math.round(right.x * 2), gy + 1, bz + Math.round(right.z * 2), BLOCK.LECTERN);
+            state.world.setBlock(bx - Math.round(right.x * 2), gy + 1, bz - Math.round(right.z * 2), BLOCK.BELL);
+            state.inventory.add('beef', 4);
+            state.inventory.setSlot(0, { id: 'beef', count: 4 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            state.onInventoryChange?.();
+            state.chat?.log('演示：营火、讲台和钟已放置（拿生肉右键营火可烤）');
+            setTimeout(() => useCampfire({ x: bx, y: gy + 1, z: bz }), 900);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
       }
       if (state.nameTagDemo && state.player) {
         state.nameTagDemo = false;
@@ -2197,6 +2294,10 @@ function handleEscape() {
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
     return;
   }
+  if (state.lecternOpen) {
+    closeLectern();
+    return;
+  }
   if (state.nameMob) {
     closeNameTagEditor(true);
     return;
@@ -2800,6 +2901,17 @@ function loop(now) {
       state.world.time += dt;
       state.world.updateCrops(dt);
       state.world.tickWater(dt);
+      if (state.campfireTimers.length) {
+        for (let i = state.campfireTimers.length - 1; i >= 0; i--) {
+          const item = state.campfireTimers[i];
+          item.t -= dt;
+          if (item.t > 0) continue;
+          state.campfireTimers.splice(i, 1);
+          if (state.items) state.items.spawn(item.out, item.x, item.y, item.z, 1);
+          state.chat?.log('🍖 烤好了：' + itemDisplay(item.out));
+          state.sound?.play('pop', { volume: 0.4 });
+        }
+      }
       if (state.fishing) {
         state.fishing.timer -= dt;
         if (state.fishing.timer <= 0) finishFishing();
@@ -2966,6 +3078,7 @@ function bindUI() {
   $('enchant-close').addEventListener('click', closeEnchant);
   $('brew-close').addEventListener('click', closeBrew);
   $('sign-close').addEventListener('click', () => closeSignEditor(false));
+  $('lectern-close').addEventListener('click', closeLectern);
   $('name-close').addEventListener('click', () => closeNameTagEditor(false));
   $('name-save').addEventListener('click', () => closeNameTagEditor(true));
   $('sign-save').addEventListener('click', () => closeSignEditor(true));
@@ -3110,6 +3223,7 @@ function boot() {
   if (params.get('nametag') === '1') state.nameTagDemo = true;
   if (params.get('city') === '1') state.tpCity = true;
   if (params.get('trial') === '1') state.tpTrial = true;
+  if (params.get('campfire') === '1') state.campfireDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

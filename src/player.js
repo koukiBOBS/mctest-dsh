@@ -636,6 +636,20 @@ export class Player {
       return;
     }
 
+    // 营火 / 钟 / 讲台
+    if (this.target && this.target.id === BLOCK.CAMPFIRE) {
+      this.game.useCampfire?.(this.target);
+      return;
+    }
+    if (this.target && this.target.id === BLOCK.BELL) {
+      this.game.ringBell?.(this.target);
+      return;
+    }
+    if (this.target && this.target.id === BLOCK.LECTERN) {
+      this.game.openLectern?.(this.target);
+      return;
+    }
+
     // 右键编辑告示牌
     if (this.target && this.target.id === BLOCK.SIGN) {
       this.game.openSignEditor?.(this.target.x, this.target.y, this.target.z);

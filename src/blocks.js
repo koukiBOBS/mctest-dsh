@@ -81,6 +81,9 @@ export const BLOCK = Object.freeze({
   SCULK: 73,
   SCULK_SENSOR: 74,
   TRIAL_SPAWNER: 75,
+  CAMPFIRE: 76,
+  BELL: 77,
+  LECTERN: 78,
 });
 
 export const BLOCK_DEFS = [];
@@ -316,6 +319,15 @@ def(BLOCK.SCULK_SENSOR, 'sculk_sensor', '幽匿感测体', {
 });
 def(BLOCK.TRIAL_SPAWNER, 'trial_spawner', '试炼刷怪笼', {
   tiles: { all: 'trial_spawner' }, hardness: 2.5, sound: 'stone', light: 6,
+});
+def(BLOCK.CAMPFIRE, 'campfire', '营火', {
+  tiles: { top: 'campfire', bottom: 'oak_planks', side: 'campfire' }, hardness: 1.0, sound: 'wood', light: 15,
+});
+def(BLOCK.BELL, 'bell', '钟', {
+  tiles: { all: 'bell' }, hardness: 2.0, sound: 'stone',
+});
+def(BLOCK.LECTERN, 'lectern', '讲台', {
+  tiles: { top: 'lectern_top', bottom: 'oak_planks', side: 'bookshelf' }, hardness: 1.0, sound: 'wood',
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },
