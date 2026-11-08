@@ -82,6 +82,8 @@ export class World {
     this.dirtyChunks = new Set();
     this.modsByChunk = new Map(); // chunkKey -> Map("x,y,z" -> id)
     this.lightSources = new Map(); // "x,y,z" -> light level
+    this.villageCache = new Map();
+    this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.time = 0; // 世界时间（秒），用于昼夜
     this.spawn = { x: 0.5, y: 80, z: 0.5 };
     this._infoCache = new Map();
@@ -280,6 +282,9 @@ export class World {
       }
     }
 
+    // 3c) 结构（村庄/地牢）
+    this.generateStructures(chunk);
+
     // 4) 应用玩家改动
     const mods = this.modsByChunk.get(chunkKey(cx, cz));
     if (mods) {
@@ -395,6 +400,274 @@ export class World {
         }
       }
     }
+  }
+
+  // ---------------- 结构生成 ----------------
+  chunkSet(chunk, wx, wy, wz, id) {
+    const lx = wx - chunk.cx * CHUNK_SX;
+    const lz = wz - chunk.cz * CHUNK_SZ;
+    if (lx < 0 || lx >= CHUNK_SX || lz < 0 || lz >= CHUNK_SZ || wy < 0 || wy >= CHUNK_H) return;
+    chunk.set(lx, wy, lz, id);
+    if (id !== 0) chunk.maxY = Math.max(chunk.maxY, wy);
+  }
+
+  generateStructures(chunk) {
+    this.stampVillages(chunk);
+    this.stampDungeon(chunk);
+  }
+
+  getVillage(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.villageCache.has(key)) return this.villageCache.get(key);
+    if (this.villageCache.size > 800) this.villageCache.clear();
+    const seed = this.seed;
+    const h = (n) => hash2i(cx * 31 + n, cz * 17 - n, seed + 900 + n);
+    const centerX = Math.round(cx * 128 + 36 + h(1) * 56);
+    const centerZ = Math.round(cz * 128 + 36 + h(2) * 56);
+    const info = this.columnInfo(centerX, centerZ);
+    let village = null;
+    if (['plains', 'forest', 'desert'].includes(info.biome) && info.height > SEA_LEVEL + 2) {
+      const layout = [
+        [0, 0, 7, 7],
+        [14, 2, 6, 5],
+        [-15, 2, 6, 6],
+        [2, 15, 6, 5],
+        [-4, -15, 5, 6],
+        [16, -13, 6, 6],
+      ];
+      const buildings = [];
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minZ = Infinity;
+      let maxZ = -Infinity;
+      for (let i = 0; i < layout.length; i++) {
+        const [ox, oz, w, d] = layout[i];
+        const jx = Math.floor(h(10 + i) * 3) - 1;
+        const jz = Math.floor(h(30 + i) * 3) - 1;
+        const bx = centerX + ox + jx;
+        const bz = centerZ + oz + jz;
+        const floorY = this.columnInfo(bx + (w >> 1), bz + (d >> 1)).height;
+        buildings.push({ x: bx, z: bz, w, d, floorY });
+        minX = Math.min(minX, bx - 2);
+        maxX = Math.max(maxX, bx + w + 1);
+        minZ = Math.min(minZ, bz - 2);
+        maxZ = Math.max(maxZ, bz + d + 1);
+      }
+      village = {
+        centerX,
+        centerZ,
+        floorY: info.height,
+        biome: info.biome,
+        buildings,
+        minX: minX - 6,
+        maxX: maxX + 6,
+        minZ: minZ - 6,
+        maxZ: maxZ + 6,
+      };
+    }
+    this.villageCache.set(key, village);
+    return village;
+  }
+
+  stampVillages(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 128);
+    const ccz = Math.floor(z0 / 128);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const v = this.getVillage(ccx + dx, ccz + dz);
+        if (!v) continue;
+        if (x1 < v.minX || x0 > v.maxX || z1 < v.minZ || z0 > v.maxZ) continue;
+        this.stampVillage(chunk, v);
+      }
+    }
+  }
+
+  stampVillage(chunk, v) {
+    const set = (wx, wy, wz, id) => this.chunkSet(chunk, wx, wy, wz, id);
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const inChunk = (wx, wz) => wx >= x0 && wx < x0 + CHUNK_SX && wz >= z0 && wz < z0 + CHUNK_SX;
+    const cy = v.floorY;
+
+    // 村中心水井
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const wx = v.centerX + dx;
+        const wz = v.centerZ + dz;
+        if (!inChunk(wx, wz)) continue;
+        if (dx === 0 && dz === 0) {
+          set(wx, cy, wz, BLOCK.WATER);
+          set(wx, cy + 1, wz, BLOCK.WATER);
+        } else {
+          set(wx, cy, wz, BLOCK.COBBLE);
+          set(wx, cy + 1, wz, BLOCK.COBBLE);
+        }
+      }
+    }
+
+    const isInsideBuilding = (wx, wz) => {
+      for (const b of v.buildings) {
+        if (wx >= b.x && wx < b.x + b.w && wz >= b.z && wz < b.z + b.d) return true;
+      }
+      return false;
+    };
+
+    for (const b of v.buildings) {
+      const floorY = b.floorY;
+      const doorSide =
+        Math.abs(b.x + b.w / 2 - v.centerX) > Math.abs(b.z + b.d / 2 - v.centerZ) ? 'x' : 'z';
+      for (let dx = -1; dx <= b.w; dx++) {
+        for (let dz = -1; dz <= b.d; dz++) {
+          const wx = b.x + dx;
+          const wz = b.z + dz;
+          if (!inChunk(wx, wz)) continue;
+          // 地基与地板
+          for (let wy = floorY - 6; wy <= floorY; wy++) {
+            if (wy === floorY) set(wx, wy, wz, BLOCK.PLANKS);
+            else if (dx < 0 || dx >= b.w || dz < 0 || dz >= b.d) set(wx, wy, wz, BLOCK.COBBLE);
+          }
+          const wall = dx >= 0 && dx < b.w && dz >= 0 && dz < b.d &&
+            (dx === 0 || dx === b.w - 1 || dz === 0 || dz === b.d - 1);
+          if (wall) {
+            for (let wy = floorY + 1; wy <= floorY + 3; wy++) {
+              const isDoor =
+                (doorSide === 'z' && dz === 0 && dx === Math.floor(b.w / 2) && wy <= floorY + 2) ||
+                (doorSide === 'x' && dx === 0 && dz === Math.floor(b.d / 2) && wy <= floorY + 2);
+              if (isDoor) {
+                set(wx, wy, wz, BLOCK.AIR);
+                continue;
+              }
+              const isWindow = wy === floorY + 2 && (dx + dz) % 4 === 0 && !(dx === 0 && dz === 0);
+              if (isWindow) {
+                set(wx, wy, wz, BLOCK.GLASS);
+                continue;
+              }
+              const corner = (dx === 0 || dx === b.w - 1) && (dz === 0 || dz === b.d - 1);
+              set(wx, wy, wz, corner ? BLOCK.LOG : v.biome === 'desert' ? BLOCK.SANDSTONE : BLOCK.PLANKS);
+            }
+          } else if (dx >= 0 && dx < b.w && dz >= 0 && dz < b.d) {
+            for (let wy = floorY + 1; wy <= floorY + 3; wy++) set(wx, wy, wz, BLOCK.AIR);
+          }
+        }
+      }
+      // 屋顶
+      for (let dx = -1; dx <= b.w; dx++) {
+        for (let dz = -1; dz <= b.d; dz++) {
+          const wx = b.x + dx;
+          const wz = b.z + dz;
+          if (!inChunk(wx, wz)) continue;
+          set(wx, floorY + 4, wz, BLOCK.PLANKS);
+          if (dx >= 0 && dx < b.w && dz >= 0 && dz < b.d) set(wx, floorY + 5, wz, BLOCK.PLANKS);
+        }
+      }
+    }
+
+    // 通往村中心的碎石路
+    for (const b of v.buildings) {
+      const sx = b.x + (b.w >> 1);
+      const sz = b.z + (b.d >> 1);
+      const steps = Math.max(Math.abs(sx - v.centerX), Math.abs(sz - v.centerZ));
+      for (let i = 0; i <= steps; i++) {
+        const t = steps ? i / steps : 0;
+        const wx = Math.round(v.centerX + (sx - v.centerX) * t);
+        const wz = Math.round(v.centerZ + (sz - v.centerZ) * t);
+        if (!inChunk(wx, wz) || isInsideBuilding(wx, wz)) continue;
+        const h = this.columnInfo(wx, wz).height;
+        set(wx, h, wz, BLOCK.GRAVEL);
+        set(wx, h + 1, wz, BLOCK.AIR);
+      }
+    }
+  }
+
+  stampDungeon(chunk) {
+    const r = hash2i(chunk.cx, chunk.cz, this.seed + 700);
+    if (r > 0.05) return;
+    const y = 16 + Math.floor(hash2i(chunk.cx, chunk.cz, this.seed + 701) * 18);
+    const cx = chunk.cx * 16 + 8;
+    const cz = chunk.cz * 16 + 8;
+    for (let dx = -5; dx <= 5; dx++) {
+      for (let dz = -5; dz <= 5; dz++) {
+        const wx = cx + dx;
+        const wz = cz + dz;
+        const inside = dx > -5 && dx < 5 && dz > -5 && dz < 5;
+        if (inside) {
+          this.chunkSet(chunk, wx, y - 1, wz, dx === 0 && dz === 0 ? BLOCK.STONE_BRICKS : BLOCK.COBBLE);
+          for (let wy = y; wy <= y + 3; wy++) this.chunkSet(chunk, wx, wy, wz, BLOCK.AIR);
+          this.chunkSet(chunk, wx, y + 4, wz, BLOCK.STONE_BRICKS);
+        } else {
+          this.chunkSet(chunk, wx, y - 1, wz, BLOCK.COBBLE);
+          for (let wy = y; wy <= y + 3; wy++) {
+            this.chunkSet(chunk, wx, wy, wz, (dx + dz) % 3 === 0 ? BLOCK.COBBLE : BLOCK.STONE_BRICKS);
+          }
+          this.chunkSet(chunk, wx, y + 4, wz, BLOCK.STONE_BRICKS);
+        }
+      }
+    }
+    const chestX = cx + 2;
+    const chestZ = cz + 2;
+    this.chunkSet(chunk, chestX, y, chestZ, BLOCK.CHEST);
+    const key = chestX + ',' + y + ',' + chestZ;
+    if (!this.structureChests.has(key)) this.structureChests.set(key, this._dungeonLoot(chunk.cx, chunk.cz));
+  }
+
+  _dungeonLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 7 + n, cz * 5 - n, this.seed + 730 + n);
+    const loot = [];
+    if (r(1) < 0.85) loot.push({ id: 'iron_ingot', count: 1 + Math.floor(r(2) * 4) });
+    if (r(3) < 0.7) loot.push({ id: 'coal', count: 2 + Math.floor(r(4) * 6) });
+    if (r(5) < 0.6) loot.push({ id: 'bread', count: 1 + Math.floor(r(6) * 3) });
+    if (r(7) < 0.35) loot.push({ id: 'gold_ingot', count: 1 + Math.floor(r(8) * 2) });
+    if (r(9) < 0.12) loot.push({ id: 'diamond', count: 1 });
+    if (r(10) < 0.5) loot.push({ id: 'arrow', count: 4 + Math.floor(r(11) * 8) });
+    return loot;
+  }
+
+  takeStructureLoot(key) {
+    const loot = this.structureChests.get(key);
+    if (!loot) return null;
+    this.structureChests.delete(key);
+    return loot;
+  }
+
+  findNearestVillage(x, z) {
+    const ccx = Math.floor(x / 128);
+    const ccz = Math.floor(z / 128);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -12; dx <= 12; dx++) {
+      for (let dz = -12; dz <= 12; dz++) {
+        const v = this.getVillage(ccx + dx, ccz + dz);
+        if (!v) continue;
+        const d = (v.centerX - x) ** 2 + (v.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = v;
+        }
+      }
+    }
+    return best;
+  }
+
+  findNearestDungeon(x, z) {
+    const px = Math.floor(x / 16);
+    const pz = Math.floor(z / 16);
+    for (let r = 0; r < 48; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const cx = px + dx;
+          const cz = pz + dz;
+          if (hash2i(cx, cz, this.seed + 700) > 0.05) continue;
+          const y = 16 + Math.floor(hash2i(cx, cz, this.seed + 701) * 18);
+          return { x: cx * 16 + 8, y: y + 1, z: cz * 16 + 8 };
+        }
+      }
+    }
+    return null;
   }
 
   // ---------- 方块读写 ----------

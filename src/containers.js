@@ -58,6 +58,21 @@ export class ContainerManager {
     if (!s) {
       s = { type: 'chest', slots: new Array(27).fill(null) };
       this.chests.set(key, s);
+      // 地牢等结构生成的箱子带战利品
+      try {
+        const world = this.game && this.game.world;
+        const loot = world && world.takeStructureLoot ? world.takeStructureLoot(key) : null;
+        if (loot && loot.length) {
+          for (let i = 0; i < loot.length && i < 27; i++) {
+            const item = loot[i];
+            if (!item || !getItem(item.id)) continue;
+            const st = stack(item.id, Math.max(1, item.count | 0));
+            if (st) s.slots[i * 2 % 27] = st;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
     }
     return s;
   }

@@ -121,7 +121,7 @@ export class ChatUI {
       switch (cmd) {
         case 'help':
           this.log('命令：/gamemode <survival|creative> · /give <物品> [数量] · /time set <day|night|noon|midnight>');
-          this.log('/tp <x> <y> <z> · /weather <clear|rain|thunder|snow> · /seed · /spawn · /kill · /clear · /summon <生物>');
+          this.log('/tp <x> <y> <z> · /weather <clear|rain|thunder|snow> · /locate village|dungeon');
           break;
         case 'gamemode': {
           const m = (parts[0] || '').toLowerCase();
@@ -189,6 +189,21 @@ export class ChatUI {
           this.game.inventory.notify();
           this.log('背包已清空');
           break;
+        case 'locate': {
+          const what = (parts[0] || '').toLowerCase();
+          if (what === 'village') {
+            const v = this.game.world.findNearestVillage(p.x, p.z);
+            if (!v) this.log('附近没有找到村庄', 'err');
+            else this.log(`最近的村庄：${v.centerX}, ${v.floorY}, ${v.centerZ}（约 ${Math.round(Math.hypot(v.centerX - p.x, v.centerZ - p.z))} 格）`);
+          } else if (what === 'dungeon') {
+            const d = this.game.world.findNearestDungeon(p.x, p.z);
+            if (!d) this.log('附近没有找到地牢', 'err');
+            else this.log(`最近的地牢：${d.x}, ${d.y}, ${d.z}（约 ${Math.round(Math.hypot(d.x - p.x, d.z - p.z))} 格）`);
+          } else {
+            this.log('用法：/locate village|dungeon', 'err');
+          }
+          break;
+        }
         case 'weather': {
           const t = (parts[0] || '').toLowerCase();
           if (!this.game.weather) {

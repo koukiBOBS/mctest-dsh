@@ -502,6 +502,34 @@ function updateLoading() {
         }, 500);
         state.spawnDemoItems = false;
       }
+      if (state.tpVillage || state.tpDungeon) {
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            let target = null;
+            if (state.tpVillage) {
+              const v = state.world.findNearestVillage(p.x, p.z);
+              if (v) target = { x: v.centerX + 3.5, y: v.floorY + 2.2, z: v.centerZ + 3.5, label: `村庄 ${v.centerX}, ${v.floorY}, ${v.centerZ}` };
+            }
+            if (state.tpDungeon) {
+              const d = state.world.findNearestDungeon(p.x, p.z);
+              if (d) target = { x: d.x + 0.5, y: d.y + 0.2, z: d.z + 0.5, label: `地牢 ${d.x}, ${d.y}, ${d.z}` };
+            }
+            if (target) {
+              state.world.ensureChunk(Math.floor(target.x) >> 4, Math.floor(target.z) >> 4);
+              p.setPosition(target.x, target.y, target.z);
+              p.pitch = -0.12;
+              state.chat?.log('已传送到 ' + target.label);
+            } else {
+              state.chat?.log('附近没有找到目标结构');
+            }
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+          state.tpVillage = false;
+          state.tpDungeon = false;
+        }, 900);
+      }
       if (state.spawnTorches && state.player) {
         setTimeout(() => {
           const p = state.player;
@@ -1383,6 +1411,8 @@ function boot() {
   if (params.get('gui') === 'chest' || params.get('gui') === 'furnace') state.guiDemo = params.get('gui');
   if (params.get('torches') === '1') state.spawnTorches = true;
   if (params.get('weather')) state.weatherDemo = params.get('weather');
+  if (params.get('village') === '1') state.tpVillage = true;
+  if (params.get('dungeon') === '1') state.tpDungeon = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);
