@@ -429,6 +429,7 @@ const EXTRA_ITEMS = {
   name_tag: { display: '命名牌', icon: 'name_tag', maxStack: 16 },
   shulker_shell: { display: '潜影壳', icon: 'shulker_shell', maxStack: 64 },
   ink_sac: { display: '墨囊', icon: 'ink_sac', maxStack: 64 },
+  elytra: { display: '鞘翅', icon: 'elytra', maxStack: 1, armor: { slot: 1, points: 0, elytra: true } },
   glass_bottle: { display: '玻璃瓶', icon: 'glass_bottle', maxStack: 16 },
   water_bottle: { display: '水瓶', icon: 'water_bottle', maxStack: 1 },
   potion_healing: { display: '治疗药水', icon: 'potion_healing', maxStack: 1, potion: 'healing' },

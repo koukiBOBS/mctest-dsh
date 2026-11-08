@@ -67,6 +67,7 @@ export class Player {
     this.fireResistTimer = 0;
     this.nightVisionTimer = 0;
     this.jumpBoostTimer = 0;
+    this.gliding = false;
     this.kills = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
@@ -178,6 +179,30 @@ export class Player {
     }
 
     const c = this.controls;
+    const elytra = !!(this.inventory.armor && this.inventory.armor[1] && this.inventory.armor[1].id === 'elytra');
+    if (this.gliding && (this.onGround || this.inWater || this.inLava || this.dead)) this.gliding = false;
+    if (!this.gliding && elytra && !this.onGround && !this.inWater && !this.inLava && this.vy < -1.2 && c.jump) {
+      this.gliding = true;
+      this.game.toast?.('开始滑翔！');
+    }
+    if (this.gliding) {
+      const dir = this.forwardVector();
+      const glideSpeed = 13;
+      this.vx = dir.x * glideSpeed;
+      this.vz = dir.z * glideSpeed;
+      this.vy = Math.max(-3.6, this.vy - 8 * dt);
+      if (dir.y > 0.15) this.vy += dir.y * 10 * dt;
+      this.onGround = false;
+      this.x += this.vx * dt;
+      this._collide('x');
+      this.z += this.vz * dt;
+      this._collide('z');
+      this.y += this.vy * dt;
+      this._collide('y');
+      if (this.y < 0) this.y = 0;
+      this.fallDistance = 0;
+      return;
+    }
     const sneak = c.sneak && !this.flying;
     this.sneaking = sneak;
     this.sprinting = c.sprint && c.forward && !sneak && !this.inWater;
@@ -925,6 +950,7 @@ export class Player {
     this.hunger = 20;
     this.fallDistance = 0;
     this.hurtFlash = 0;
+    this.gliding = false;
     this.breakProgress = 0;
     this.breakTarget = null;
     this.setPosition(this.spawn.x, this.spawn.y + 0.5, this.spawn.z);

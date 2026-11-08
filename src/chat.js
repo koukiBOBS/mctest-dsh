@@ -195,7 +195,7 @@ export class ChatUI {
             this.log('成就系统尚未加载', 'err');
             break;
           }
-          const total = 33;
+          const total = 34;
           this.log(`成就进度：${ach.unlocked.size}/${total}`);
           const names = [...ach.unlocked].join(', ') || '（还没有解锁任何成就）';
           this.log(names);

@@ -3,7 +3,7 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST, END_ORIGIN, END_DEST } from './world.js';
+import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST, END_ORIGIN, END_DEST, END_SHIP } from './world.js';
 import { Renderer } from './render.js';
 import { Player } from './player.js';
 import { Inventory, InventoryUI, makeHudIcons } from './inventory.js';
@@ -1001,6 +1001,7 @@ function startGame(opts = {}) {
   state.loading = true;
   state.loadingDone = false;
   state.paused = false;
+  state._elytraChecked = false;
   showScreen('loading');
   $('hud').classList.add('hidden');
   hideTouch(true);
@@ -1342,6 +1343,38 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.elytraDemo && state.player) {
+        state.elytraDemo = false;
+        setTimeout(() => {
+          try {
+            state.inventory.armor[1] = { id: 'elytra', count: 1 };
+            state.inventory.notify();
+            state.inventory.setSlot(0, { id: 'diamond_sword', count: 1, durability: 1561 });
+            state.inventory.selectSlot(0);
+            state.chat?.log('演示：已装备鞘翅（空中按跳跃可滑翔）');
+            updateHUD();
+            openInventory(2);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
+      if (state.shipDemo && state.player) {
+        state.shipDemo = false;
+        setTimeout(() => {
+          try {
+            enterEnd();
+            setTimeout(() => {
+              state.player.setPosition(END_SHIP.x + 0.5, END_SHIP.y + 1.2, END_SHIP.z + 3.5);
+              state.player.yaw = 0;
+              state.player.pitch = 0;
+              state.chat?.log('演示：已到达末地船（宝箱里有鞘翅）');
+            }, 700);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.potionDemo && state.player) {
         state.potionDemo = false;
@@ -3078,6 +3111,14 @@ function loop(now) {
   if (state.running && !state.loading && state.inventory && state.inventory.armor && state.inventory.armor.length === 4 && state.inventory.armor.every(Boolean)) {
     state.achievements?.onEvent('armor', { full: true });
   }
+  if (state.running && !state.loading && state.inventory && !state._elytraChecked) {
+    const hasElytra = (state.inventory.armor || []).some((s) => s && s.id === 'elytra')
+      || (state.inventory.slots || []).some((s) => s && s.id === 'elytra');
+    if (hasElytra) {
+      state._elytraChecked = true;
+      state.achievements?.onEvent('elytra', {});
+    }
+  }
 
   if (state.loading) updateLoading();
 
@@ -3298,6 +3339,8 @@ function boot() {
   if (params.get('campfire') === '1') state.campfireDemo = true;
   if (params.get('endcity') === '1') state.endCityDemo = true;
   if (params.get('potion') === '1') state.potionDemo = true;
+  if (params.get('elytra') === '1') state.elytraDemo = true;
+  if (params.get('ship') === '1') state.shipDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

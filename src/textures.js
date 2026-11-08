@@ -172,6 +172,7 @@ export const ITEM_ICON_NAMES = [
   'name_tag',
   'shulker_shell',
   'ink_sac',
+  'elytra',
   'potion_fire_resist',
   'potion_night_vision',
   'potion_jump',
@@ -3626,6 +3627,15 @@ const ICON_PAINTERS = {
     fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#3aa85a'));
     setPx(b, 14, 18, C('#9affb0'));
     fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  elytra(b, rng) {
+    fillPoly(b, [[8, 6], [14, 10], [16, 26], [9, 24], [6, 14]], C('#6a5a7a'));
+    fillPoly(b, [[24, 6], [18, 10], [16, 26], [23, 24], [26, 14]], C('#6a5a7a'));
+    fillPoly(b, [[9, 9], [14, 12], [15, 23], [10, 21], [8, 14]], C('#8a7a9a'));
+    fillPoly(b, [[23, 9], [18, 12], [17, 23], [22, 21], [24, 14]], C('#8a7a9a'));
+    fillRect(b, 14, 4, 4, 8, C('#4a3a5a'));
+    setPx(b, 14, 12, C('#c8b8d8'));
   },
 
 };

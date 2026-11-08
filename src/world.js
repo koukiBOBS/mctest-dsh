@@ -35,6 +35,7 @@ export const END_CHUNK_START = END_ORIGIN >> 4;
 export const END_CHUNK_SIZE = 16;
 export const END_DEST = { x: END_ORIGIN + 128, z: END_ORIGIN + 128 };
 export const END_CITY = { x: END_DEST.x + 70, z: END_DEST.z + 10, y: 60 };
+export const END_SHIP = { x: END_DEST.x + 100, z: END_DEST.z + 18, y: 74 };
 const CHUNK_AREA = CHUNK_SX * CHUNK_SZ;
 
 export const BIOME_NAMES = {
@@ -239,6 +240,7 @@ export class World {
     if (this.isEndChunk(cx, cz)) {
       this.generateEndChunk(chunk);
       this.stampEndCity(chunk);
+      this.stampEndShip(chunk);
       const emods = this.modsByChunk.get(chunkKey(cx, cz));
       if (emods) {
         for (const [k, id] of emods) {
@@ -1944,6 +1946,47 @@ export class World {
     if (r(5) < 0.7) loot.push({ id: 'iron_ingot', count: 3 + Math.floor(r(6) * 4) });
     if (r(7) < 0.6) loot.push({ id: 'gold_ingot', count: 2 + Math.floor(r(8) * 3) });
     return loot;
+  }
+
+  stampEndShip(chunk) {
+    const ship = END_SHIP;
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    if (x1 < ship.x - 5 || x0 > ship.x + 5 || z1 < ship.z - 7 || z0 > ship.z + 7) return;
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const P = BLOCK.PURPUR_BLOCK;
+    const baseY = ship.y;
+    for (let dz = -6; dz <= 6; dz++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        set(ship.x + dx, baseY, ship.z + dz, P);
+        set(ship.x + dx, baseY + 1, ship.z + dz, BLOCK.AIR);
+        set(ship.x + dx, baseY + 2, ship.z + dz, BLOCK.AIR);
+        if (Math.abs(dx) === 3) set(ship.x + dx, baseY + 1, ship.z + dz, P);
+      }
+    }
+    // 船头
+    for (let dy = 0; dy <= 1; dy++) set(ship.x, baseY + dy, ship.z + 7, P);
+    // 桅杆与帆
+    for (let dy = 2; dy <= 8; dy++) set(ship.x, baseY + dy, ship.z, P);
+    for (let dy = 4; dy <= 7; dy++) {
+      for (let dx = -2; dx <= 2; dx++) set(ship.x + dx, baseY + dy, ship.z + 1, BLOCK.WOOL);
+    }
+    // 宝箱（鞘翅）
+    const cx = ship.x + 2;
+    const cy = baseY + 1;
+    const cz = ship.z - 4;
+    set(cx, cy, cz, BLOCK.CHEST);
+    const key = cx + ',' + cy + ',' + cz;
+    if (!this.structureChests.has(key)) {
+      this.structureChests.set(key, [
+        { id: 'elytra', count: 1 },
+        { id: 'diamond', count: 2 },
+        { id: 'emerald', count: 3 },
+      ]);
+    }
+    this.endCities.set('ship', { x: ship.x, y: baseY, z: ship.z });
   }
 
   findNearestEndCity() {
