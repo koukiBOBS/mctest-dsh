@@ -12,6 +12,7 @@ import { MobManager } from './mobs.js';
 import { BLOCK, getBlockDef, itemDisplay } from './blocks.js';
 import * as RP from './resourcepack.js';
 import { ChatUI } from './chat.js';
+import { ContainerManager, ContainerUI } from './containers.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -34,6 +35,8 @@ const state = {
   items: null,
   mobs: null,
   chat: null,
+  containers: null,
+  containerUI: null,
   isTouch: false,
   settings: { sens: 1, distance: 3, volume: 0.7, mute: false, debug: false },
   overlayReturn: 'title',
@@ -117,7 +120,8 @@ function activeGame() {
     !state.paused &&
     state.player &&
     !state.player.dead &&
-    !(state.invUI && state.invUI.isOpen)
+    !(state.invUI && state.invUI.isOpen) &&
+    !(state.containerUI && state.containerUI.isOpen)
   );
 }
 
@@ -180,6 +184,7 @@ function saveGame() {
       mods: state.world.serializeMods(),
       player: state.player.saveState(),
       inventory: state.inventory.serialize(),
+      containers: state.containers ? state.containers.serialize() : null,
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     return true;
@@ -291,6 +296,29 @@ function startGame(opts = {}) {
   });
   state.mobs = mobs;
   game.mobs = mobs;
+
+  const containers = new ContainerManager({
+    world,
+    scene: renderer.scene,
+    items,
+    sound: state.sound,
+    dropItem: game.dropItem,
+  });
+  state.containers = containers;
+  game.containers = containers;
+  const containerUI = new ContainerUI(containers, inventory, {
+    sound: state.sound,
+    onClose: () => {
+      if (!state.running || state.paused) return;
+      $('hud').classList.remove('hidden');
+      if (state.isTouch) hideTouch(false);
+    },
+  });
+  state.containerUI = containerUI;
+  game.containerUI = containerUI;
+  game.onContainerChange = () => containerUI.refreshIfOpen();
+  game.openContainer = (hit) => openContainer(hit);
+  if (save && save.containers) containers.load(save.containers);
   state.invUI = new InventoryUI(inventory, {
     sound: state.sound,
     onClose: onInventoryClosed,
@@ -369,6 +397,14 @@ function stopGame(toTitle = true) {
     }
     state.renderer = null;
   }
+  if (state.containerUI) {
+    state.containerUI.isOpen = false;
+    state.containerUI = null;
+  }
+  if (state.containers) {
+    state.containers.clear();
+    state.containers = null;
+  }
   if (state.chat) {
     state.chat.close();
     state.chat = null;
@@ -442,6 +478,37 @@ function updateLoading() {
           state.chat?.log('演示掉落物已生成');
         }, 500);
         state.spawnDemoItems = false;
+      }
+      if (state.guiDemo && state.player) {
+        const guiType = state.guiDemo;
+        state.guiDemo = null;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 2.5);
+            const z = Math.floor(p.z + f.z * 2.5);
+            const gy = state.world.getSurfaceY(x, z);
+            const y = gy + 1;
+            const blockId = guiType === 'chest' ? BLOCK.CHEST : BLOCK.FURNACE;
+            state.world.setBlock(x, y, z, blockId);
+            if (guiType === 'chest') {
+              const c = state.containers.ensureChest(x + ',' + y + ',' + z);
+              c.slots[0] = { id: 'oak_log', count: 12 };
+              c.slots[1] = { id: 'iron_ingot', count: 8 };
+              c.slots[2] = { id: 'apple', count: 5 };
+              c.slots[4] = { id: 'diamond', count: 2 };
+            } else {
+              const st = state.containers.ensureFurnace(x + ',' + y + ',' + z);
+              st.input = { id: 'iron_ore', count: 5 };
+              st.fuel = { id: 'coal', count: 3 };
+            }
+            openContainer({ x, y, z, id: blockId });
+            state.chat?.log(guiType === 'chest' ? '已生成测试箱子' : '已生成测试熔炉（铁矿 + 煤炭）');
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 700);
       }
       if (state.spawnDemoMobs && state.mobs && state.player) {
         setTimeout(() => {
@@ -528,6 +595,7 @@ function updateDebug() {
 function openInventory(size = 2) {
   if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
   if (state.invUI && state.invUI.isOpen) return;
+  if (state.containerUI && state.containerUI.isOpen) return;
   resetControls();
   releasePointerLock();
   hideTouch(true);
@@ -539,6 +607,19 @@ function onInventoryClosed() {
   if (!state.running || state.paused) return;
   $('hud').classList.remove('hidden');
   if (state.isTouch) hideTouch(false);
+}
+
+function openContainer(hit) {
+  if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
+  if (!state.containers || !state.containerUI) return;
+  if (state.invUI && state.invUI.isOpen) return;
+  const open = state.containers.open(hit);
+  if (!open) return;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  state.containerUI.show(open.key, open.type);
 }
 
 function setPaused(paused) {
@@ -601,6 +682,10 @@ function handleEscape() {
   if (!state.running) {
     if (!$('screen-settings').classList.contains('hidden')) closeSettings();
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
+    return;
+  }
+  if (state.containerUI && state.containerUI.isOpen) {
+    state.containerUI.hide();
     return;
   }
   if (state.invUI && state.invUI.isOpen) {
@@ -1098,6 +1183,11 @@ function loop(now) {
     state.renderer.render(state.player, dt);
   }
 
+  if (!state.paused && !state.loading) {
+    state.containers?.tick(dt);
+    state.containerUI?.update(dt);
+  }
+
   if (state.loading) updateLoading();
 
   if (state.player) {
@@ -1249,6 +1339,7 @@ function boot() {
   if (params.get('openinv') === '1') state.openInvAfterLoad = true;
   if (params.get('mobs') === '1') state.spawnDemoMobs = true;
   if (params.get('items') === '1') state.spawnDemoItems = true;
+  if (params.get('gui') === 'chest' || params.get('gui') === 'furnace') state.guiDemo = params.get('gui');
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

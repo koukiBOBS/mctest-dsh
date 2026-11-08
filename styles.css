@@ -372,6 +372,7 @@ body {
 .settings-panel,
 .help-panel,
 .inv-panel,
+.container-panel,
 .death-panel {
   width: min(94vw, 470px);
   max-height: 90vh;
@@ -619,10 +620,102 @@ body {
 }
 
 /* 物品栏 */
-.inv-panel {
+.inv-panel,
+.container-panel {
   width: min(96vw, 620px);
   padding: 14px;
 }
+
+.container-panel {
+  background: rgba(22, 24, 28, 0.97);
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px #50565c, 0 18px 46px rgba(0, 0, 0, 0.55);
+  border-radius: 3px;
+  max-height: 92vh;
+  overflow: auto;
+}
+
+.container-panel {
+  position: relative;
+}
+
+.container-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 40px);
+  justify-content: center;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+.furnace-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.furnace-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.furnace-slot {
+  width: 46px;
+  height: 46px;
+}
+
+.flame {
+  position: relative;
+  width: 16px;
+  height: 20px;
+  border-radius: 50% 50% 45% 45%;
+  background: rgba(255, 150, 30, 0.18);
+  overflow: hidden;
+}
+
+.flame i {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(#ffd24a, #ff6a00);
+  transition: height 0.2s;
+}
+
+.furnace-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.furnace-arrow {
+  position: relative;
+  width: 84px;
+  height: 14px;
+  background: #1b1e22;
+  border: 2px solid #000;
+  box-shadow: inset 0 0 0 2px #43484d;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.furnace-arrow i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(#d8d8d8, #9a9a9a);
+  transition: width 0.2s;
+}
+
+.furnace-hint {
+  font-size: 10px;
+  color: #8b969c;
+}
+
 
 .inv-header {
   display: flex;
@@ -696,22 +789,24 @@ body {
 .inv-grid,
 .hotbar-row {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(9, 40px);
+  justify-content: center;
   gap: 3px;
   margin-bottom: 12px;
 }
 
 .inv-grid .slot,
 .hotbar-row .slot,
-.creative-grid .slot {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  height: auto;
+.creative-grid .slot,
+.container-grid .slot {
+  width: 40px;
+  height: 40px;
 }
 
 .creative-grid {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(9, 40px);
+  justify-content: center;
   gap: 3px;
   max-height: 42vh;
   overflow: auto;
@@ -850,8 +945,17 @@ body {
 
   .inv-grid,
   .hotbar-row,
-  .creative-grid {
+  .creative-grid,
+  .container-grid {
+    grid-template-columns: repeat(9, 36px);
     gap: 2px;
+  }
+  .inv-grid .slot,
+  .hotbar-row .slot,
+  .creative-grid .slot,
+  .container-grid .slot {
+    width: 36px;
+    height: 36px;
   }
 
   .craft-grid.grid2 {
@@ -894,9 +998,15 @@ body {
 
 /* 横屏矮屏（手机）下的物品栏压缩 */
 @media (orientation: landscape) and (max-height: 540px) {
-  .inv-panel {
+  .inv-panel,
+  .container-panel {
     padding: 8px 10px;
     max-height: 96vh;
+  }
+
+  .furnace-slot {
+    width: 38px;
+    height: 38px;
   }
   .inv-header {
     margin-bottom: 4px;
@@ -1034,6 +1144,47 @@ body {
     font-size: 11px;
   }
   #held-name {
+    display: none;
+  }
+}
+
+/* 横屏矮屏（手机）下压缩容器与背包界面 */
+@media (orientation: landscape) and (max-height: 620px) {
+  .container-panel,
+  .inv-panel {
+    padding: 8px 10px;
+    max-height: 96vh;
+  }
+  .container-grid,
+  .inv-grid,
+  .hotbar-row,
+  .creative-grid {
+    grid-template-columns: repeat(9, 30px);
+    gap: 2px;
+    margin-bottom: 6px;
+  }
+  .container-grid .slot,
+  .inv-grid .slot,
+  .hotbar-row .slot,
+  .creative-grid .slot,
+  .container-panel .slot,
+  .inv-panel .slot {
+    width: 30px;
+    height: 30px;
+  }
+  .furnace-slot {
+    width: 36px;
+    height: 36px;
+  }
+  .furnace-area {
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .inv-header {
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .inv-hint {
     display: none;
   }
 }

@@ -464,6 +464,7 @@ export class Player {
       if (tool && def.tool === tool.type) this.inventory.damageHeld(1);
     }
 
+    this.game.containers?.dropAndRemove(hit);
     this.world.setBlock(hit.x, hit.y, hit.z, 0);
     this.game.renderer?.spawnBreakParticles(hit.x, hit.y, hit.z, hit.id);
     this.game.sound?.play(breakSoundName(hit.id), { volume: 0.55 });
@@ -498,9 +499,16 @@ export class Player {
 
   secondaryAction() {
     if (this.dead) return;
-    if (this.target && this.target.id === BLOCK.CRAFTING_TABLE) {
-      this.game.openCraftingTable?.();
-      return;
+    if (this.target) {
+      const def = getBlockDef(this.target.id);
+      if (def.name === 'crafting_table') {
+        this.game.openCraftingTable?.();
+        return;
+      }
+      if (def.name === 'furnace' || def.name === 'chest') {
+        this.game.openContainer?.(this.target);
+        return;
+      }
     }
     this.tryPlace();
   }
