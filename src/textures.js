@@ -87,6 +87,7 @@ export const TILE_NAMES = [
   'end_portal',
   'prismarine',
   'sea_lantern',
+  'bookshelf',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -154,6 +155,7 @@ export const ITEM_ICON_NAMES = [
   'diamond_chestplate',
   'diamond_leggings',
   'diamond_boots',
+  'book',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -2159,6 +2161,29 @@ const TILE_PAINTERS = {
     for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#ffffff'));
   },
 
+  bookshelf(b, rng) {
+    noiseFill(b, rng, [
+      ['#a9743f', 6],
+      ['#8a5a2e', 4],
+      ['#b9854c', 3],
+    ]);
+    // 上下木板
+    fillRect(b, 0, 0, 16, 2, C('#7d5327'));
+    fillRect(b, 0, 14, 16, 2, C('#7d5327'));
+    // 书本
+    const colors = ['#b83a2e', '#3a6ab8', '#3a9a5a', '#c8a232', '#8a3ab8'];
+    let x = 1;
+    while (x < 15) {
+      const w = 1 + ((rng() * 2) | 0);
+      const h = 7 + ((rng() * 5) | 0);
+      const c = colors[(rng() * colors.length) | 0];
+      fillRect(b, x, 13 - h, w, h, C(c));
+      setPx(b, x, 13 - h + 1, C('#f0e8c8'));
+      x += w + 1;
+    }
+    hline(b, 0, 15, 6, C('#7d5327'));
+  },
+
 };
 
 function paintTile(name) {
@@ -3366,6 +3391,16 @@ const ICON_PAINTERS = {
   },
   diamond_boots(b, rng) {
     paintArmorPiece(b, 'boots', '#4aedd9', '#9afff0', '#2bb8a8');
+  },
+
+  book(b, rng) {
+    fillRect(b, 8, 5, 16, 22, C('#6b3a1e'));
+    fillRect(b, 10, 7, 12, 18, C('#f0e8d0'));
+    fillRect(b, 8, 5, 3, 22, C('#8a4a26'));
+    hline(b, 11, 21, 10, C('#c8b898'));
+    hline(b, 11, 21, 12, C('#c8b898'));
+    hline(b, 11, 21, 14, C('#c8b898'));
+    setPx(b, 20, 6, C('#e8c04a'));
   },
 
 };

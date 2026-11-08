@@ -75,6 +75,7 @@ export const BLOCK = Object.freeze({
   END_PORTAL_FRAME: 67,
   PRISMARINE: 68,
   SEA_LANTERN: 69,
+  BOOKSHELF: 70,
 });
 
 export const BLOCK_DEFS = [];
@@ -292,6 +293,9 @@ def(BLOCK.PRISMARINE, 'prismarine', '海晶石', {
 def(BLOCK.SEA_LANTERN, 'sea_lantern', '海晶灯', {
   tiles: { all: 'sea_lantern' }, hardness: 0.3, sound: 'glass', light: 15,
 });
+def(BLOCK.BOOKSHELF, 'bookshelf', '书架', {
+  tiles: { all: 'bookshelf' }, hardness: 1.5, sound: 'wood',
+});
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },
   hardness: 0.1,
@@ -380,6 +384,7 @@ const EXTRA_ITEMS = {
   door: { display: '门', icon: 'door', block: BLOCK.DOOR_X },
   fence: { display: '栅栏', icon: 'fence', block: BLOCK.FENCE },
   emerald: { display: '绿宝石', icon: 'emerald' },
+  book: { display: '书', icon: 'book' },
   glass_bottle: { display: '玻璃瓶', icon: 'glass_bottle', maxStack: 16 },
   water_bottle: { display: '水瓶', icon: 'water_bottle', maxStack: 1 },
   potion_healing: { display: '治疗药水', icon: 'potion_healing', maxStack: 1, potion: 'healing' },

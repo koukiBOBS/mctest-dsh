@@ -272,12 +272,41 @@ function checkPortal() {
   }
 }
 
-const TRADES = [
-  { cost: { id: 'wheat', count: 8 }, result: { id: 'emerald', count: 1 } },
-  { cost: { id: 'emerald', count: 1 }, result: { id: 'bread', count: 4 } },
-  { cost: { id: 'emerald', count: 3 }, result: { id: 'diamond', count: 1 } },
-  { cost: { id: 'coal', count: 12 }, result: { id: 'emerald', count: 1 } },
-];
+const PROFESSIONS = {
+  farmer: {
+    name: '农民',
+    trades: [
+      { cost: { id: 'wheat', count: 8 }, result: { id: 'emerald', count: 1 } },
+      { cost: { id: 'emerald', count: 1 }, result: { id: 'bread', count: 4 } },
+      { cost: { id: 'emerald', count: 3 }, result: { id: 'diamond', count: 1 } },
+      { cost: { id: 'coal', count: 12 }, result: { id: 'emerald', count: 1 } },
+    ],
+  },
+  librarian: {
+    name: '图书管理员',
+    trades: [
+      { cost: { id: 'emerald', count: 1 }, result: { id: 'book', count: 2 } },
+      { cost: { id: 'emerald', count: 2 }, result: { id: 'bookshelf', count: 1 } },
+      { cost: { id: 'emerald', count: 4 }, result: { id: 'diamond', count: 1 } },
+      { cost: { id: 'book', count: 4 }, result: { id: 'emerald', count: 1 } },
+    ],
+  },
+  blacksmith: {
+    name: '铁匠',
+    trades: [
+      { cost: { id: 'coal', count: 12 }, result: { id: 'emerald', count: 1 } },
+      { cost: { id: 'emerald', count: 1 }, result: { id: 'iron_ingot', count: 3 } },
+      { cost: { id: 'emerald', count: 4 }, result: { id: 'diamond', count: 1 } },
+      { cost: { id: 'iron_ingot', count: 6 }, result: { id: 'emerald', count: 1 } },
+    ],
+  },
+};
+
+function currentTrades() {
+  const prof = state.tradeMob && state.tradeMob.profession;
+  const data = PROFESSIONS[prof] || PROFESSIONS.farmer;
+  return data.trades;
+}
 
 const BREWS = [
   { id: 'potion_healing', name: '治疗药水', ingredient: 'rose', desc: '恢复 6 点生命' },
@@ -442,7 +471,7 @@ function applyEnchant(index) {
 function renderTradeOffers() {
   const box = $('trade-offers');
   if (!box || !state.inventory) return;
-  box.innerHTML = TRADES.map((t, i) => {
+  box.innerHTML = currentTrades().map((t, i) => {
     const a = state.inventory.iconURL(t.cost.id);
     const b = state.inventory.iconURL(t.result.id);
     return `<button class="trade-offer" data-index="${i}">`
@@ -458,6 +487,11 @@ function openTrade(mob) {
   if (state.tradeOpen) return;
   state.tradeOpen = true;
   state.tradeMob = mob || null;
+  const titleEl = $('trade-title');
+  if (titleEl) {
+    const prof = mob && mob.profession;
+    titleEl.textContent = (prof && PROFESSIONS[prof] ? PROFESSIONS[prof].name : '村民') + '交易';
+  }
   state.paused = true;
   resetControls();
   releasePointerLock();
@@ -478,7 +512,7 @@ function closeTrade() {
 }
 
 function doTrade(index) {
-  const offer = TRADES[index];
+  const offer = currentTrades()[index];
   if (!offer || !state.inventory) return;
   if (state.inventory.countOf(offer.cost.id) < offer.cost.count) {
     showToast('材料不够：还需要 ' + offer.cost.count + ' 个' + itemDisplay(offer.cost.id));

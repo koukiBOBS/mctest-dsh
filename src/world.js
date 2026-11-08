@@ -1327,6 +1327,13 @@ export class World {
         set(sx, fy + step, sz - step, P);
         set(sx + 1, fy + step, sz - step, P);
       }
+      // 书架点缀
+      if (f === 1) {
+        for (let dx = 0; dx < 4; dx++) {
+          set(x0 + 2 + dx, fy, m.centerZ + 4, BLOCK.BOOKSHELF);
+          set(x0 + 2 + dx, fy + 1, m.centerZ + 4, BLOCK.BOOKSHELF);
+        }
+      }
       // 宝箱
       const chests = [
         [x0 + 2, fy, z0 + 2],

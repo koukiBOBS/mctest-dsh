@@ -351,6 +351,9 @@ export class MobManager {
       _matCache: new Map(),
     };
     mob.yawTarget = mob.yaw;
+    if (type === 'villager') {
+      mob.profession = ['farmer', 'librarian', 'blacksmith'][Math.floor(Math.random() * 3)];
+    }
 
     this._buildModel(mob);
     this.mobs.push(mob);
@@ -1449,6 +1452,7 @@ export class MobManager {
     mob.group = root;
     if (this.scene) this.scene.add(root);
     if (def.id === 'sheep') this._initWool(mob, c);
+    if (def.id === 'villager') this._initVillager(mob, c);
     return root;
   }
 
@@ -1465,6 +1469,16 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.18, 0.32, 0.18, 0.24, 0.32, -0.29, mob.legs);
     this._addLimb(mob, root, c.leg, 0.18, 0.32, 0.18, -0.24, 0.32, 0.29, mob.legs);
     this._addLimb(mob, root, c.leg, 0.18, 0.32, 0.18, 0.24, 0.32, 0.29, mob.legs);
+  }
+
+  _initVillager(mob, c) {
+    const colors = { farmer: 0x5a7a32, librarian: 0xd8d0c0, blacksmith: 0x3a3a3a };
+    const target = colors[mob.profession];
+    if (target === undefined) return;
+    const robeHex = new THREE.Color(c.robe).getHex();
+    for (const entry of mob.mats) {
+      if (entry.base.getHex() === robeHex) entry.base.setHex(target);
+    }
   }
 
   _initWool(mob, c) {
