@@ -195,7 +195,7 @@ export class ChatUI {
             this.log('成就系统尚未加载', 'err');
             break;
           }
-          const total = 15;
+          const total = 17;
           this.log(`成就进度：${ach.unlocked.size}/${total}`);
           const names = [...ach.unlocked].join(', ') || '（还没有解锁任何成就）';
           this.log(names);
@@ -207,6 +207,14 @@ export class ChatUI {
             const v = this.game.world.findNearestVillage(p.x, p.z);
             if (!v) this.log('附近没有找到村庄', 'err');
             else this.log(`最近的村庄：${v.centerX}, ${v.floorY}, ${v.centerZ}（约 ${Math.round(Math.hypot(v.centerX - p.x, v.centerZ - p.z))} 格）`);
+          } else if (what === 'temple') {
+            const m = this.game.world.findNearestTemple(p.x, p.z);
+            if (!m) this.log('附近没有找到沙漠神殿', 'err');
+            else this.log(`最近的沙漠神殿：${m.centerX}, ${m.floorY}, ${m.centerZ}（约 ${Math.round(Math.hypot(m.centerX - p.x, m.centerZ - p.z))} 格）`);
+          } else if (what === 'igloo') {
+            const m = this.game.world.findNearestIgloo(p.x, p.z);
+            if (!m) this.log('附近没有找到雪屋', 'err');
+            else this.log(`最近的雪屋：${m.centerX}, ${m.floorY}, ${m.centerZ}（约 ${Math.round(Math.hypot(m.centerX - p.x, m.centerZ - p.z))} 格）`);
           } else if (what === 'mineshaft') {
             const m = this.game.world.findNearestMineshaft(p.x, p.z);
             if (!m) this.log('附近没有找到矿洞', 'err');
@@ -216,7 +224,7 @@ export class ChatUI {
             if (!d) this.log('附近没有找到地牢', 'err');
             else this.log(`最近的地牢：${d.x}, ${d.y}, ${d.z}（约 ${Math.round(Math.hypot(d.x - p.x, d.z - p.z))} 格）`);
           } else {
-            this.log('用法：/locate village|dungeon|mineshaft', 'err');
+            this.log('用法：/locate village|dungeon|mineshaft|temple|igloo', 'err');
           }
           break;
         }

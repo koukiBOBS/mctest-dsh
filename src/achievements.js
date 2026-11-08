@@ -18,6 +18,8 @@ export const ACHIEVEMENTS = [
   { id: 'dungeon', name: '深入地牢', desc: '发现一个地牢' },
   { id: 'mineshaft', name: '废弃矿井', desc: '发现一处废弃矿洞' },
   { id: 'rain', name: '雨天', desc: '经历一次下雨' },
+  { id: 'temple', name: '沙漠宝藏', desc: '发现一座沙漠神殿' },
+  { id: 'igloo', name: '冰原小屋', desc: '发现一座雪屋' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -121,6 +123,8 @@ export class Achievements {
         if (data.kind === 'village') this.unlock('village');
         else if (data.kind === 'dungeon') this.unlock('dungeon');
         else if (data.kind === 'mineshaft') this.unlock('mineshaft');
+        else if (data.kind === 'temple') this.unlock('temple');
+        else if (data.kind === 'igloo') this.unlock('igloo');
         break;
       default:
         break;

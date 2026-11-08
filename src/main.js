@@ -613,7 +613,7 @@ function updateLoading() {
           }
         }, 700);
       }
-      if (state.tpVillage || state.tpDungeon || state.tpMineshaft) {
+      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo) {
         setTimeout(() => {
           try {
             const p = state.player;
@@ -630,6 +630,22 @@ function updateLoading() {
               const m = state.world.findNearestMineshaft(p.x, p.z);
               if (m) target = { x: m.centerX + 0.5, y: m.y + 0.2, z: m.centerZ + 0.5, label: `矿洞 ${m.centerX}, ${m.y}, ${m.centerZ}` };
             }
+            if (state.tpTemple) {
+              const m = state.world.findNearestTemple(p.x, p.z);
+              if (m) {
+                const tz = m.centerZ + 18;
+                const gy = state.world.getSurfaceY(m.centerX, tz);
+                target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `沙漠神殿 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
+              }
+            }
+            if (state.tpIgloo) {
+              const m = state.world.findNearestIgloo(p.x, p.z);
+              if (m) {
+                const tz = m.centerZ + 12;
+                const gy = state.world.getSurfaceY(m.centerX, tz);
+                target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `雪屋 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
+              }
+            }
             if (target) {
               state.world.ensureChunk(Math.floor(target.x) >> 4, Math.floor(target.z) >> 4);
               p.setPosition(target.x, target.y, target.z);
@@ -644,6 +660,8 @@ function updateLoading() {
           state.tpVillage = false;
           state.tpDungeon = false;
           state.tpMineshaft = false;
+          state.tpTemple = false;
+          state.tpIgloo = false;
         }, 900);
       }
       if (state.spawnTorches && state.player) {
@@ -856,6 +874,25 @@ function checkDiscoveries() {
       if (Math.hypot(d.x - p.x, d.z - p.z) < 24 && Math.abs(d.y - p.y) < 20) {
         ach.onEvent('discover', { kind: 'dungeon' });
         break;
+      }
+    }
+    // 沙漠神殿 / 雪屋
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getDesertTemple(vcx + dx, vcz + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 32) {
+          ach.onEvent('discover', { kind: 'temple' });
+          break;
+        }
+      }
+    }
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getIgloo(vcx + dx, vcz + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
+          ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
       }
     }
     // 矿洞：当前及相邻 128 区块
@@ -1690,6 +1727,8 @@ function boot() {
   if (params.get('farm') === '1') state.farmDemo = true;
   if (params.get('mineshaft') === '1') state.tpMineshaft = true;
   if (params.get('water') === '1') state.waterDemo = true;
+  if (params.get('temple') === '1') state.tpTemple = true;
+  if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');

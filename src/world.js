@@ -85,6 +85,8 @@ export class World {
     this.lightSources = new Map(); // "x,y,z" -> light level
     this.villageCache = new Map();
     this.mineshaftCache = new Map();
+    this.templeCache = new Map();
+    this.iglooCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.crops = new Map(); // "x,y,z" -> 下次生长时间
@@ -421,6 +423,8 @@ export class World {
 
   generateStructures(chunk) {
     this.stampVillages(chunk);
+    this.stampDesertTemples(chunk);
+    this.stampIgloos(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
   }
@@ -721,6 +725,230 @@ export class World {
     for (let dx = -10; dx <= 10; dx++) {
       for (let dz = -10; dz <= 10; dz++) {
         const m = this.getMineshaft(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 沙漠神殿 ----------------
+  getDesertTemple(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.templeCache.has(key)) return this.templeCache.get(key);
+    if (this.templeCache.size > 600) this.templeCache.clear();
+    const h = (n) => hash2i(cx * 41 + n, cz * 23 - n, this.seed + 1400 + n);
+    let m = null;
+    if (h(1) < 0.24) {
+      const centerX = Math.round(cx * 128 + 32 + h(2) * 56);
+      const centerZ = Math.round(cz * 128 + 32 + h(3) * 56);
+      const info = this.columnInfo(centerX, centerZ);
+      if (info.biome === 'desert' && info.height > SEA_LEVEL + 2) {
+        m = {
+          centerX,
+          centerZ,
+          floorY: info.height,
+          minX: centerX - 12,
+          maxX: centerX + 12,
+          minZ: centerZ - 12,
+          maxZ: centerZ + 12,
+        };
+      }
+    }
+    this.templeCache.set(key, m);
+    return m;
+  }
+
+  stampDesertTemples(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 128);
+    const ccz = Math.floor(z0 / 128);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getDesertTemple(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampDesertTemple(chunk, m);
+      }
+    }
+  }
+
+  stampDesertTemple(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const baseY = m.floorY;
+    // 地基
+    for (let dx = -8; dx <= 8; dx++) {
+      for (let dz = -8; dz <= 8; dz++) {
+        const wx = m.centerX + dx;
+        const wz = m.centerZ + dz;
+        for (let wy = baseY - 4; wy < baseY; wy++) set(wx, wy, wz, BLOCK.SANDSTONE);
+        set(wx, baseY, wz, BLOCK.SANDSTONE);
+        for (let wy = baseY + 1; wy <= baseY + 14; wy++) set(wx, wy, wz, BLOCK.AIR);
+      }
+    }
+    // 阶梯金字塔
+    for (let layer = 0; layer <= 6; layer++) {
+      const half = 7 - layer;
+      for (let dx = -half; dx <= half; dx++) {
+        for (let dz = -half; dz <= half; dz++) {
+          set(m.centerX + dx, baseY + 1 + layer, m.centerZ + dz, BLOCK.SANDSTONE);
+        }
+      }
+    }
+    // 中空房间
+    for (let dx = -3; dx <= 3; dx++) {
+      for (let dz = -3; dz <= 3; dz++) {
+        for (let dy = 1; dy <= 3; dy++) set(m.centerX + dx, baseY + dy, m.centerZ + dz, BLOCK.AIR);
+        set(m.centerX + dx, baseY, m.centerZ + dz, BLOCK.SANDSTONE);
+      }
+    }
+    // 入口通道（-X 方向）
+    for (let dx = -7; dx <= -3; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        set(m.centerX + dx, baseY + 1, m.centerZ + dz, BLOCK.AIR);
+        set(m.centerX + dx, baseY + 2, m.centerZ + dz, BLOCK.AIR);
+      }
+    }
+    // 宝藏箱
+    const chests = [
+      [m.centerX - 2, baseY + 1, m.centerZ - 2],
+      [m.centerX + 2, baseY + 1, m.centerZ + 2],
+    ];
+    for (const [cx, cy, cz] of chests) {
+      set(cx, cy, cz, BLOCK.CHEST);
+      const key = cx + ',' + cy + ',' + cz;
+      if (!this.structureChests.has(key)) this.structureChests.set(key, this._templeLoot(cx, cz));
+    }
+  }
+
+  _templeLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 11 + n, cz * 7 - n, this.seed + 1500 + n);
+    const loot = [];
+    loot.push({ id: 'gold_ingot', count: 1 + Math.floor(r(1) * 3) });
+    if (r(2) < 0.8) loot.push({ id: 'iron_ingot', count: 1 + Math.floor(r(3) * 4) });
+    if (r(4) < 0.4) loot.push({ id: 'diamond', count: 1 + Math.floor(r(5) * 2) });
+    if (r(6) < 0.7) loot.push({ id: 'bone', count: 1 + Math.floor(r(7) * 4) });
+    if (r(8) < 0.6) loot.push({ id: 'bread', count: 1 + Math.floor(r(9) * 3) });
+    if (r(10) < 0.5) loot.push({ id: 'gunpowder', count: 1 + Math.floor(r(11) * 5) });
+    return loot;
+  }
+
+  findNearestTemple(x, z) {
+    const ccx = Math.floor(x / 128);
+    const ccz = Math.floor(z / 128);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -10; dx <= 10; dx++) {
+      for (let dz = -10; dz <= 10; dz++) {
+        const m = this.getDesertTemple(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 雪屋 ----------------
+  getIgloo(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.iglooCache.has(key)) return this.iglooCache.get(key);
+    if (this.iglooCache.size > 600) this.iglooCache.clear();
+    const h = (n) => hash2i(cx * 37 + n, cz * 19 - n, this.seed + 1600 + n);
+    let m = null;
+    if (h(1) < 0.3) {
+      const centerX = Math.round(cx * 128 + 32 + h(2) * 56);
+      const centerZ = Math.round(cz * 128 + 32 + h(3) * 56);
+      const info = this.columnInfo(centerX, centerZ);
+      if (info.biome === 'snowy' && info.height > SEA_LEVEL + 1) {
+        m = {
+          centerX,
+          centerZ,
+          floorY: info.height,
+          minX: centerX - 9,
+          maxX: centerX + 9,
+          minZ: centerZ - 9,
+          maxZ: centerZ + 9,
+        };
+      }
+    }
+    this.iglooCache.set(key, m);
+    return m;
+  }
+
+  stampIgloos(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 128);
+    const ccz = Math.floor(z0 / 128);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getIgloo(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampIgloo(chunk, m);
+      }
+    }
+  }
+
+  stampIgloo(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const baseY = m.floorY;
+    const radius = 4;
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dz = -radius; dz <= radius; dz++) {
+        const wx = m.centerX + dx;
+        const wz = m.centerZ + dz;
+        const edge = Math.abs(dx) === radius || Math.abs(dz) === radius;
+        const inner = Math.abs(dx) <= radius - 1 && Math.abs(dz) <= radius - 1;
+        for (let wy = baseY - 3; wy <= baseY; wy++) set(wx, wy, wz, edge ? BLOCK.SNOW : BLOCK.SNOW);
+        set(wx, baseY, wz, BLOCK.SNOW);
+        for (let wy = baseY + 1; wy <= baseY + 3; wy++) {
+          if (edge) set(wx, wy, wz, BLOCK.SNOW);
+          else if (inner) set(wx, wy, wz, BLOCK.AIR);
+        }
+        set(wx, baseY + 4, wz, edge ? BLOCK.SNOW : BLOCK.SNOW);
+      }
+    }
+    // 门洞（-Z）
+    for (let dx = -1; dx <= 1; dx++) {
+      set(m.centerX + dx, baseY + 1, m.centerZ - radius, BLOCK.AIR);
+      set(m.centerX + dx, baseY + 2, m.centerZ - radius, BLOCK.AIR);
+    }
+    // 内部箱子
+    const cx = m.centerX;
+    const cz = m.centerZ;
+    set(cx, baseY + 1, cz, BLOCK.CHEST);
+    const key = cx + ',' + (baseY + 1) + ',' + cz;
+    if (!this.structureChests.has(key)) {
+      this.structureChests.set(key, [
+        { id: 'iron_ingot', count: 2 },
+        { id: 'bread', count: 2 },
+        { id: 'coal', count: 4 },
+      ]);
+    }
+  }
+
+  findNearestIgloo(x, z) {
+    const ccx = Math.floor(x / 128);
+    const ccz = Math.floor(z / 128);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -10; dx <= 10; dx++) {
+      for (let dz = -10; dz <= 10; dz++) {
+        const m = this.getIgloo(ccx + dx, ccz + dz);
         if (!m) continue;
         const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
         if (d < bestD) {
