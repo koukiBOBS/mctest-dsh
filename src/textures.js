@@ -100,6 +100,7 @@ export const TILE_NAMES = [
   'iron_block',
   'pumpkin_top',
   'pumpkin_face',
+  'nether_bricks',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -183,6 +184,7 @@ export const ITEM_ICON_NAMES = [
   'golden_apple',
   'mutton',
   'cooked_mutton',
+  'blaze_rod',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -2372,6 +2374,20 @@ const TILE_PAINTERS = {
     hline(b, 0, 15, 13, C('#a85a10'));
   },
 
+  nether_bricks(b, rng) {
+    noiseFill(b, rng, [
+      ['#3a1a1e', 6],
+      ['#2e1216', 5],
+      ['#4a2228', 3],
+    ]);
+    for (let y = 0; y < 16; y += 4) {
+      hline(b, 0, 15, y, C('#1e0a0e'));
+      const off = (y / 4) % 2 === 0 ? 0 : 4;
+      for (let x = off; x < 16; x += 8) vline(b, y + 1, y + 3, x, C('#1e0a0e'));
+    }
+    for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#5a2a32'));
+  },
+
 };
 
 function paintTile(name) {
@@ -3710,6 +3726,14 @@ const ICON_PAINTERS = {
     fillPoly(b, [[10, 15], [15, 11], [20, 12], [22, 17], [18, 21], [12, 20]], C('#b87a42'));
     fillRect(b, 20, 14, 4, 3, C('#f0e8d0'));
     setPx(b, 13, 15, C('#e0a060'));
+  },
+
+  blaze_rod(b, rng) {
+    thickLine(b, 9, 27, 21, 5, 4, C('#e8a020'));
+    thickLine(b, 10, 26, 21, 6, 2, C('#ffd24a'));
+    fillPoly(b, [[18, 2], [26, 4], [24, 10], [16, 8]], C('#f0c040'));
+    setPx(b, 21, 5, C('#fff2b0'));
+    fillRect(b, 8, 24, 4, 4, C('#8a5a10'));
   },
 
 };

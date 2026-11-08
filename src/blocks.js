@@ -87,6 +87,7 @@ export const BLOCK = Object.freeze({
   PURPUR_BLOCK: 79,
   IRON_BLOCK: 80,
   PUMPKIN: 81,
+  NETHER_BRICKS: 82,
 });
 
 export const BLOCK_DEFS = [];
@@ -323,6 +324,9 @@ def(BLOCK.SCULK_SENSOR, 'sculk_sensor', '幽匿感测体', {
 def(BLOCK.TRIAL_SPAWNER, 'trial_spawner', '试炼刷怪笼', {
   tiles: { all: 'trial_spawner' }, hardness: 2.5, sound: 'stone', light: 6,
 });
+def(BLOCK.NETHER_BRICKS, 'nether_bricks', '下界砖块', {
+  tiles: { all: 'nether_bricks' }, hardness: 2.0, sound: 'stone',
+});
 def(BLOCK.IRON_BLOCK, 'iron_block', '铁块', {
   tiles: { all: 'iron_block' }, hardness: 3.0, sound: 'stone',
 });
@@ -437,6 +441,7 @@ const EXTRA_ITEMS = {
   cooked_mutton: { display: '熟羊肉', icon: 'cooked_mutton', food: 6 },
   pumpkin_pie: { display: '南瓜派', icon: 'pumpkin_pie', food: 8 },
   golden_apple: { display: '金苹果', icon: 'golden_apple', food: 4 },
+  blaze_rod: { display: '烈焰棒', icon: 'blaze_rod', maxStack: 64 },
   firework_rocket: { display: '烟花火箭', icon: 'firework_rocket', maxStack: 16 },
   name_tag: { display: '命名牌', icon: 'name_tag', maxStack: 16 },
   shulker_shell: { display: '潜影壳', icon: 'shulker_shell', maxStack: 64 },

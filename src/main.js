@@ -3,7 +3,7 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST, END_ORIGIN, END_DEST, END_SHIP } from './world.js';
+import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST, NETHER_FORTRESS, END_ORIGIN, END_DEST, END_SHIP } from './world.js';
 import { Renderer } from './render.js';
 import { Player } from './player.js';
 import { Inventory, InventoryUI, makeHudIcons } from './inventory.js';
@@ -1398,6 +1398,23 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.fortressDemo && state.player) {
+        state.fortressDemo = false;
+        setTimeout(() => {
+          try {
+            enterNether();
+            setTimeout(() => {
+              const f = NETHER_FORTRESS;
+              state.player.setPosition(f.x + 0.5, f.y + 1.2, f.z + 0.5);
+              state.player.yaw = 0;
+              state.player.pitch = 0;
+              state.chat?.log('演示：已到达下界要塞（桥上有烈焰人）');
+            }, 700);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.golemDemo && state.player) {
         state.golemDemo = false;
         setTimeout(() => {
@@ -2269,6 +2286,13 @@ function checkDiscoveries() {
         }
       }
     }
+    // 下界要塞
+    if (state.inNether) {
+      const f = NETHER_FORTRESS;
+      if (Math.hypot(f.x - p.x, f.z - p.z) < 30) {
+        ach.onEvent('discover', { kind: 'nether_fortress' });
+      }
+    }
     // 末地城
     if (state.inEnd && w.endCities.size > 0) {
       const city = w.endCities.get('fixed');
@@ -3018,6 +3042,17 @@ function loop(now) {
         state.golemTimer = 0;
         ensureVillageDefense();
       }
+      state.blazeTimer = (state.blazeTimer || 0) + dt;
+      if (state.blazeTimer > 8) {
+        state.blazeTimer = 0;
+        if (state.inNether && state.player && state.mobs && state.mobs.count() < 10) {
+          const f = NETHER_FORTRESS;
+          if (Math.hypot(f.x - state.player.x, f.z - state.player.z) < 30) {
+            state.mobs.spawn('blaze', f.x + (Math.random() - 0.5) * 10, f.y + 1, f.z + (Math.random() - 0.5) * 4);
+            state.chat?.log('烈焰人出现了！');
+          }
+        }
+      }
       state.shulkerTimer = (state.shulkerTimer || 0) + dt;
       if (state.shulkerTimer > 8) {
         state.shulkerTimer = 0;
@@ -3424,6 +3459,7 @@ function boot() {
   if (params.get('elytra') === '1') state.elytraDemo = true;
   if (params.get('ship') === '1') state.shipDemo = true;
   if (params.get('golem') === '1') state.golemDemo = true;
+  if (params.get('fortress') === '1') state.fortressDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

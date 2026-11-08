@@ -195,7 +195,7 @@ export class ChatUI {
             this.log('成就系统尚未加载', 'err');
             break;
           }
-          const total = 35;
+          const total = 36;
           this.log(`成就进度：${ach.unlocked.size}/${total}`);
           const names = [...ach.unlocked].join(', ') || '（还没有解锁任何成就）';
           this.log(names);
@@ -207,6 +207,10 @@ export class ChatUI {
             const v = this.game.world.findNearestVillage(p.x, p.z);
             if (!v) this.log('附近没有找到村庄', 'err');
             else this.log(`最近的村庄：${v.centerX}, ${v.floorY}, ${v.centerZ}（约 ${Math.round(Math.hypot(v.centerX - p.x, v.centerZ - p.z))} 格）`);
+          } else if (what === 'fortress') {
+            const m = this.game.world.findNearestFortress();
+            if (!m) this.log('没有找到下界要塞', 'err');
+            else this.log(`下界要塞：${m.x}, ${m.y}, ${m.z}（需在下界中）`);
           } else if (what === 'endcity') {
             const m = this.game.world.findNearestEndCity();
             if (!m) this.log('没有找到末地城', 'err');
@@ -252,7 +256,7 @@ export class ChatUI {
             if (!d) this.log('附近没有找到地牢', 'err');
             else this.log(`最近的地牢：${d.x}, ${d.y}, ${d.z}（约 ${Math.round(Math.hypot(d.x - p.x, d.z - p.z))} 格）`);
           } else {
-            this.log('用法：/locate village|dungeon|mineshaft|temple|igloo|stronghold|mansion|monument|ruin|city|trial|endcity', 'err');
+            this.log('用法：/locate village|dungeon|mineshaft|temple|igloo|stronghold|mansion|monument|ruin|city|trial|endcity|fortress', 'err');
           }
           break;
         }

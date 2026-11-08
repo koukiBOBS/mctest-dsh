@@ -67,6 +67,8 @@ export class Player {
     this.fireResistTimer = 0;
     this.nightVisionTimer = 0;
     this.jumpBoostTimer = 0;
+    this.burnTimer = 0;
+    this.burnDmgTimer = 0;
     this.gliding = false;
     this.kills = 0;
     this.breakTarget = null;
@@ -143,6 +145,17 @@ export class Player {
     if (this.fireResistTimer > 0) this.fireResistTimer = Math.max(0, this.fireResistTimer - dt);
     if (this.nightVisionTimer > 0) this.nightVisionTimer = Math.max(0, this.nightVisionTimer - dt);
     if (this.jumpBoostTimer > 0) this.jumpBoostTimer = Math.max(0, this.jumpBoostTimer - dt);
+    if (this.inWater || this.inLava) this.burnTimer = 0;
+    if (this.burnTimer > 0) {
+      this.burnTimer = Math.max(0, this.burnTimer - dt);
+      this.burnDmgTimer += dt;
+      if (this.burnDmgTimer >= 1) {
+        this.burnDmgTimer = 0;
+        this.damage(1, '被烧死了');
+      }
+    } else {
+      this.burnDmgTimer = 0;
+    }
     if (this.chargingBow) {
       const held = this.inventory.held;
       if (!held || held.id !== 'bow' || this.dead) {

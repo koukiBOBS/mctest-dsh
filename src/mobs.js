@@ -120,6 +120,17 @@ export const MOB_TYPES = {
     ],
     colors: { body: 0x2f2f2f, white: 0xf1f1ec, snout: 0xd9a3a5, horn: 0xd9d5c5, leg: 0x3a3a3a, eye: 0x111111 },
   },
+  blaze: {
+    id: 'blaze',
+    name: '烈焰人',
+    hostile: true,
+    width: 0.8,
+    height: 1.6,
+    health: 20,
+    speed: 1.2,
+    drops: [{ id: 'blaze_rod', min: 1, max: 2 }],
+    colors: { body: 0xf0c040, core: 0xffe08a, dark: 0xb87810, eye: 0x2a1a0a },
+  },
   iron_golem: {
     id: 'iron_golem',
     name: '铁傀儡',
@@ -274,6 +285,7 @@ export class MobManager {
 
     this.mobs = [];
     this.arrows = [];
+    this.fireballs = [];
     this.spawnTimer = 0;
     this.paused = false;
     this.elapsed = 0;
@@ -287,6 +299,8 @@ export class MobManager {
 
     this._box = getUnitBox();
     this._arrowGeo = getArrowGeometry();
+    this._fireballGeo = new THREE.SphereGeometry(0.2, 8, 6);
+    this._fireballMat = new THREE.MeshBasicMaterial({ color: 0xffa040 });
     this._arrowMat = getArrowMaterial();
   }
 
@@ -316,6 +330,7 @@ export class MobManager {
 
     this._separateMobs();
     this._updateArrows(dt);
+    this._updateFireballs(dt);
   }
 
   setPaused(value) {
@@ -335,6 +350,10 @@ export class MobManager {
       this._removeArrow(this.arrows[i]);
     }
     this.arrows.length = 0;
+    for (const fb of this.fireballs || []) {
+      if (fb.mesh && fb.mesh.parent) fb.mesh.parent.remove(fb.mesh);
+    }
+    this.fireballs.length = 0;
     this.spawnTimer = 0;
   }
 
@@ -754,6 +773,11 @@ export class MobManager {
       this._updateTint(mob);
       return;
     }
+    if (mob.type === 'blaze') {
+      this._updateBlaze(mob, dt);
+      this._updateTint(mob);
+      return;
+    }
     if (mob.type === 'iron_golem') {
       this._updateIronGolem(mob, dt);
       return;
@@ -887,6 +911,39 @@ export class MobManager {
   // ------------------------------------------------------------
   // AI
   // ------------------------------------------------------------
+  _updateBlaze(mob, dt) {
+    const player = this.player;
+    mob.hoverPhase = (mob.hoverPhase || 0) + dt;
+    if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
+    if (mob.shootCd === undefined) mob.shootCd = 1 + Math.random();
+    mob.shootCd -= dt;
+    if (mob.group) mob.group.position.set(mob.x, mob.y + Math.sin(mob.hoverPhase * 3) * 0.18, mob.z);
+    if (!player || player.dead) return;
+    const dx = player.x - mob.x;
+    const dy = player.y + 1.2 - mob.y;
+    const dz = player.z - mob.z;
+    const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
+    const targetY = player.y + 2.2 + Math.sin(mob.hoverPhase * 1.5) * 0.4;
+    mob.y += (targetY - mob.y) * Math.min(1, dt * 2);
+    if (dist > 6) {
+      mob.x += (dx / dist) * 1.4 * dt;
+      mob.z += (dz / dist) * 1.4 * dt;
+    } else if (dist < 3.2) {
+      mob.x -= (dx / dist) * 1.2 * dt;
+      mob.z -= (dz / dist) * 1.2 * dt;
+    }
+    mob.yaw = Math.atan2(dx, dz);
+    if (mob.group) mob.group.rotation.y = mob.yaw;
+    if (mob.shootCd <= 0 && dist < 16) {
+      mob.shootCd = 2 + Math.random() * 1.2;
+      const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+      this._spawnFireball(
+        { x: mob.x, y: mob.y + 1.3, z: mob.z },
+        { x: dx / len, y: dy / len, z: dz / len },
+      );
+    }
+  }
+
   _updateIronGolem(mob, dt) {
     if (mob.attackCd > 0) mob.attackCd -= dt;
     if (mob.hurtTimer > 0) mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
@@ -1417,6 +1474,48 @@ export class MobManager {
     return false;
   }
 
+  _spawnFireball(origin, dir) {
+    let mesh = null;
+    if (this.scene) {
+      mesh = new THREE.Mesh(this._fireballGeo, this._fireballMat);
+      mesh.position.set(origin.x, origin.y, origin.z);
+      this.scene.add(mesh);
+    }
+    this.fireballs.push({
+      x: origin.x, y: origin.y, z: origin.z,
+      vx: dir.x * 11, vy: dir.y * 11, vz: dir.z * 11,
+      life: 4, mesh,
+    });
+    this._playSound('pop', 0.25);
+  }
+
+  _updateFireballs(dt) {
+    const player = this.player;
+    for (let i = this.fireballs.length - 1; i >= 0; i--) {
+      const fb = this.fireballs[i];
+      fb.life -= dt;
+      fb.x += fb.vx * dt;
+      fb.y += fb.vy * dt;
+      fb.z += fb.vz * dt;
+      let dead = fb.life <= 0;
+      if (!dead && this._pointSolid(fb.x, fb.y, fb.z)) dead = true;
+      if (!dead && player && !player.dead) {
+        const d = Math.hypot(player.x - fb.x, player.y + 1 - fb.y, player.z - fb.z);
+        if (d < 0.8) {
+          player.damage(4, '被烈焰人烧死了');
+          if (typeof player.burnTimer === 'number') player.burnTimer = 4;
+          dead = true;
+        }
+      }
+      if (dead) {
+        if (fb.mesh && fb.mesh.parent) fb.mesh.parent.remove(fb.mesh);
+        this.fireballs.splice(i, 1);
+        continue;
+      }
+      if (fb.mesh) fb.mesh.position.set(fb.x, fb.y, fb.z);
+    }
+  }
+
   _updateArrows(dt) {
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const arrow = this.arrows[i];
@@ -1721,6 +1820,7 @@ export class MobManager {
       case 'villager': this._modelVillager(mob, root, c); break;
       case 'ender_dragon': this._modelDragon(mob, root, c); break;
       case 'shulker': this._modelShulker(mob, root, c); break;
+      case 'blaze': this._modelBlaze(mob, root, c); break;
       case 'iron_golem': this._modelIronGolem(mob, root, c); break;
       case 'bat': this._modelBat(mob, root, c); break;
       case 'squid': this._modelSquid(mob, root, c); break;
@@ -1829,6 +1929,21 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelBlaze(mob, root, c) {
+    this._addBox(mob, root, c.core, 0.5, 0.9, 0.5, 0, 0.9, 0);
+    const head = this._makeHead(mob, root, c.body, 0.55, 0.55, 0.55, 0, 1.55, 0);
+    this._addBox(mob, head, c.eye, 0.1, 0.1, 0.04, -0.14, 0.05, 0.28);
+    this._addBox(mob, head, c.eye, 0.1, 0.1, 0.04, 0.14, 0.05, 0.28);
+    this._addBox(mob, head, c.dark, 0.3, 0.08, 0.06, 0, -0.16, 0.28);
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const px = Math.cos(angle) * 0.45;
+      const pz = Math.sin(angle) * 0.45;
+      this._addBox(mob, root, c.body, 0.12, 0.9, 0.12, px, 1.0, pz);
+      this._addBox(mob, root, c.core, 0.08, 0.25, 0.08, px, 1.55, pz);
+    }
   }
 
   _modelIronGolem(mob, root, c) {

@@ -28,6 +28,7 @@ export const NETHER_ORIGIN = 200000;
 export const NETHER_CHUNK_START = NETHER_ORIGIN >> 4;
 export const NETHER_CHUNK_SIZE = 16;
 export const NETHER_DEST = { x: NETHER_ORIGIN + 128, z: NETHER_ORIGIN + 128 };
+export const NETHER_FORTRESS = { x: NETHER_DEST.x + 60, z: NETHER_DEST.z + 30, y: 41 };
 
 // 末地区域
 export const END_ORIGIN = 300000;
@@ -108,6 +109,7 @@ export class World {
     this.trialCache = new Map();
     this.trialSpawners = new Map();
     this.endCities = new Map();
+    this.fortresses = new Map();
     this.ruinCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
@@ -261,6 +263,7 @@ export class World {
 
     if (this.isNetherChunk(cx, cz)) {
       this.generateNetherChunk(chunk);
+      this.stampNetherFortress(chunk);
       const nmods = this.modsByChunk.get(chunkKey(cx, cz));
       if (nmods) {
         for (const [k, id] of nmods) {
@@ -2004,6 +2007,64 @@ export class World {
       ]);
     }
     this.endCities.set('ship', { x: ship.x, y: baseY, z: ship.z });
+  }
+
+  stampNetherFortress(chunk) {
+    const f = NETHER_FORTRESS;
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    if (x1 < f.x - 22 || x0 > f.x + 22 || z1 < f.z - 10 || z0 > f.z + 10) return;
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const B = BLOCK.NETHER_BRICKS;
+    const y = f.y;
+    // 桥面（沿 X）
+    for (let dx = -22; dx <= 22; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        set(f.x + dx, y, f.z + dz, B);
+        for (let dy = 1; dy <= 3; dy++) set(f.x + dx, y + dy, f.z + dz, BLOCK.AIR);
+        set(f.x + dx, y + 4, f.z + dz, y + 4 ? BLOCK.AIR : B);
+      }
+      for (const dz of [-2, 2]) {
+        for (let dy = 1; dy <= 2; dy++) set(f.x + dx, y + dy, f.z + dz, B);
+      }
+    }
+    // 两端房间
+    for (const rx of [f.x - 26, f.x + 26]) {
+      for (let dx = -4; dx <= 4; dx++) {
+        for (let dz = -4; dz <= 4; dz++) {
+          set(rx + dx, y, f.z + dz, B);
+          for (let dy = 1; dy <= 4; dy++) set(rx + dx, y + dy, f.z + dz, BLOCK.AIR);
+          set(rx + dx, y + 5, f.z + dz, B);
+          const edge = Math.abs(dx) === 4 || Math.abs(dz) === 4;
+          if (edge) {
+            for (let dy = 1; dy <= 4; dy++) set(rx + dx, y + dy, f.z + dz, B);
+          }
+        }
+      }
+      // 门洞
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dy = 1; dy <= 2; dy++) set(rx + (rx < f.x ? 4 : -4), y + dy, f.z + dz, BLOCK.AIR);
+      }
+      // 宝箱
+      const cx = rx + (rx < f.x ? -2 : 2);
+      const cz = f.z + 2;
+      set(cx, y + 1, cz, BLOCK.CHEST);
+      const key = cx + ',' + (y + 1) + ',' + cz;
+      if (!this.structureChests.has(key)) {
+        this.structureChests.set(key, [
+          { id: 'blaze_rod', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 3500) * 3) },
+          { id: 'gold_ingot', count: 2 + Math.floor(hash2i(cx, cz, this.seed + 3510) * 4) },
+          { id: 'diamond', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 3520) * 2) },
+        ]);
+      }
+    }
+    this.fortresses.set('fixed', { x: f.x, y, z: f.z });
+  }
+
+  findNearestFortress() {
+    return { x: NETHER_FORTRESS.x, y: NETHER_FORTRESS.y, z: NETHER_FORTRESS.z };
   }
 
   findNearestEndCity() {

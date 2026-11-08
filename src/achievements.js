@@ -38,6 +38,7 @@ export const ACHIEVEMENTS = [
   { id: 'end_city', name: '末地之城', desc: '发现末地城' },
   { id: 'elytra', name: '自由滑翔', desc: '获得鞘翅' },
   { id: 'golem', name: '村庄守护者', desc: '召唤一只铁傀儡' },
+  { id: 'nether_fortress', name: '下界要塞', desc: '发现一座下界要塞' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -179,6 +180,7 @@ export class Achievements {
         else if (data.kind === 'ancient_city') this.unlock('ancient_city');
         else if (data.kind === 'trial') this.unlock('trial');
         else if (data.kind === 'end_city') this.unlock('end_city');
+        else if (data.kind === 'nether_fortress') this.unlock('nether_fortress');
         break;
       default:
         break;
