@@ -101,6 +101,8 @@ export class World {
     this.iglooCache = new Map();
     this.strongholdCache = new Map();
     this.mansionCache = new Map();
+    this.monumentCache = new Map();
+    this.ruinCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.crops = new Map(); // "x,y,z" -> 下次生长时间
@@ -540,6 +542,8 @@ export class World {
     this.stampIgloos(chunk);
     this.stampStrongholds(chunk);
     this.stampMansions(chunk);
+    this.stampMonuments(chunk);
+    this.stampRuinedPortals(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
   }
@@ -1377,6 +1381,225 @@ export class World {
     for (let dx = -6; dx <= 6; dx++) {
       for (let dz = -6; dz <= 6; dz++) {
         const m = this.getMansion(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 海底遗迹 ----------------
+  getMonument(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.monumentCache.has(key)) return this.monumentCache.get(key);
+    if (this.monumentCache.size > 600) this.monumentCache.clear();
+    const h = (n) => hash2i(cx * 61 + n, cz * 37 - n, this.seed + 2100 + n);
+    let m = null;
+    if (h(1) < 0.3) {
+      const centerX = Math.round(cx * 512 + 40 + h(2) * 430);
+      const centerZ = Math.round(cz * 512 + 40 + h(3) * 430);
+      const info = this.columnInfo(centerX, centerZ);
+      if (info.biome === 'ocean' && info.height < SEA_LEVEL - 4) {
+        m = {
+          centerX,
+          centerZ,
+          floorY: info.height,
+          minX: centerX - 12,
+          maxX: centerX + 12,
+          minZ: centerZ - 12,
+          maxZ: centerZ + 12,
+        };
+      }
+    }
+    this.monumentCache.set(key, m);
+    return m;
+  }
+
+  stampMonuments(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 512);
+    const ccz = Math.floor(z0 / 512);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getMonument(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampMonument(chunk, m);
+      }
+    }
+  }
+
+  stampMonument(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const B = BLOCK.PRISMARINE;
+    const L = BLOCK.SEA_LANTERN;
+    const baseY = m.floorY + 1;
+    // 底座
+    for (let dx = -7; dx <= 7; dx++) {
+      for (let dz = -7; dz <= 7; dz++) set(m.centerX + dx, baseY, m.centerZ + dz, B);
+    }
+    // 三层塔身
+    for (let layer = 0; layer < 3; layer++) {
+      const half = 7 - layer * 2;
+      const y0 = baseY + 1 + layer * 2;
+      for (let dx = -half; dx <= half; dx++) {
+        for (let dz = -half; dz <= half; dz++) {
+          const edge = Math.abs(dx) === half || Math.abs(dz) === half;
+          for (let dy = 0; dy < 2; dy++) {
+            if (edge) set(m.centerX + dx, y0 + dy, m.centerZ + dz, B);
+            else set(m.centerX + dx, y0 + dy, m.centerZ + dz, BLOCK.AIR);
+          }
+          if (edge) {
+            if ((dx === -half || dx === half) && (dz === -half || dz === half)) {
+              set(m.centerX + dx, y0, m.centerZ + dz, L);
+            }
+          }
+        }
+      }
+    }
+    // 顶部
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) set(m.centerX + dx, baseY + 7, m.centerZ + dz, B);
+    }
+    set(m.centerX, baseY + 8, m.centerZ, L);
+    // 入口（-Z 方向）
+    for (let dx = -1; dx <= 1; dx++) {
+      set(m.centerX + dx, baseY + 1, m.centerZ - 7, BLOCK.AIR);
+      set(m.centerX + dx, baseY + 2, m.centerZ - 7, BLOCK.AIR);
+    }
+    // 内部宝箱
+    const chests = [
+      [m.centerX - 3, baseY + 1, m.centerZ - 3],
+      [m.centerX + 3, baseY + 1, m.centerZ + 3],
+    ];
+    for (const [cx, cy, cz] of chests) {
+      set(cx, cy, cz, BLOCK.CHEST);
+      const key = cx + ',' + cy + ',' + cz;
+      if (!this.structureChests.has(key)) this.structureChests.set(key, this._monumentLoot(cx, cz));
+    }
+  }
+
+  _monumentLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 9 + n, cz * 13 - n, this.seed + 2200 + n);
+    const loot = [];
+    loot.push({ id: 'gold_ingot', count: 2 + Math.floor(r(1) * 4) });
+    if (r(2) < 0.8) loot.push({ id: 'emerald', count: 1 + Math.floor(r(3) * 3) });
+    if (r(4) < 0.5) loot.push({ id: 'diamond', count: 1 });
+    if (r(5) < 0.7) loot.push({ id: 'iron_ingot', count: 2 + Math.floor(r(6) * 4) });
+    return loot;
+  }
+
+  findNearestMonument(x, z) {
+    const ccx = Math.floor(x / 512);
+    const ccz = Math.floor(z / 512);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -6; dx <= 6; dx++) {
+      for (let dz = -6; dz <= 6; dz++) {
+        const m = this.getMonument(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 废弃传送门 ----------------
+  getRuinedPortal(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.ruinCache.has(key)) return this.ruinCache.get(key);
+    if (this.ruinCache.size > 600) this.ruinCache.clear();
+    const h = (n) => hash2i(cx * 71 + n, cz * 43 - n, this.seed + 2300 + n);
+    let m = null;
+    if (h(1) < 0.32) {
+      const centerX = Math.round(cx * 256 + 24 + h(2) * 200);
+      const centerZ = Math.round(cz * 256 + 24 + h(3) * 200);
+      const info = this.columnInfo(centerX, centerZ);
+      if (info.biome !== 'ocean' && info.height > SEA_LEVEL + 2) {
+        m = {
+          centerX,
+          centerZ,
+          floorY: info.height,
+          minX: centerX - 8,
+          maxX: centerX + 8,
+          minZ: centerZ - 8,
+          maxZ: centerZ + 8,
+        };
+      }
+    }
+    this.ruinCache.set(key, m);
+    return m;
+  }
+
+  stampRuinedPortals(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 256);
+    const ccz = Math.floor(z0 / 256);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getRuinedPortal(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampRuinedPortal(chunk, m);
+      }
+    }
+  }
+
+  stampRuinedPortal(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const baseY = m.floorY + 1;
+    // 下界岩平台
+    for (let dx = -4; dx <= 4; dx++) {
+      for (let dz = -4; dz <= 4; dz++) {
+        set(m.centerX + dx, baseY - 1, m.centerZ + dz, BLOCK.NETHERRACK);
+      }
+    }
+    // 黑曜石框架（4×5，部分缺失）
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 5; j++) {
+        const border = i === 0 || i === 3 || j === 0 || j === 4;
+        if (!border) continue;
+        const missing = hash2i(m.centerX + i, m.centerZ + j, this.seed + 2400) < 0.22;
+        if (missing) continue;
+        set(m.centerX - 2 + i, baseY + j, m.centerZ, BLOCK.OBSIDIAN);
+      }
+    }
+    // 宝箱
+    const cx = m.centerX + 3;
+    const cz = m.centerZ + 2;
+    set(cx, baseY, cz, BLOCK.CHEST);
+    const key = cx + ',' + baseY + ',' + cz;
+    if (!this.structureChests.has(key)) {
+      this.structureChests.set(key, [
+        { id: 'obsidian', count: 2 + Math.floor(hash2i(cx, cz, this.seed + 2410) * 4) },
+        { id: 'flint', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 2420) * 3) },
+        { id: 'gold_ingot', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 2430) * 2) },
+      ]);
+    }
+  }
+
+  findNearestRuinedPortal(x, z) {
+    const ccx = Math.floor(x / 256);
+    const ccz = Math.floor(z / 256);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -6; dx <= 6; dx++) {
+      for (let dz = -6; dz <= 6; dz++) {
+        const m = this.getRuinedPortal(ccx + dx, ccz + dz);
         if (!m) continue;
         const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
         if (d < bestD) {

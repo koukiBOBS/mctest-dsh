@@ -1305,7 +1305,7 @@ function updateLoading() {
           }
         }, 700);
       }
-      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold || state.tpMansion) {
+      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold || state.tpMansion || state.tpMonument || state.tpRuin) {
         setTimeout(() => {
           try {
             const p = state.player;
@@ -1328,6 +1328,18 @@ function updateLoading() {
                 const tz = m.centerZ + 18;
                 const gy = state.world.getSurfaceY(m.centerX, tz);
                 target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `沙漠神殿 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
+              }
+            }
+            if (state.tpMonument) {
+              const m = state.world.findNearestMonument(p.x, p.z);
+              if (m) target = { x: m.centerX + 0.5, y: 68, z: m.centerZ + 16.5, label: `海底遗迹 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
+            }
+            if (state.tpRuin) {
+              const m = state.world.findNearestRuinedPortal(p.x, p.z);
+              if (m) {
+                const tz = m.centerZ + 10;
+                const gy = state.world.getSurfaceY(m.centerX, tz);
+                target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `废弃传送门 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
               }
             }
             if (state.tpMansion) {
@@ -1368,6 +1380,8 @@ function updateLoading() {
           state.tpIgloo = false;
           state.tpStronghold = false;
           state.tpMansion = false;
+          state.tpMonument = false;
+          state.tpRuin = false;
         }, 900);
       }
       if (state.spawnTorches && state.player) {
@@ -1631,6 +1645,16 @@ function checkDiscoveries() {
         const m = w.getIgloo(vcx + dx, vcz + dz);
         if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
           ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
+      }
+    }
+    // 海底遗迹
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getMonument(Math.floor(p.x / 512) + dx, Math.floor(p.z / 512) + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 34) {
+          ach.onEvent('discover', { kind: 'monument' });
           break;
         }
       }
@@ -2638,6 +2662,8 @@ function boot() {
   if (params.get('end') === '1') state.endDemo = true;
   if (params.get('dragon') === '1') state.dragonDemo = true;
   if (params.get('mansion') === '1') state.tpMansion = true;
+  if (params.get('monument') === '1') state.tpMonument = true;
+  if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

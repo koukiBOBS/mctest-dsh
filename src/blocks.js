@@ -73,6 +73,8 @@ export const BLOCK = Object.freeze({
   END_STONE: 65,
   END_PORTAL: 66,
   END_PORTAL_FRAME: 67,
+  PRISMARINE: 68,
+  SEA_LANTERN: 69,
 });
 
 export const BLOCK_DEFS = [];
@@ -283,6 +285,12 @@ def(BLOCK.END_PORTAL, 'end_portal', '末地传送门', {
 });
 def(BLOCK.END_PORTAL_FRAME, 'end_portal_frame', '末地传送门框架', {
   tiles: { all: 'end_stone' }, hardness: 4, sound: 'stone',
+});
+def(BLOCK.PRISMARINE, 'prismarine', '海晶石', {
+  tiles: { all: 'prismarine' }, hardness: 1.5, sound: 'stone',
+});
+def(BLOCK.SEA_LANTERN, 'sea_lantern', '海晶灯', {
+  tiles: { all: 'sea_lantern' }, hardness: 0.3, sound: 'glass', light: 15,
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },

@@ -85,6 +85,8 @@ export const TILE_NAMES = [
   'fire',
   'end_stone',
   'end_portal',
+  'prismarine',
+  'sea_lantern',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2134,6 +2136,27 @@ const TILE_PAINTERS = {
       const c = rng() < 0.35 ? '#c8a8ff' : rng() < 0.6 ? '#6a4a9a' : '#e8e0ff';
       setPx(b, x, y, C(c));
     }
+  },
+
+  prismarine(b, rng) {
+    noiseFill(b, rng, [
+      ['#3a8f86', 6],
+      ['#2f7d76', 5],
+      ['#4aa79c', 4],
+    ]);
+    for (let y = 3; y < 16; y += 5) hline(b, 0, 15, y, C('#226860'));
+    for (let i = 0; i < 8; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#5fc0b2'));
+  },
+
+  sea_lantern(b, rng) {
+    fillSolid(b, C('#bfe8dc'));
+    for (let y = 2; y < 14; y += 4) {
+      for (let x = 2; x < 14; x += 4) {
+        fillRect(b, x, y, 3, 3, C('#8fd8c8'));
+        setPx(b, x + 1, y + 1, C('#f2fff8'));
+      }
+    }
+    for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#ffffff'));
   },
 
 };

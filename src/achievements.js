@@ -30,6 +30,7 @@ export const ACHIEVEMENTS = [
   { id: 'hunter10', name: '怪物杀手', desc: '累计击杀 10 只敌对生物' },
   { id: 'dragon', name: '屠龙者', desc: '击败末影龙' },
   { id: 'mansion', name: '豪宅探险', desc: '发现一座林地府邸' },
+  { id: 'monument', name: '深海遗迹', desc: '发现一座海底遗迹' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -155,6 +156,7 @@ export class Achievements {
         else if (data.kind === 'nether') this.unlock('nether');
         else if (data.kind === 'end') this.unlock('end');
         else if (data.kind === 'mansion') this.unlock('mansion');
+        else if (data.kind === 'monument') this.unlock('monument');
         break;
       default:
         break;
