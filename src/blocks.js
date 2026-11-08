@@ -334,6 +334,7 @@ const EXTRA_ITEMS = {
   lava_bucket: { display: '岩浆桶', icon: 'lava_bucket', maxStack: 1 },
   door: { display: '门', icon: 'door', block: BLOCK.DOOR_X },
   fence: { display: '栅栏', icon: 'fence', block: BLOCK.FENCE },
+  emerald: { display: '绿宝石', icon: 'emerald' },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };

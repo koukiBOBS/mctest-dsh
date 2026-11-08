@@ -119,6 +119,17 @@ export const MOB_TYPES = {
     ],
     colors: { body: 0x2f2f2f, white: 0xf1f1ec, snout: 0xd9a3a5, horn: 0xd9d5c5, leg: 0x3a3a3a, eye: 0x111111 },
   },
+  villager: {
+    id: 'villager',
+    name: '村民',
+    hostile: false,
+    width: 0.6,
+    height: 1.9,
+    health: 20,
+    speed: 0.85,
+    drops: [],
+    colors: { robe: 0x6b4a2e, robeDark: 0x4a3320, skin: 0xc9a17c, nose: 0xb98a63, eye: 0x1a1a1a },
+  },
   chicken: {
     id: 'chicken',
     name: '鸡',
@@ -731,7 +742,7 @@ export class MobManager {
       // 手持小麦/种子时动物会靠近
       const pInv = player.inventory;
       const heldItem = pInv && pInv.held ? pInv.held.id : null;
-      if ((heldItem === 'wheat' || heldItem === 'wheat_seeds') && dist < 8 && dist > 1.2) {
+      if (mob.type !== 'villager' && (heldItem === 'wheat' || heldItem === 'wheat_seeds') && dist < 8 && dist > 1.2) {
         this._setMove(mob, dx / dist, dz / dist, def.speed * 0.75);
         this._face(mob, player.x, player.z);
         return;
@@ -1292,6 +1303,7 @@ export class MobManager {
       case 'skeleton': this._modelSkeleton(mob, root, c); break;
       case 'creeper': this._modelCreeper(mob, root, c); break;
       case 'spider': this._modelSpider(mob, root, c); break;
+      case 'villager': this._modelVillager(mob, root, c); break;
       default: this._addBox(mob, root, 0xffffff, 0.5, 0.5, 0.5, 0, 0.5, 0); break;
     }
 
@@ -1386,6 +1398,20 @@ export class MobManager {
     this._addLimb(mob, root, c.leg, 0.07, 0.2, 0.07, 0.1, 0.2, 0, mob.legs);
 
     this._addBox(mob, root, c.wing, 0.16, 0.14, 0.16, 0, 0.45, -0.24);
+  }
+
+  _modelVillager(mob, root, c) {
+    this._addLimb(mob, root, c.robeDark, 0.22, 0.75, 0.24, -0.14, 0.75, 0, mob.legs);
+    this._addLimb(mob, root, c.robeDark, 0.22, 0.75, 0.24, 0.14, 0.75, 0, mob.legs);
+    this._addBox(mob, root, c.robe, 0.58, 0.82, 0.36, 0, 1.12, 0);
+    this._addBox(mob, root, c.robeDark, 0.62, 0.12, 0.4, 0, 0.72, 0);
+    this._addLimb(mob, root, c.robe, 0.18, 0.64, 0.2, -0.38, 1.36, 0, mob.arms);
+    this._addLimb(mob, root, c.robe, 0.18, 0.64, 0.2, 0.38, 1.36, 0, mob.arms);
+    const head = this._makeHead(mob, root, c.skin, 0.5, 0.5, 0.5, 0, 1.64, 0);
+    this._addBox(mob, head, c.nose, 0.12, 0.2, 0.16, 0, -0.08, 0.3);
+    this._addBox(mob, head, c.eye, 0.08, 0.08, 0.02, -0.12, 0.06, 0.26);
+    this._addBox(mob, head, c.eye, 0.08, 0.08, 0.02, 0.12, 0.06, 0.26);
+    this._addBox(mob, head, c.robeDark, 0.5, 0.1, 0.5, 0, 0.26, 0);
   }
 
   _modelZombie(mob, root, c) {

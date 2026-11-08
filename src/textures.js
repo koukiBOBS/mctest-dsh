@@ -129,6 +129,7 @@ export const ITEM_ICON_NAMES = [
   'water_bucket',
   'lava_bucket',
   'fence',
+  'emerald',
 ];
 
 /* =====================================================================
@@ -3126,6 +3127,13 @@ const ICON_PAINTERS = {
     fillRect(b, 5, 19, 22, 3, C('#a9743f'));
     setPx(b, 7, 6, C('#c2924f'));
     setPx(b, 23, 6, C('#c2924f'));
+  },
+
+  emerald(b, rng) {
+    fillPoly(b, [[16, 4], [24, 12], [20, 26], [10, 24], [7, 13]], C('#1f9a5a'));
+    fillPoly(b, [[16, 7], [21, 13], [18, 23], [12, 21], [10, 14]], C('#35c476'));
+    fillPoly(b, [[15, 10], [19, 13], [16, 18], [13, 14]], C('#7ef0b0'));
+    setPx(b, 15, 9, C('#e8fff0'));
   },
 
 };

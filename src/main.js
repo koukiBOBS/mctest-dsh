@@ -43,6 +43,9 @@ const state = {
   weather: null,
   achievements: null,
   discoverTimer: 0,
+  tradeOpen: false,
+  tradeMob: null,
+  villagerTimer: 0,
   playerModel: null,
   thirdPerson: false,
   qualityScale: 1,
@@ -66,6 +69,67 @@ function showScreen(name) {
     const el = $('screen-' + id);
     if (el) el.classList.toggle('hidden', id !== name);
   }
+}
+
+const TRADES = [
+  { cost: { id: 'wheat', count: 8 }, result: { id: 'emerald', count: 1 } },
+  { cost: { id: 'emerald', count: 1 }, result: { id: 'bread', count: 4 } },
+  { cost: { id: 'emerald', count: 3 }, result: { id: 'diamond', count: 1 } },
+  { cost: { id: 'coal', count: 12 }, result: { id: 'emerald', count: 1 } },
+];
+
+function renderTradeOffers() {
+  const box = $('trade-offers');
+  if (!box || !state.inventory) return;
+  box.innerHTML = TRADES.map((t, i) => {
+    const a = state.inventory.iconURL(t.cost.id);
+    const b = state.inventory.iconURL(t.result.id);
+    return `<button class="trade-offer" data-index="${i}">`
+      + `<img src="${a}" alt=""><span>×${t.cost.count}</span>`
+      + `<span class="trade-arrow">→</span>`
+      + `<img src="${b}" alt=""><span>×${t.result.count}</span>`
+      + `</button>`;
+  }).join('');
+}
+
+function openTrade(mob) {
+  if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
+  if (state.tradeOpen) return;
+  state.tradeOpen = true;
+  state.tradeMob = mob || null;
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-trade').classList.remove('hidden');
+  renderTradeOffers();
+}
+
+function closeTrade() {
+  if (!state.tradeOpen) return;
+  state.tradeOpen = false;
+  state.tradeMob = null;
+  state.paused = false;
+  $('screen-trade').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+}
+
+function doTrade(index) {
+  const offer = TRADES[index];
+  if (!offer || !state.inventory) return;
+  if (state.inventory.countOf(offer.cost.id) < offer.cost.count) {
+    showToast('材料不够：还需要 ' + offer.cost.count + ' 个' + itemDisplay(offer.cost.id));
+    return;
+  }
+  state.inventory.remove(offer.cost.id, offer.cost.count);
+  state.inventory.add(offer.result.id, offer.result.count);
+  state.sound?.play('craft', { volume: 0.5 });
+  state.achievements?.onEvent('trade', {});
+  showToast('交易完成：' + itemDisplay(offer.result.id) + ' ×' + offer.result.count);
+  updateHUD();
+  renderTradeOffers();
 }
 
 function showToast(msg, ms = 1900) {
@@ -303,6 +367,7 @@ function startGame(opts = {}) {
   game.dropItem = (id, x, y, z, count = 1) => items.spawn(id, x, y, z, count);
   game.explode = (x, y, z, power = 3) => explode(x, y, z, power);
   game.igniteTNT = (x, y, z) => igniteTNT(x, y, z);
+  game.openTrade = (mob) => openTrade(mob);
 
   const mobs = new MobManager(game, {
     maxMobs: state.isTouch ? 14 : 24,
@@ -559,6 +624,27 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.tradeDemo && state.player) {
+        state.tradeDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const tx = p.x + f.x * 3;
+            const tz = p.z + f.z * 3;
+            const ty = state.world.getSurfaceY(Math.floor(tx), Math.floor(tz));
+            const villager = state.mobs?.spawn('villager', tx, ty + 1, tz);
+            state.inventory.add('wheat', 32);
+            state.inventory.add('emerald', 8);
+            state.inventory.add('coal', 32);
+            state.onInventoryChange?.();
+            openTrade(villager);
+            setTimeout(() => doTrade(0), 1500);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 1000);
       }
       if (state.fenceDemo && state.player) {
         state.fenceDemo = false;
@@ -973,6 +1059,33 @@ function openContainer(hit) {
   state.containerUI.show(open.key, open.type);
 }
 
+function ensureVillagers() {
+  const p = state.player;
+  const w = state.world;
+  const mobs = state.mobs;
+  if (!p || !w || !mobs || p.dead) return;
+  let villagers = 0;
+  for (const mob of mobs.mobs) if (mob.type === 'villager') villagers++;
+  if (villagers >= 4) return;
+  const vcx = Math.floor(p.x / 128);
+  const vcz = Math.floor(p.z / 128);
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      const v = w.getVillage(vcx + dx, vcz + dz);
+      if (!v) continue;
+      if (Math.hypot(v.centerX - p.x, v.centerZ - p.z) > 48) continue;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const x = v.centerX + Math.round((Math.random() - 0.5) * 16);
+        const z = v.centerZ + Math.round((Math.random() - 0.5) * 16);
+        if (!w.isLoaded(x, z)) continue;
+        const y = w.getSurfaceY(x, z) + 1;
+        if (w.getBlock(x, y, z) !== 0 || w.getBlock(x, y + 1, z) !== 0) continue;
+        if (mobs.spawn('villager', x + 0.5, y, z + 0.5)) return;
+      }
+    }
+  }
+}
+
 function checkDiscoveries() {
   const p = state.player;
   const w = state.world;
@@ -1150,6 +1263,10 @@ function handleEscape() {
   if (!state.running) {
     if (!$('screen-settings').classList.contains('hidden')) closeSettings();
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
+    return;
+  }
+  if (state.tradeOpen) {
+    closeTrade();
     return;
   }
   if (state.containerUI && state.containerUI.isOpen) {
@@ -1672,6 +1789,11 @@ function loop(now) {
       state.player.update(dt);
       state.playerModel?.update(dt, state.player, state.renderer ? state.renderer.dayLight : 1);
       state.mobs?.update(dt);
+      state.villagerTimer += dt;
+      if (state.villagerTimer > 6) {
+        state.villagerTimer = 0;
+        ensureVillagers();
+      }
       state.dungeonSpawnTimer = (state.dungeonSpawnTimer || 0) + dt;
       if (state.dungeonSpawnTimer > 6) {
         state.dungeonSpawnTimer = 0;
@@ -1805,6 +1927,13 @@ function bindUI() {
   $('btn-hud-view').addEventListener('click', toggleThirdPerson);
   $('btn-hud-inv').addEventListener('click', () => openInventory(2));
   $('btn-hud-menu').addEventListener('click', () => setPaused(true));
+  $('trade-close').addEventListener('click', closeTrade);
+  $('trade-offers').addEventListener('click', (e) => {
+    const btn = e.target.closest('.trade-offer');
+    if (!btn) return;
+    const index = Number(btn.dataset.index);
+    if (Number.isFinite(index)) doTrade(index);
+  });
 
   bindKeyboard();
   bindMouse();
@@ -1911,6 +2040,7 @@ function boot() {
   if (params.get('doordemo') === '1') state.doorDemo = true;
   if (params.get('fencedemo') === '1') state.fenceDemo = true;
   if (params.get('stronghold') === '1') state.tpStronghold = true;
+  if (params.get('trade') === '1') state.tradeDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

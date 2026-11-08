@@ -580,6 +580,11 @@ export class Player {
       }
     }
 
+    if (this.mobTarget && this.mobTarget.type === 'villager' && this.mobTarget.health > 0) {
+      this.game.openTrade?.(this.mobTarget);
+      return;
+    }
+
     if (this.startBowCharge()) return;
     const held = this.inventory.held;
     const heldItem = held ? getItem(held.id) : null;
