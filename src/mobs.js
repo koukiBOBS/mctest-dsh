@@ -482,7 +482,7 @@ export class MobManager {
     };
     mob.yawTarget = mob.yaw;
     if (type === 'villager') {
-      mob.profession = ['farmer', 'librarian', 'blacksmith'][Math.floor(Math.random() * 3)];
+      mob.profession = ['farmer', 'librarian', 'blacksmith', 'cleric', 'butcher'][Math.floor(Math.random() * 5)];
       mob.tradeLevel = 1;
       mob.tradeCount = 0;
     }
@@ -1407,7 +1407,7 @@ export class MobManager {
 
   feed(mob, itemId) {
     if (!mob || mob.removed) return null;
-    const foods = { pig: 'apple', cow: 'wheat', sheep: 'wheat', chicken: 'wheat_seeds', panda: 'bamboo', mooshroom: 'wheat' };
+    const foods = { pig: 'apple', cow: 'wheat', sheep: 'wheat', chicken: 'wheat_seeds', panda: 'bamboo', mooshroom: 'wheat', villager: 'bread' };
     if (foods[mob.type] !== itemId) return null;
     if (mob.isBaby) return 'baby';
     if (mob.loveTimer > 0) return 'already';
@@ -1985,7 +1985,7 @@ export class MobManager {
   }
 
   _initVillager(mob, c) {
-    const colors = { farmer: 0x5a7a32, librarian: 0xd8d0c0, blacksmith: 0x3a3a3a };
+    const colors = { farmer: 0x5a7a32, librarian: 0xd8d0c0, blacksmith: 0x3a3a3a, cleric: 0x6a3a8a, butcher: 0xa85a4a };
     const target = colors[mob.profession];
     if (target === undefined) return;
     const robeHex = new THREE.Color(c.robe).getHex();

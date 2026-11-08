@@ -309,6 +309,32 @@ const PROFESSIONS = {
       { cost: { id: 'emerald', count: 6 }, result: { id: 'name_tag', count: 1 } },
     ],
   },
+  cleric: {
+    name: '牧师',
+    trades: [
+      { cost: { id: 'rotten_flesh', count: 10 }, result: { id: 'emerald', count: 1 } },
+      { cost: { id: 'emerald', count: 2 }, result: { id: 'glowstone', count: 1 } },
+      { cost: { id: 'emerald', count: 4 }, result: { id: 'diamond', count: 1 } },
+      { cost: { id: 'gold_ingot', count: 4 }, result: { id: 'emerald', count: 1 } },
+    ],
+    extras: [
+      { cost: { id: 'emerald', count: 3 }, result: { id: 'obsidian', count: 2 } },
+      { cost: { id: 'emerald', count: 6 }, result: { id: 'golden_apple', count: 1 } },
+    ],
+  },
+  butcher: {
+    name: '屠夫',
+    trades: [
+      { cost: { id: 'beef', count: 8 }, result: { id: 'emerald', count: 1 } },
+      { cost: { id: 'emerald', count: 1 }, result: { id: 'cooked_porkchop', count: 3 } },
+      { cost: { id: 'emerald', count: 3 }, result: { id: 'diamond', count: 1 } },
+      { cost: { id: 'mutton', count: 8 }, result: { id: 'emerald', count: 1 } },
+    ],
+    extras: [
+      { cost: { id: 'emerald', count: 2 }, result: { id: 'cooked_mutton', count: 4 } },
+      { cost: { id: 'emerald', count: 5 }, result: { id: 'cooked_beef', count: 4 } },
+    ],
+  },
   blacksmith: {
     name: '铁匠',
     trades: [
