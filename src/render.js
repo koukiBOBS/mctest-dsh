@@ -186,6 +186,7 @@ export class Renderer {
     this.weatherFactor = 0;
     this.nether = false;
     this.end = false;
+    this.nightVision = false;
     this.flashFactor = 0;
     this.dayLight = 1;
     this._tileColorCache = new Map();
@@ -374,6 +375,10 @@ export class Renderer {
 
   setEnd(on) {
     this.end = !!on;
+  }
+
+  setNightVision(on) {
+    this.nightVision = !!on;
   }
 
   // 动态画质：降低/恢复渲染分辨率（用于低帧率设备）
@@ -639,7 +644,8 @@ export class Renderer {
       }
     }
 
-    const lightMul = Math.min(1, (0.3 + 0.7 * dayF) * (1 - 0.42 * rain) + flash * 0.3);
+    let lightMul = Math.min(1, (0.3 + 0.7 * dayF) * (1 - 0.42 * rain) + flash * 0.3);
+    if (this.nightVision) lightMul = Math.max(lightMul, 0.9);
     this.dayLight = lightMul;
     for (const mat of this.chunkMaterials) {
       const u = mat.uniforms;

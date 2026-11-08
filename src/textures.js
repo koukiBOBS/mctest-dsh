@@ -172,6 +172,9 @@ export const ITEM_ICON_NAMES = [
   'name_tag',
   'shulker_shell',
   'ink_sac',
+  'potion_fire_resist',
+  'potion_night_vision',
+  'potion_jump',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3595,6 +3598,34 @@ const ICON_PAINTERS = {
     fillPoly(b, [[11, 12], [16, 8], [21, 12], [20, 20], [16, 23], [12, 20]], C('#2e2e3e'));
     fillRect(b, 14, 3, 4, 5, C('#3a3a4a'));
     setPx(b, 13, 12, C('#6a6a8a'));
+  },
+
+  potion_fire_resist(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#e06a1a'));
+    setPx(b, 14, 18, C('#ffd24a'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  potion_night_vision(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#1e2a6a'));
+    fillRect(b, 13, 18, 6, 3, C('#4a6ad8'));
+    setPx(b, 16, 19, C('#c8e0ff'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  potion_jump(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#3aa85a'));
+    setPx(b, 14, 18, C('#9affb0'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
   },
 
 };

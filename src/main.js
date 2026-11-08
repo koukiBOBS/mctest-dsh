@@ -341,6 +341,9 @@ const BREWS = [
   { id: 'potion_healing', name: '治疗药水', ingredient: 'rose', desc: '恢复 6 点生命' },
   { id: 'potion_strength', name: '力量药水', ingredient: 'beef', desc: '20 秒攻击 +3' },
   { id: 'potion_speed', name: '迅捷药水', ingredient: 'feather', desc: '20 秒移速 +35%' },
+  { id: 'potion_fire_resist', name: '抗火药水', ingredient: 'coal', desc: '30 秒免疫火焰/岩浆' },
+  { id: 'potion_night_vision', name: '夜视药水', ingredient: 'gold_ingot', desc: '60 秒夜视' },
+  { id: 'potion_jump', name: '跳跃药水', ingredient: 'apple', desc: '30 秒跳跃力 +35%' },
 ];
 
 const LECTERN_PAGES = [
@@ -1339,6 +1342,21 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.potionDemo && state.player) {
+        state.potionDemo = false;
+        setTimeout(() => {
+          try {
+            state.inventory.setSlot(0, { id: 'potion_night_vision', count: 1 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            state.player.secondaryAction();
+            state.chat?.log('演示：喝下夜视药水（60 秒）');
+            updateHUD();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.endCityDemo && state.player) {
         state.endCityDemo = false;
@@ -3006,6 +3024,9 @@ function loop(now) {
     if (state.player) {
       if (state.player.strengthTimer > 0) eff.push('力量 ' + Math.ceil(state.player.strengthTimer) + 's');
       if (state.player.speedTimer > 0) eff.push('迅捷 ' + Math.ceil(state.player.speedTimer) + 's');
+      if (state.player.fireResistTimer > 0) eff.push('抗火 ' + Math.ceil(state.player.fireResistTimer) + 's');
+      if (state.player.nightVisionTimer > 0) eff.push('夜视 ' + Math.ceil(state.player.nightVisionTimer) + 's');
+      if (state.player.jumpBoostTimer > 0) eff.push('跳跃 ' + Math.ceil(state.player.jumpBoostTimer) + 's');
     }
     if (eff.length) {
       effEl.textContent = eff.join(' · ');
@@ -3029,6 +3050,9 @@ function loop(now) {
   if (state.labelClock > 0.2) {
     state.labelClock = 0;
     renderMobLabels();
+  }
+  if (state.renderer && state.player) {
+    state.renderer.setNightVision(state.player.nightVisionTimer > 0);
   }
   const bossBar = $('boss-bar');
   if (bossBar) {
@@ -3273,6 +3297,7 @@ function boot() {
   if (params.get('trial') === '1') state.tpTrial = true;
   if (params.get('campfire') === '1') state.campfireDemo = true;
   if (params.get('endcity') === '1') state.endCityDemo = true;
+  if (params.get('potion') === '1') state.potionDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

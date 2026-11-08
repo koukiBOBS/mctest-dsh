@@ -64,6 +64,9 @@ export class Player {
     this.xpLevel = 0;
     this.strengthTimer = 0;
     this.speedTimer = 0;
+    this.fireResistTimer = 0;
+    this.nightVisionTimer = 0;
+    this.jumpBoostTimer = 0;
     this.kills = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
@@ -136,6 +139,9 @@ export class Player {
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
     if (this.strengthTimer > 0) this.strengthTimer = Math.max(0, this.strengthTimer - dt);
     if (this.speedTimer > 0) this.speedTimer = Math.max(0, this.speedTimer - dt);
+    if (this.fireResistTimer > 0) this.fireResistTimer = Math.max(0, this.fireResistTimer - dt);
+    if (this.nightVisionTimer > 0) this.nightVisionTimer = Math.max(0, this.nightVisionTimer - dt);
+    if (this.jumpBoostTimer > 0) this.jumpBoostTimer = Math.max(0, this.jumpBoostTimer - dt);
     if (this.chargingBow) {
       const held = this.inventory.held;
       if (!held || held.id !== 'bow' || this.dead) {
@@ -210,7 +216,7 @@ export class Player {
       this.vy -= GRAVITY * dt;
       if (this.vy < -60) this.vy = -60;
       if (c.jump && this.onGround) {
-        this.vy = JUMP_V;
+        this.vy = JUMP_V * (this.jumpBoostTimer > 0 ? 1.35 : 1);
         this.onGround = false;
         this.game.sound?.play('jump', { volume: 0.18 });
       }
@@ -745,6 +751,9 @@ export class Player {
         if (potion.potion === 'healing') this.health = Math.min(20, this.health + 6);
         else if (potion.potion === 'strength') this.strengthTimer = 20;
         else if (potion.potion === 'speed') this.speedTimer = 20;
+        else if (potion.potion === 'fire_resist') this.fireResistTimer = 30;
+        else if (potion.potion === 'night_vision') this.nightVisionTimer = 60;
+        else if (potion.potion === 'jump') this.jumpBoostTimer = 30;
         this.inventory.consumeHeld(1);
         this.inventory.add('glass_bottle', 1);
         this.game.sound?.play('pop', { volume: 0.6 });
@@ -885,6 +894,10 @@ export class Player {
 
   damage(amount, reason) {
     if (this.dead || this.mode === 'creative') return;
+    const text = String(reason || '');
+    if (this.fireResistTimer > 0 && (text.includes('岩浆') || text.includes('烧') || text.includes('火焰'))) {
+      return;
+    }
     const points = this.inventory && this.inventory.armorDefense ? this.inventory.armorDefense() : 0;
     if (points > 0) amount = Math.max(1, amount * (1 - Math.min(0.8, points * 0.04)));
     let protection = 0;
