@@ -203,6 +203,7 @@ export const ITEM_ICON_NAMES = [
   'potion_regen',
   'nether_star',
   'shield',
+  'heart_of_the_sea',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3928,6 +3929,14 @@ const ICON_PAINTERS = {
     fillRect(b, 15, 7, 2, 14, C('#c8c8c8'));
     fillRect(b, 11, 12, 10, 2, C('#c8c8c8'));
     fillPoly(b, [[13, 14], [19, 14], [18, 19], [16, 22], [14, 19]], C('#e0e0e0'));
+  },
+
+  heart_of_the_sea(b, rng) {
+    fillPoly(b, [[16, 5], [27, 11], [24, 22], [16, 28], [8, 22], [5, 11]], C('#3a8ac8'));
+    fillPoly(b, [[16, 9], [23, 13], [21, 20], [16, 24], [11, 20], [9, 13]], C('#5fc8e8'));
+    fillPoly(b, [[16, 12], [20, 15], [18, 19], [16, 21], [14, 19], [12, 15]], C('#c8f0ff'));
+    setPx(b, 16, 15, C('#ffffff'));
+    for (let i = 0; i < 6; i++) setPx(b, 9 + ((rng() * 14) | 0), 10 + ((rng() * 14) | 0), C('#a8e8ff'));
   },
 
 };

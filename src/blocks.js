@@ -508,6 +508,7 @@ const EXTRA_ITEMS = {
   potion_regen: { display: '再生药水', icon: 'potion_regen', maxStack: 1, potion: 'regen' },
   nether_star: { display: '下界之星', icon: 'nether_star', maxStack: 64 },
   shield: { display: '盾牌', icon: 'shield', maxStack: 1 },
+  heart_of_the_sea: { display: '海洋之心', icon: 'heart_of_the_sea', maxStack: 64 },
   firework_rocket: { display: '烟花火箭', icon: 'firework_rocket', maxStack: 16 },
   name_tag: { display: '命名牌', icon: 'name_tag', maxStack: 16 },
   shulker_shell: { display: '潜影壳', icon: 'shulker_shell', maxStack: 64 },

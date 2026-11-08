@@ -1506,6 +1506,25 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.shipwreckDemo && state.player) {
+        state.shipwreckDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const v = state.world.findNearestShipwreck(p.x, p.z);
+            if (v) {
+              p.setPosition(v.x + 0.5, v.y + 1.2, v.z + 0.5);
+              p.yaw = 0;
+              p.pitch = 0;
+              state.chat?.log('演示：已到达沉船内部（宝箱有海洋之心）');
+            } else {
+              state.chat?.log('演示：附近没有找到沉船');
+            }
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.shieldDemo && state.player) {
         state.shieldDemo = false;
         setTimeout(() => {
@@ -2551,6 +2570,15 @@ function checkDiscoveries() {
         const m = w.getIgloo(vcx + dx, vcz + dz);
         if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
           ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
+      }
+    }
+    // 沉船
+    if (w.shipwrecks) {
+      for (const wreck of w.shipwrecks.values()) {
+        if (Math.hypot(wreck.x - p.x, wreck.z - p.z) < 24) {
+          ach.onEvent('discover', { kind: 'shipwreck' });
           break;
         }
       }
@@ -3773,6 +3801,7 @@ function boot() {
   if (params.get('mushroom') === '1') state.mushroomDemo = true;
   if (params.get('achievements') === '1') state.achievementsDemo = true;
   if (params.get('shield') === '1') state.shieldDemo = true;
+  if (params.get('shipwreck') === '1') state.shipwreckDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

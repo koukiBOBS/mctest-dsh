@@ -114,6 +114,7 @@ export class World {
     this.trialSpawners = new Map();
     this.endCities = new Map();
     this.fortresses = new Map();
+    this.shipwrecks = new Map();
     this.ruinCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
@@ -661,6 +662,7 @@ export class World {
 
   generateStructures(chunk) {
     this.stampVillages(chunk);
+    this.stampShipwrecks(chunk);
     this.stampDesertTemples(chunk);
     this.stampIgloos(chunk);
     this.stampStrongholds(chunk);
@@ -671,6 +673,108 @@ export class World {
     this.stampTrialChambers(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
+  }
+
+  getShipwreck(cx, cz) {
+    const key = 'w' + cx + ',' + cz;
+    if (this.villageCache.has(key)) return this.villageCache.get(key);
+    const h = hash2i(cx, cz, this.seed + 6100);
+    if (h > 0.02) {
+      this.villageCache.set(key, null);
+      return null;
+    }
+    const x = cx * CHUNK_SX + 8;
+    const z = cz * CHUNK_SZ + 8;
+    const info = this.columnInfo(x, z);
+    const wreck = info.biome === 'ocean' ? { x, z, y: 40 } : null;
+    this.villageCache.set(key, wreck);
+    return wreck;
+  }
+
+  stampShipwrecks(chunk) {
+    const ccx = chunk.cx;
+    const ccz = chunk.cz;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const v = this.getShipwreck(ccx + dx, ccz + dz);
+        if (v) this.stampShipwreck(chunk, v);
+      }
+    }
+  }
+
+  stampShipwreck(chunk, v) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    if (x1 < v.x - 6 || x0 > v.x + 6 || z1 < v.z - 3 || z0 > v.z + 3) return;
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const y = v.y;
+    const plank = BLOCK.SPRUCE_PLANKS;
+    // 船体底部与内部
+    for (let dx = -5; dx <= 5; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        set(v.x + dx, y, v.z + dz, plank);
+        for (let dy = 1; dy <= 3; dy++) set(v.x + dx, y + dy, v.z + dz, BLOCK.AIR);
+      }
+    }
+    // 船壳
+    for (let dx = -5; dx <= 5; dx++) {
+      for (let dy = 1; dy <= 3; dy++) {
+        set(v.x + dx, y + dy, v.z - 2, plank);
+        set(v.x + dx, y + dy, v.z + 2, plank);
+      }
+    }
+    for (let dz = -2; dz <= 2; dz++) {
+      for (let dy = 1; dy <= 3; dy++) {
+        set(v.x - 5, y + dy, v.z + dz, plank);
+        set(v.x + 5, y + dy, v.z + dz, plank);
+      }
+    }
+    // 甲板（留破洞）
+    for (let dx = -4; dx <= 4; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (dx === 2 && dz === 0) continue;
+        set(v.x + dx, y + 4, v.z + dz, plank);
+      }
+    }
+    // 桅杆
+    for (let dy = 5; dy <= 9; dy++) set(v.x - 1, y + dy, v.z, BLOCK.LOG);
+    // 宝箱
+    const cx = v.x + 2;
+    const cy = y + 1;
+    const cz = v.z;
+    set(cx, cy, cz, BLOCK.CHEST);
+    const key = cx + ',' + cy + ',' + cz;
+    if (!this.structureChests.has(key)) {
+      this.structureChests.set(key, [
+        { id: 'heart_of_the_sea', count: 1 },
+        { id: 'emerald', count: 2 + Math.floor(hash2i(cx, cz, this.seed + 6200) * 4) },
+        { id: 'iron_ingot', count: 2 + Math.floor(hash2i(cx, cz, this.seed + 6201) * 3) },
+        { id: 'gold_ingot', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 6202) * 2) },
+        { id: 'cooked_cod', count: 2 },
+      ]);
+    }
+    this.shipwrecks.set(v.x + ',' + v.z, { x: v.x, y, z: v.z });
+  }
+
+  findNearestShipwreck(px, pz) {
+    let best = null;
+    let bestD = Infinity;
+    const ccx = Math.floor(px / CHUNK_SX);
+    const ccz = Math.floor(pz / CHUNK_SZ);
+    for (let dx = -14; dx <= 14; dx++) {
+      for (let dz = -14; dz <= 14; dz++) {
+        const v = this.getShipwreck(ccx + dx, ccz + dz);
+        if (!v) continue;
+        const d = Math.hypot(v.x - px, v.z - pz);
+        if (d < bestD) {
+          bestD = d;
+          best = v;
+        }
+      }
+    }
+    return best;
   }
 
   getVillage(cx, cz) {

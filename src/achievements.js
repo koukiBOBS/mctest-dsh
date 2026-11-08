@@ -47,6 +47,7 @@ export const ACHIEVEMENTS = [
   { id: 'panda', name: '熊猫朋友', desc: '在竹林里遇见一只熊猫' },
   { id: 'mushroom', name: '蘑菇岛', desc: '发现一座蘑菇岛' },
   { id: 'shield', name: '坚盾', desc: '举起盾牌格挡' },
+  { id: 'shipwreck', name: '沉船宝藏', desc: '发现一艘沉船' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -213,6 +214,7 @@ export class Achievements {
         else if (data.kind === 'end_city') this.unlock('end_city');
         else if (data.kind === 'nether_fortress') this.unlock('nether_fortress');
         else if (data.kind === 'mushroom_fields') this.unlock('mushroom');
+        else if (data.kind === 'shipwreck') this.unlock('shipwreck');
         break;
       default:
         break;
