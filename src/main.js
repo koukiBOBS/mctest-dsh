@@ -14,6 +14,7 @@ import * as RP from './resourcepack.js';
 import { ChatUI } from './chat.js';
 import { ContainerManager, ContainerUI } from './containers.js';
 import { WeatherManager } from './weather.js';
+import { Achievements } from './achievements.js';
 import { PlayerModel } from './player-model.js';
 
 const $ = (id) => document.getElementById(id);
@@ -40,6 +41,8 @@ const state = {
   containers: null,
   containerUI: null,
   weather: null,
+  achievements: null,
+  discoverTimer: 0,
   playerModel: null,
   thirdPerson: false,
   qualityScale: 1,
@@ -193,6 +196,7 @@ function saveGame() {
       inventory: state.inventory.serialize(),
       containers: state.containers ? state.containers.serialize() : null,
       weather: state.weather ? state.weather.serialize() : null,
+      achievements: state.achievements ? state.achievements.serialize() : [],
       crops: state.world ? state.world.serializeCrops() : [],
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -342,6 +346,11 @@ function startGame(opts = {}) {
   };
   state.chat.log('欢迎来到 Minecraft Web！输入 /help 查看命令，T 键打开聊天。');
 
+  const achievements = new Achievements(game);
+  state.achievements = achievements;
+  game.achievements = achievements;
+  if (save && save.achievements) achievements.load(save.achievements);
+
   const playerModel = new PlayerModel(renderer.scene);
   state.playerModel = playerModel;
   renderer.setThirdPerson(state.thirdPerson);
@@ -362,7 +371,10 @@ function startGame(opts = {}) {
     weather.setType(state.weatherDemo);
   }
   if (state.weatherDemo) weather.timer = 600;
-  state.invUI.onCraft = (res) => showToast('合成：' + itemDisplay(res.id));
+  state.invUI.onCraft = (res) => {
+    showToast('合成：' + itemDisplay(res.id));
+    state.achievements?.onEvent('craft', { id: res.id });
+  };
 
   if (save) {
     if (save.inventory) inventory.deserialize(save.inventory);
@@ -442,6 +454,7 @@ function stopGame(toTitle = true) {
     try { state.weather.clear(); } catch (e) { /* ignore */ }
     state.weather = null;
   }
+  state.achievements = null;
   if (state.playerModel) {
     try { state.playerModel.group.parent && state.playerModel.group.parent.remove(state.playerModel.group); } catch (e) { /* ignore */ }
     state.playerModel = null;
@@ -545,6 +558,20 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.achDemo) {
+        state.achDemo = false;
+        const list = ['wood', 'workbench', 'pickaxe', 'stone', 'iron'];
+        let ai = 0;
+        setTimeout(() => {
+          const timer = setInterval(() => {
+            if (ai >= list.length) {
+              clearInterval(timer);
+              return;
+            }
+            state.achievements?.unlock(list[ai++]);
+          }, 2500);
+        }, 800);
       }
       if (state.waterDemo && state.player) {
         state.waterDemo = false;
@@ -806,6 +833,46 @@ function openContainer(hit) {
   state.containerUI.show(open.key, open.type);
 }
 
+function checkDiscoveries() {
+  const p = state.player;
+  const w = state.world;
+  const ach = state.achievements;
+  if (!p || !w || !ach) return;
+  try {
+    // 村庄：当前及相邻 128 区块
+    const vcx = Math.floor(p.x / 128);
+    const vcz = Math.floor(p.z / 128);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const v = w.getVillage(vcx + dx, vcz + dz);
+        if (v && Math.hypot(v.centerX - p.x, v.centerZ - p.z) < 34) {
+          ach.onEvent('discover', { kind: 'village' });
+          break;
+        }
+      }
+    }
+    // 地牢：已生成的地牢记录
+    for (const d of w.dungeons.values()) {
+      if (Math.hypot(d.x - p.x, d.z - p.z) < 24 && Math.abs(d.y - p.y) < 20) {
+        ach.onEvent('discover', { kind: 'dungeon' });
+        break;
+      }
+    }
+    // 矿洞：当前及相邻 128 区块
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getMineshaft(vcx + dx, vcz + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 36 && Math.abs(m.y - p.y) < 22) {
+          ach.onEvent('discover', { kind: 'mineshaft' });
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
 function spawnDungeonMobs() {
   const p = state.player;
   const w = state.world;
@@ -838,6 +905,7 @@ function sleepInBed(hit) {
   w.time = 60;
   p.health = Math.min(20, p.health + 4);
   p.hunger = Math.min(20, p.hunger + 2);
+  state.achievements?.onEvent('sleep', {});
   state.chat?.log('你睡了一觉，天亮了。出生点已设置到床边。');
   showToast('睡了一觉，天亮了');
   state.sound?.play('open', { volume: 0.4 });
@@ -1435,6 +1503,13 @@ function loop(now) {
       state.world.time += dt;
       state.world.updateCrops(dt);
       state.world.tickWater(dt);
+      state.achievements?.update(dt);
+      if (state.weather && state.weather.isRaining) state.achievements?.onEvent('rain', {});
+      state.discoverTimer += dt;
+      if (state.discoverTimer > 2) {
+        state.discoverTimer = 0;
+        checkDiscoveries();
+      }
       state.saveClock += dt;
       if (state.saveClock > 30) {
         state.saveClock = 0;
@@ -1615,6 +1690,7 @@ function boot() {
   if (params.get('farm') === '1') state.farmDemo = true;
   if (params.get('mineshaft') === '1') state.tpMineshaft = true;
   if (params.get('water') === '1') state.waterDemo = true;
+  if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

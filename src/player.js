@@ -374,8 +374,12 @@ export class Player {
     this.attackCooldown = 0.45;
     const dir = this.forwardVector();
     const dmg = this._attackDamage();
-    const died = this.game.mobs.hit(this.mobTarget, dmg, dir.x * 0.9, dir.z * 0.9);
-    if (died) this.game.sound?.play('pop', { volume: 0.35 });
+    const mob = this.mobTarget;
+    const died = this.game.mobs.hit(mob, dmg, dir.x * 0.9, dir.z * 0.9);
+    if (died) {
+      this.game.sound?.play('pop', { volume: 0.35 });
+      this.game.achievements?.onEvent('kill', { hostile: !!(mob.def && mob.def.hostile) });
+    }
     const held = this.inventory.held;
     if (held) this.inventory.damageHeld(1);
     return true;
@@ -474,6 +478,8 @@ export class Player {
     this.world.setBlock(hit.x, hit.y, hit.z, 0);
     this.game.renderer?.spawnBreakParticles(hit.x, hit.y, hit.z, hit.id);
     this.game.sound?.play(breakSoundName(hit.id), { volume: 0.55 });
+    this.game.achievements?.onEvent('mine', { id: hit.id, name: def.name });
+    if (hit.id === BLOCK.WHEAT_3) this.game.achievements?.onEvent('harvest', {});
     this.game.onInventoryChange?.();
   }
 
@@ -588,6 +594,7 @@ export class Player {
 
     this.world.setBlock(px, py, pz, item.block);
     if (this.mode === 'survival') this.inventory.consumeHeld(1);
+    this.game.achievements?.onEvent('place', { name: placeDef.name });
     this.game.sound?.play(placeSoundName(item.block), { volume: 0.5 });
     this.game.onInventoryChange?.();
   }

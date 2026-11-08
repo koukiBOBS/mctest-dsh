@@ -121,7 +121,7 @@ export class ChatUI {
       switch (cmd) {
         case 'help':
           this.log('命令：/gamemode <survival|creative> · /give <物品> [数量] · /time set <day|night|noon|midnight>');
-          this.log('/tp <x> <y> <z> · /weather <clear|rain|thunder|snow> · /locate village|dungeon|mineshaft');
+          this.log('/tp · /weather · /locate · /achievements · /summon · /give · /gamemode · /seed · /spawn · /kill · /clear');
           break;
         case 'gamemode': {
           const m = (parts[0] || '').toLowerCase();
@@ -189,6 +189,18 @@ export class ChatUI {
           this.game.inventory.notify();
           this.log('背包已清空');
           break;
+        case 'achievements': {
+          const ach = this.game.achievements;
+          if (!ach) {
+            this.log('成就系统尚未加载', 'err');
+            break;
+          }
+          const total = 15;
+          this.log(`成就进度：${ach.unlocked.size}/${total}`);
+          const names = [...ach.unlocked].join(', ') || '（还没有解锁任何成就）';
+          this.log(names);
+          break;
+        }
         case 'locate': {
           const what = (parts[0] || '').toLowerCase();
           if (what === 'village') {

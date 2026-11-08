@@ -90,6 +90,49 @@ body {
   pointer-events: none;
 }
 
+#achievement-popup {
+  position: absolute;
+  top: 23%;
+  left: 50%;
+  transform: translate(-50%, -12px);
+  min-width: 220px;
+  max-width: 80vw;
+  padding: 10px 16px;
+  background: rgba(18, 22, 20, 0.92);
+  border: 2px solid #d8b84a;
+  border-radius: 4px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(255, 226, 120, 0.18);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 22;
+}
+
+#achievement-popup.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.ach-title {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #d8c04a;
+}
+
+.ach-name {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff3c4;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.ach-desc {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #c9d6c4;
+}
+
 #toast {
   position: absolute;
   top: 12%;

@@ -140,6 +140,7 @@ export class ContainerManager {
         if (f.input.count <= 0) f.input = null;
         if (f.output) f.output.count += 1;
         else f.output = stack(outId, 1);
+        if (this.game.achievements) this.game.achievements.onEvent('smelt', { id: outId });
         changed.value = true;
       }
     } else {
