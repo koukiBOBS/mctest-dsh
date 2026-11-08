@@ -130,6 +130,11 @@ export const ITEM_ICON_NAMES = [
   'lava_bucket',
   'fence',
   'emerald',
+  'glass_bottle',
+  'water_bottle',
+  'potion_healing',
+  'potion_strength',
+  'potion_speed',
 ];
 
 /* =====================================================================
@@ -3134,6 +3139,49 @@ const ICON_PAINTERS = {
     fillPoly(b, [[16, 7], [21, 13], [18, 23], [12, 21], [10, 14]], C('#35c476'));
     fillPoly(b, [[15, 10], [19, 13], [16, 18], [13, 14]], C('#7ef0b0'));
     setPx(b, 15, 9, C('#e8fff0'));
+  },
+
+  glass_bottle(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 14], [21, 14], [19, 25], [13, 25]], C('#d8e8f0'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  water_bottle(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#3d7fd6'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  potion_healing(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#e0405a'));
+    setPx(b, 14, 18, C('#ff9aa8'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  potion_strength(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#b8481e'));
+    setPx(b, 14, 18, C('#ffb060'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
+  },
+
+  potion_speed(b, rng) {
+    fillRect(b, 13, 4, 6, 4, C('#b9c4cc'));
+    fillRect(b, 14, 8, 4, 4, C('#c8d4dc'));
+    fillPoly(b, [[9, 12], [23, 12], [21, 27], [11, 27]], C('#a8c4d4'));
+    fillPoly(b, [[11, 16], [21, 16], [19, 25], [13, 25]], C('#2fb8c8'));
+    setPx(b, 14, 18, C('#a8f0ff'));
+    fillRect(b, 12, 3, 8, 2, C('#8a5a2e'));
   },
 
 };

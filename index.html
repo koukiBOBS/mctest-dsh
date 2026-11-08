@@ -17,6 +17,7 @@
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
   <div id="bow-charge" class="hidden"><i></i></div>
+  <div id="effect-timer" class="hidden"></div>
   <div id="debug" class="hidden"></div>
   <div id="toast" class="hidden"></div>
   <div id="hurt-overlay"></div>
@@ -190,6 +191,7 @@
         <p>15. 地下要塞：石砖大厅、十字走廊、端厅宝箱与荧石传送门框架</p>
         <p>16. 村庄里的村民可以右键交易（小麦换绿宝石、绿宝石换面包/钻石）</p>
         <p>17. 挖矿/击杀获得经验；附魔台消耗等级给工具附魔（效率/锋利/耐久）</p>
+        <p>18. 玻璃瓶装水 + 玫瑰/牛肉/羽毛，在酿造台酿治疗/力量/迅捷药水</p>
       </div>
     </div>
     <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>
@@ -221,6 +223,16 @@
     <div id="enchant-held"></div>
     <div id="enchant-offers"></div>
     <div class="trade-hint">消耗经验等级为手持工具/武器附魔（最高 III 级）</div>
+  </div>
+</div>
+
+<!-- ================= 酿造台 ================= -->
+<div id="screen-brew" class="screen hidden">
+  <div class="trade-panel">
+    <div class="inv-header"><span>酿造台</span><button id="brew-close" class="mc-btn small">关闭</button></div>
+    <div id="brew-held"></div>
+    <div id="brew-offers"></div>
+    <div class="trade-hint">需要 1 个水瓶 + 1 个材料（玫瑰 / 牛肉 / 羽毛）</div>
   </div>
 </div>
 

@@ -46,6 +46,7 @@ const state = {
   tradeOpen: false,
   tradeMob: null,
   enchantOpen: false,
+  brewOpen: false,
   villagerTimer: 0,
   playerModel: null,
   thirdPerson: false,
@@ -78,6 +79,74 @@ const TRADES = [
   { cost: { id: 'emerald', count: 3 }, result: { id: 'diamond', count: 1 } },
   { cost: { id: 'coal', count: 12 }, result: { id: 'emerald', count: 1 } },
 ];
+
+const BREWS = [
+  { id: 'potion_healing', name: '治疗药水', ingredient: 'rose', desc: '恢复 6 点生命' },
+  { id: 'potion_strength', name: '力量药水', ingredient: 'beef', desc: '20 秒攻击 +3' },
+  { id: 'potion_speed', name: '迅捷药水', ingredient: 'feather', desc: '20 秒移速 +35%' },
+];
+
+function openBrew() {
+  if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
+  if (state.brewOpen) return;
+  state.brewOpen = true;
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-brew').classList.remove('hidden');
+  renderBrewOffers();
+}
+
+function closeBrew() {
+  if (!state.brewOpen) return;
+  state.brewOpen = false;
+  state.paused = false;
+  $('screen-brew').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+}
+
+function renderBrewOffers() {
+  const heldBox = $('brew-held');
+  const box = $('brew-offers');
+  if (!heldBox || !box || !state.inventory) return;
+  const bottles = state.inventory.countOf('water_bottle');
+  heldBox.textContent = `水瓶 ×${bottles} · 点击下方材料开始酿造`;
+  box.innerHTML = BREWS.map((b, i) => {
+    const ing = state.inventory.iconURL(b.ingredient);
+    const out = state.inventory.iconURL(b.id);
+    const ingCount = state.inventory.countOf(b.ingredient);
+    return `<button class="trade-offer" data-brew="${i}">`
+      + `<img src="${ing}" alt=""><span>×1</span>`
+      + `<span class="trade-arrow">→</span>`
+      + `<img src="${out}" alt=""><span>×1</span>`
+      + `<span class="enchant-desc">${b.name} · ${b.desc}（材料 ${ingCount}）</span>`
+      + `</button>`;
+  }).join('');
+}
+
+function doBrew(index) {
+  const brew = BREWS[index];
+  if (!brew || !state.inventory) return;
+  if (state.inventory.countOf('water_bottle') < 1) {
+    showToast('需要 1 个水瓶');
+    return;
+  }
+  if (state.inventory.countOf(brew.ingredient) < 1) {
+    showToast('材料不足：需要 ' + itemDisplay(brew.ingredient));
+    return;
+  }
+  state.inventory.remove('water_bottle', 1);
+  state.inventory.remove(brew.ingredient, 1);
+  state.inventory.add(brew.id, 1);
+  state.sound?.play('craft', { volume: 0.55 });
+  state.achievements?.onEvent('brew', {});
+  showToast('酿造完成：' + brew.name);
+  updateHUD();
+  renderBrewOffers();
+}
 
 const ENCHANTS = [
   { id: 'efficiency', name: '效率', desc: '挖掘速度 +35%/级', cost: 3, kind: 'tool' },
@@ -462,6 +531,7 @@ function startGame(opts = {}) {
   game.igniteTNT = (x, y, z) => igniteTNT(x, y, z);
   game.openTrade = (mob) => openTrade(mob);
   game.openEnchant = () => openEnchant();
+  game.openBrew = () => openBrew();
 
   const mobs = new MobManager(game, {
     maxMobs: state.isTouch ? 14 : 24,
@@ -718,6 +788,32 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.brewDemo && state.player) {
+        state.brewDemo = false;
+        setTimeout(() => {
+          try {
+            state.inventory.add('water_bottle', 4);
+            state.inventory.add('rose', 8);
+            state.inventory.add('beef', 8);
+            state.inventory.add('feather', 8);
+            state.onInventoryChange?.();
+            openBrew();
+            setTimeout(() => {
+              doBrew(0);
+              setTimeout(() => {
+                closeBrew();
+                state.inventory.setSlot(0, { id: 'potion_speed', count: 1 });
+                state.inventory.selectSlot(0);
+                state.inventory.notify();
+                state.player.secondaryAction();
+                updateHUD();
+              }, 900);
+            }, 1500);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.enchantDemo && state.player) {
         state.enchantDemo = false;
@@ -1382,6 +1478,10 @@ function handleEscape() {
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
     return;
   }
+  if (state.brewOpen) {
+    closeBrew();
+    return;
+  }
   if (state.enchantOpen) {
     closeEnchant();
     return;
@@ -1971,6 +2071,20 @@ function loop(now) {
     state.containerUI?.update(dt);
   }
 
+  const effEl = $('effect-timer');
+  if (effEl) {
+    const eff = [];
+    if (state.player) {
+      if (state.player.strengthTimer > 0) eff.push('力量 ' + Math.ceil(state.player.strengthTimer) + 's');
+      if (state.player.speedTimer > 0) eff.push('迅捷 ' + Math.ceil(state.player.speedTimer) + 's');
+    }
+    if (eff.length) {
+      effEl.textContent = eff.join(' · ');
+      effEl.classList.remove('hidden');
+    } else {
+      effEl.classList.add('hidden');
+    }
+  }
   const bowBar = $('bow-charge');
   if (bowBar) {
     if (state.player && state.player.chargingBow && !state.thirdPerson) {
@@ -2050,6 +2164,13 @@ function bindUI() {
   $('btn-hud-menu').addEventListener('click', () => setPaused(true));
   $('trade-close').addEventListener('click', closeTrade);
   $('enchant-close').addEventListener('click', closeEnchant);
+  $('brew-close').addEventListener('click', closeBrew);
+  $('brew-offers').addEventListener('click', (e) => {
+    const btn = e.target.closest('.trade-offer');
+    if (!btn || btn.disabled) return;
+    const index = Number(btn.dataset.brew);
+    if (Number.isFinite(index)) doBrew(index);
+  });
   $('enchant-offers').addEventListener('click', (e) => {
     const btn = e.target.closest('.trade-offer');
     if (!btn || btn.disabled) return;
@@ -2170,6 +2291,7 @@ function boot() {
   if (params.get('stronghold') === '1') state.tpStronghold = true;
   if (params.get('trade') === '1') state.tradeDemo = true;
   if (params.get('enchant') === '1') state.enchantDemo = true;
+  if (params.get('brew') === '1') state.brewDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

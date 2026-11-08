@@ -62,6 +62,8 @@ export class Player {
     this.bowCharge = 0;
     this.xp = 0;
     this.xpLevel = 0;
+    this.strengthTimer = 0;
+    this.speedTimer = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
     this.breakHeld = false;
@@ -131,6 +133,8 @@ export class Player {
     this._updateMobTarget();
     this._updateBreaking(dt);
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    if (this.strengthTimer > 0) this.strengthTimer = Math.max(0, this.strengthTimer - dt);
+    if (this.speedTimer > 0) this.speedTimer = Math.max(0, this.speedTimer - dt);
     if (this.chargingBow) {
       const held = this.inventory.held;
       if (!held || held.id !== 'bow' || this.dead) {
@@ -172,6 +176,7 @@ export class Player {
     this.sprinting = c.sprint && c.forward && !sneak && !this.inWater;
 
     let speed = this.sneaking ? 1.5 : this.sprinting ? 5.9 : 4.3;
+    if (this.speedTimer > 0) speed *= 1.35;
     if (this.inWater) speed *= 0.65;
     if (this.inLava) speed *= 0.45;
 
@@ -384,6 +389,7 @@ export class Player {
     }
     const held2 = this.inventory.held;
     if (held2 && held2.enchant && held2.enchant.id === 'sharpness') base += held2.enchant.level;
+    if (this.strengthTimer > 0) base += 3;
     return base;
   }
 
@@ -616,6 +622,11 @@ export class Player {
       return;
     }
 
+    if (this.target && this.target.id === BLOCK.BREWING_STAND) {
+      this.game.openBrew?.();
+      return;
+    }
+
     if (this.target && this.target.id === BLOCK.ENCHANTING_TABLE) {
       this.game.openEnchant?.();
       return;
@@ -639,6 +650,35 @@ export class Player {
         this._dropItem('wool_white', wool, this.mobTarget.x, this.mobTarget.y + 0.6, this.mobTarget.z);
         this.inventory.damageHeld(1);
         this.game.sound?.play('click', { volume: 0.45 });
+        this.game.onInventoryChange?.();
+        return;
+      }
+    }
+
+    // 玻璃瓶装水
+    if (heldId === 'glass_bottle') {
+      const dir = this.forwardVector();
+      const hit = this.world.raycast(this.x, this.eyeY(), this.z, dir.x, dir.y, dir.z, 5, true);
+      if (hit && isWaterLike(hit.id)) {
+        this.inventory.consumeHeld(1);
+        this.inventory.add('water_bottle', 1);
+        this.game.sound?.play('splash', { volume: 0.4 });
+        this.game.onInventoryChange?.();
+        return;
+      }
+    }
+
+    // 喝药水
+    if (heldId && heldId.startsWith('potion_')) {
+      const potion = getItem(heldId);
+      if (potion && potion.potion) {
+        if (potion.potion === 'healing') this.health = Math.min(20, this.health + 6);
+        else if (potion.potion === 'strength') this.strengthTimer = 20;
+        else if (potion.potion === 'speed') this.speedTimer = 20;
+        this.inventory.consumeHeld(1);
+        this.inventory.add('glass_bottle', 1);
+        this.game.sound?.play('pop', { volume: 0.6 });
+        this.game.onHealthChange?.();
         this.game.onInventoryChange?.();
         return;
       }

@@ -1443,3 +1443,25 @@ body.touch #xp-bar {
 .trade-offer[disabled] {
   opacity: 0.45;
 }
+
+
+#effect-timer {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 46px);
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  color: #9fe8ff;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#brew-held {
+  margin: 8px 0 2px;
+  font-size: 12px;
+  color: #cfe8c8;
+  text-align: center;
+}

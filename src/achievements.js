@@ -23,6 +23,7 @@ export const ACHIEVEMENTS = [
   { id: 'stronghold', name: '要塞探险家', desc: '发现一座地下要塞' },
   { id: 'trade', name: '讨价还价', desc: '和村民完成一次交易' },
   { id: 'enchant', name: '附魔大师', desc: '在附魔台为物品附魔一次' },
+  { id: 'brew', name: '魔药学家', desc: '在酿造台酿造一瓶药水' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -119,6 +120,9 @@ export class Achievements {
         if (id.startsWith('cooked_')) this.unlock('cook');
         break;
       }
+      case 'brew':
+        this.unlock('brew');
+        break;
       case 'enchant':
         this.unlock('enchant');
         break;

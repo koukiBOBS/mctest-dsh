@@ -66,6 +66,7 @@ export const BLOCK = Object.freeze({
   DOOR_Z_OPEN: 58,
   FENCE: 59,
   ENCHANTING_TABLE: 60,
+  BREWING_STAND: 61,
 });
 
 export const BLOCK_DEFS = [];
@@ -252,6 +253,10 @@ def(BLOCK.ENCHANTING_TABLE, 'enchanting_table', '附魔台', {
   tiles: { top: 'obsidian', bottom: 'obsidian', side: 'oak_planks' },
   hardness: 1.2, sound: 'wood',
 });
+def(BLOCK.BREWING_STAND, 'brewing_stand', '酿造台', {
+  tiles: { top: 'cobble', bottom: 'cobble', side: 'oak_planks' },
+  hardness: 1.0, sound: 'wood',
+});
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },
   hardness: 0.1,
@@ -340,6 +345,11 @@ const EXTRA_ITEMS = {
   door: { display: '门', icon: 'door', block: BLOCK.DOOR_X },
   fence: { display: '栅栏', icon: 'fence', block: BLOCK.FENCE },
   emerald: { display: '绿宝石', icon: 'emerald' },
+  glass_bottle: { display: '玻璃瓶', icon: 'glass_bottle', maxStack: 16 },
+  water_bottle: { display: '水瓶', icon: 'water_bottle', maxStack: 1 },
+  potion_healing: { display: '治疗药水', icon: 'potion_healing', maxStack: 1, potion: 'healing' },
+  potion_strength: { display: '力量药水', icon: 'potion_strength', maxStack: 1, potion: 'strength' },
+  potion_speed: { display: '迅捷药水', icon: 'potion_speed', maxStack: 1, potion: 'speed' },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };
