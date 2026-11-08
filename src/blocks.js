@@ -60,6 +60,10 @@ export const BLOCK = Object.freeze({
   WATER_FLOW_6: 52,
   WATER_FLOW_7: 53,
   TNT: 54,
+  DOOR_X: 55,
+  DOOR_Z: 56,
+  DOOR_X_OPEN: 57,
+  DOOR_Z_OPEN: 58,
 });
 
 export const BLOCK_DEFS = [];
@@ -222,6 +226,22 @@ def(BLOCK.FARMLAND, 'farmland', '耕地', {
   tiles: { top: 'farmland_top', bottom: 'dirt', side: 'farmland_side' },
   hardness: 0.6, sound: 'grass', drop: 'dirt',
 });
+def(BLOCK.DOOR_X, 'door_x', '门', {
+  tiles: { all: 'door' }, model: 'door', doorAxis: 'x', doorOpen: false,
+  solid: true, opaque: false, transparent: true, hardness: 0.4, sound: 'wood', drop: 'door',
+});
+def(BLOCK.DOOR_Z, 'door_z', '门', {
+  tiles: { all: 'door' }, model: 'door', doorAxis: 'z', doorOpen: false,
+  solid: true, opaque: false, transparent: true, hardness: 0.4, sound: 'wood', drop: 'door',
+});
+def(BLOCK.DOOR_X_OPEN, 'door_x_open', '门', {
+  tiles: { all: 'door' }, model: 'door', doorAxis: 'x', doorOpen: true,
+  solid: false, opaque: false, transparent: true, hardness: 0.4, sound: 'wood', drop: 'door',
+});
+def(BLOCK.DOOR_Z_OPEN, 'door_z_open', '门', {
+  tiles: { all: 'door' }, model: 'door', doorAxis: 'z', doorOpen: true,
+  solid: false, opaque: false, transparent: true, hardness: 0.4, sound: 'wood', drop: 'door',
+});
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },
   hardness: 0.1,
@@ -307,6 +327,7 @@ const EXTRA_ITEMS = {
   bucket: { display: '桶', icon: 'bucket', maxStack: 16 },
   water_bucket: { display: '水桶', icon: 'water_bucket', maxStack: 1 },
   lava_bucket: { display: '岩浆桶', icon: 'lava_bucket', maxStack: 1 },
+  door: { display: '门', icon: 'door', block: BLOCK.DOOR_X },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };

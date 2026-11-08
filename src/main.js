@@ -560,6 +560,29 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.doorDemo && state.player) {
+        state.doorDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+            const bx = Math.floor(p.x + f.x * 6);
+            const bz = Math.floor(p.z + f.z * 6);
+            const gy = state.world.getSurfaceY(bx, bz);
+            state.world.setBlock(bx, gy + 1, bz, BLOCK.DOOR_X);
+            state.world.setBlock(bx + 2, gy + 1, bz, BLOCK.DOOR_X_OPEN);
+            state.world.setBlock(bx + 4, gy + 1, bz, BLOCK.DOOR_Z);
+            state.world.setBlock(bx + 4, gy + 1, bz - 2, BLOCK.DOOR_Z_OPEN);
+            state.inventory.setSlot(0, { id: 'door', count: 16 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            state.chat?.log('演示：已放置关闭/打开的门（右键门可开合）');
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
+      }
       if (state.tntDemo && state.player) {
         state.tntDemo = false;
         setTimeout(() => {
@@ -1846,6 +1869,7 @@ function boot() {
   if (params.get('bowdemo') === '1') state.bowDemo = true;
   if (params.get('sheardemo') === '1') state.shearDemo = true;
   if (params.get('tntdemo') === '1') state.tntDemo = true;
+  if (params.get('doordemo') === '1') state.doorDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

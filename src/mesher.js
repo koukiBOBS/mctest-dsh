@@ -189,6 +189,33 @@ function pushCross(buf, lx, ly, lz, wxp, wzp, tileName, light, getLightWorld) {
   }
 }
 
+function pushDoor(buf, lx, ly, lz, axis, open, tileName, light, getLightWorld, wxp, wzp) {
+  const uv = tileUV(tileName);
+  const y0 = 0.02;
+  const y1 = 0.98;
+  let quad;
+  if (!open) {
+    if (axis === 'x') quad = [[0.06, y0, 0.5], [0.94, y0, 0.5], [0.06, y1, 0.5], [0.94, y1, 0.5]];
+    else quad = [[0.5, y0, 0.06], [0.5, y0, 0.94], [0.5, y1, 0.06], [0.5, y1, 0.94]];
+  } else if (axis === 'x') {
+    quad = [[0.06, y0, 0.06], [0.06, y0, 0.94], [0.06, y1, 0.06], [0.06, y1, 0.94]];
+  } else {
+    quad = [[0.06, y0, 0.06], [0.94, y0, 0.06], [0.06, y1, 0.06], [0.94, y1, 0.06]];
+  }
+  const cornerUV = [[0, 0], [1, 0], [0, 1], [1, 1]];
+  const sky = Math.max(0.4, Math.min(1, light));
+  const blockLight = Math.min(1, getLightWorld(wxp, ly, wzp) / 15);
+  const base = buf.count;
+  for (let i = 0; i < 4; i++) {
+    const p = quad[i];
+    buf.positions.push(lx + p[0], ly + p[1], lz + p[2]);
+    buf.lights.push(blockLight, sky, 0.95);
+    buf.uvs.push(uv.u0 + cornerUV[i][0] * (uv.u1 - uv.u0), uv.v0 + cornerUV[i][1] * (uv.v1 - uv.v0));
+  }
+  buf.indices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+  buf.count += 4;
+}
+
 function toGeometry(buf) {
   if (buf.count === 0) return null;
   const g = new THREE.BufferGeometry();
@@ -241,6 +268,12 @@ export function buildChunkGeometry(world, chunk) {
         if (def.cross) {
           pushCross(plants, lx, y, lz, x0 + lx, z0 + lz, def.tiles.all, light, getLightWorld);
           quads += 2;
+          continue;
+        }
+
+        if (def.model === 'door') {
+          pushDoor(plants, lx, y, lz, def.doorAxis, def.doorOpen, def.tiles.all, light, getLightWorld, x0 + lx, z0 + lz);
+          quads += 1;
           continue;
         }
 

@@ -79,6 +79,7 @@ export const TILE_NAMES = [
   'tnt_side',
   'tnt_top',
   'tnt_bottom',
+  'door',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2024,6 +2025,31 @@ const TILE_PAINTERS = {
     ]);
     fillRect(b, 4, 4, 8, 8, C('#6a1c15'));
     fillRect(b, 6, 6, 4, 4, C('#4a120d'));
+  },
+
+  door(b, rng) {
+    noiseFill(b, rng, [
+      ['#a9743f', 6],
+      ['#8a5a2e', 4],
+      ['#b9854c', 3],
+    ]);
+    // 门框
+    vline(b, 0, 15, 0, C('#5f3d1d'));
+    vline(b, 0, 15, 15, C('#5f3d1d'));
+    hline(b, 0, 15, 0, C('#5f3d1d'));
+    hline(b, 0, 15, 15, C('#5f3d1d'));
+    // 上窗
+    fillRect(b, 3, 2, 10, 4, C('#3a2a18'));
+    fillRect(b, 4, 3, 3, 2, C('#6a7f9a'));
+    fillRect(b, 9, 3, 3, 2, C('#6a7f9a'));
+    // 中横档
+    fillRect(b, 1, 7, 14, 2, C('#7d5327'));
+    // 下门板
+    fillRect(b, 3, 10, 10, 4, C('#8a5a2e'));
+    hline(b, 3, 12, 11, C('#6b4423'));
+    // 门把手
+    fillRect(b, 12, 8, 2, 2, C('#3a3a3a'));
+    setPx(b, 12, 8, C('#c8c8c8'));
   },
 
 };

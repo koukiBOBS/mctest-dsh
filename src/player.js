@@ -563,6 +563,20 @@ export class Player {
 
   secondaryAction() {
     if (this.dead) return;
+
+    // 右键开关门
+    if (this.target) {
+      const tdef = getBlockDef(this.target.id);
+      if (tdef.model === 'door') {
+        const nextId = tdef.doorOpen
+          ? (tdef.doorAxis === 'x' ? BLOCK.DOOR_X : BLOCK.DOOR_Z)
+          : (tdef.doorAxis === 'x' ? BLOCK.DOOR_X_OPEN : BLOCK.DOOR_Z_OPEN);
+        this.world.setBlock(this.target.x, this.target.y, this.target.z, nextId);
+        this.game.sound?.play('open', { volume: 0.45, pitch: 0.7 });
+        return;
+      }
+    }
+
     if (this.startBowCharge()) return;
     const held = this.inventory.held;
     const heldItem = held ? getItem(held.id) : null;
@@ -688,7 +702,12 @@ export class Player {
     const placeDef = getBlockDef(item.block);
     if (placeDef.needsSupport && !isSolidBlock(this.world.getBlock(px, py - 1, pz))) return;
 
-    this.world.setBlock(px, py, pz, item.block);
+    let placeId = item.block;
+    if (placeDef.model === 'door') {
+      const alongX = Math.abs(Math.sin(this.yaw)) > Math.abs(Math.cos(this.yaw));
+      placeId = alongX ? BLOCK.DOOR_Z : BLOCK.DOOR_X;
+    }
+    this.world.setBlock(px, py, pz, placeId);
     if (this.mode === 'survival') this.inventory.consumeHeld(1);
     this.game.achievements?.onEvent('place', { name: placeDef.name });
     this.game.sound?.play(placeSoundName(item.block), { volume: 0.5 });
