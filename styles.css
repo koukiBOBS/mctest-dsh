@@ -1025,11 +1025,15 @@ body {
     max-width: 66vw;
   }
   #chat {
-    left: 148px;
-    width: calc(100vw - 300px);
-    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    left: 150px;
+    width: 240px;
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   }
   #chat-log {
-    max-height: 22vh;
+    max-height: 12vh;
+    font-size: 11px;
+  }
+  #held-name {
+    display: none;
   }
 }
