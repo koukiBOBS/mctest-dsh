@@ -157,6 +157,9 @@ export const ITEM_ICON_NAMES = [
   'diamond_leggings',
   'diamond_boots',
   'book',
+  'fishing_rod',
+  'cod',
+  'cooked_cod',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3419,6 +3422,29 @@ const ICON_PAINTERS = {
     hline(b, 11, 21, 12, C('#c8b898'));
     hline(b, 11, 21, 14, C('#c8b898'));
     setPx(b, 20, 6, C('#e8c04a'));
+  },
+
+  fishing_rod(b, rng) {
+    thickLine(b, 7, 26, 24, 6, 2, C('#8a5a2e'));
+    thickLine(b, 24, 6, 22, 14, 1, C('#e8e2d0'));
+    thickLine(b, 22, 14, 17, 20, 1, C('#e8e2d0'));
+    fillRect(b, 15, 20, 3, 3, C('#c8c8c8'));
+    fillRect(b, 10, 24, 4, 3, C('#5f3d1d'));
+  },
+
+  cod(b, rng) {
+    fillPoly(b, [[6, 16], [18, 10], [26, 15], [18, 21]], C('#c8a070'));
+    fillPoly(b, [[12, 15], [20, 12], [23, 16], [16, 19]], C('#e8d0a8'));
+    fillPoly(b, [[26, 15], [30, 11], [30, 19]], C('#a8804a'));
+    setPx(b, 10, 15, C('#1a1a1a'));
+  },
+
+  cooked_cod(b, rng) {
+    fillPoly(b, [[6, 16], [18, 10], [26, 15], [18, 21]], C('#b8762e'));
+    fillPoly(b, [[12, 15], [20, 12], [23, 16], [16, 19]], C('#e0a050'));
+    fillPoly(b, [[26, 15], [30, 11], [30, 19]], C('#8a5218'));
+    setPx(b, 10, 15, C('#1a1a1a'));
+    setPx(b, 16, 13, C('#f0c070'));
   },
 
 };

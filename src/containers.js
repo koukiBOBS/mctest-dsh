@@ -15,6 +15,7 @@ const SMELT_RECIPES = new Map(
     beef: 'cooked_beef',
     porkchop: 'cooked_porkchop',
     chicken: 'cooked_chicken',
+    cod: 'cooked_cod',
     clay_ball: 'brick',
   }),
 );

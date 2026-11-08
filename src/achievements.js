@@ -31,6 +31,7 @@ export const ACHIEVEMENTS = [
   { id: 'dragon', name: '屠龙者', desc: '击败末影龙' },
   { id: 'mansion', name: '豪宅探险', desc: '发现一座林地府邸' },
   { id: 'monument', name: '深海遗迹', desc: '发现一座海底遗迹' },
+  { id: 'fish', name: '钓鱼佬', desc: '钓到第一条鱼' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -115,6 +116,9 @@ export class Achievements {
       case 'kill':
         if (data.hostile) this.unlock('hunter');
         if ((data.kills || 0) >= 10) this.unlock('hunter10');
+        break;
+      case 'fish':
+        this.unlock('fish');
         break;
       case 'dragon':
         this.unlock('dragon');

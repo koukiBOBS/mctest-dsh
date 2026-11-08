@@ -605,6 +605,12 @@ export class Player {
   secondaryAction() {
     if (this.dead) return;
 
+    // 钓竿抛竿
+    if (this.inventory.held && this.inventory.held.id === 'fishing_rod') {
+      this.game.startFishing?.();
+      return;
+    }
+
     // 右键编辑告示牌
     if (this.target && this.target.id === BLOCK.SIGN) {
       this.game.openSignEditor?.(this.target.x, this.target.y, this.target.z);

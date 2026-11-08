@@ -9,7 +9,7 @@ import { Inventory, InventoryUI, makeHudIcons } from './inventory.js';
 import { SoundEngine } from './sound.js';
 import { ItemEntityManager } from './items.js';
 import { MobManager } from './mobs.js';
-import { BLOCK, getBlockDef, itemDisplay, getItem } from './blocks.js';
+import { BLOCK, getBlockDef, itemDisplay, getItem, isWaterLike } from './blocks.js';
 import * as RP from './resourcepack.js';
 import { ChatUI } from './chat.js';
 import { ContainerManager, ContainerUI } from './containers.js';
@@ -48,6 +48,7 @@ const state = {
   enchantOpen: false,
   brewOpen: false,
   signEditing: null,
+  fishing: null,
   inNether: false,
   inEnd: false,
   endReturn: null,
@@ -314,6 +315,48 @@ const BREWS = [
   { id: 'potion_strength', name: '力量药水', ingredient: 'beef', desc: '20 秒攻击 +3' },
   { id: 'potion_speed', name: '迅捷药水', ingredient: 'feather', desc: '20 秒移速 +35%' },
 ];
+
+function startFishing() {
+  const p = state.player;
+  const w = state.world;
+  if (!p || !w || state.fishing) return;
+  const held = p.inventory && p.inventory.held;
+  if (!held || held.id !== 'fishing_rod') return;
+  const dir = p.forwardVector();
+  const hit = w.raycast(p.x, p.eyeY(), p.z, dir.x, dir.y, dir.z, 24, true);
+  if (!hit || !isWaterLike(hit.id)) {
+    showToast('需要对着水面抛竿');
+    return;
+  }
+  state.fishing = { timer: 2.5 + Math.random() * 4 };
+  showToast('抛竿了…');
+  state.sound?.play('splash', { volume: 0.35 });
+}
+
+function finishFishing() {
+  state.fishing = null;
+  const inv = state.inventory;
+  if (!inv) return;
+  const roll = Math.random();
+  let id;
+  let count = 1;
+  if (roll < 0.7) {
+    id = 'cod';
+    count = 1 + Math.floor(Math.random() * 3);
+  } else if (roll < 0.9) {
+    id = ['stick', 'leather', 'bone', 'string'][Math.floor(Math.random() * 4)];
+  } else {
+    id = ['emerald', 'diamond', 'iron_ingot'][Math.floor(Math.random() * 3)];
+  }
+  inv.add(id, count);
+  inv.damageHeld(1);
+  state.sound?.play('splash', { volume: 0.6 });
+  state.chat?.log('🎣 钓到了：' + itemDisplay(id) + ' ×' + count);
+  showToast('钓到了！');
+  state.achievements?.onEvent('fish', {});
+  state.player?.addXp?.(2);
+  updateHUD();
+}
 
 function openSignEditor(x, y, z) {
   if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
@@ -802,6 +845,7 @@ function startGame(opts = {}) {
   game.openEnchant = () => openEnchant();
   game.openBrew = () => openBrew();
   game.openSignEditor = (x, y, z) => openSignEditor(x, y, z);
+  game.startFishing = () => startFishing();
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
 
   const mobs = new MobManager(game, {
@@ -1074,6 +1118,26 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.fishDemo && state.player) {
+        state.fishDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 3);
+            const z = Math.floor(p.z + f.z * 3);
+            const gy = state.world.getSurfaceY(x, z);
+            state.world.setBlock(x, gy + 1, z, BLOCK.WATER);
+            state.inventory.setSlot(0, { id: 'fishing_rod', count: 1, durability: 64 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            p.pitch = -0.5;
+            setTimeout(() => startFishing(), 600);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
       }
       if (state.signDemo && state.player) {
         state.signDemo = false;
@@ -1805,6 +1869,13 @@ function sleepInBed(hit) {
   const w = state.world;
   const p = state.player;
   if (!w || !p || !hit) return;
+  if (state.inNether || state.inEnd) {
+    w.setBlock(hit.x, hit.y, hit.z, 0);
+    explode(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, 5);
+    p.damage(8, '床爆炸了');
+    state.chat?.log('床在非主世界爆炸了！');
+    return;
+  }
   const t = (((w.time % 600) + 600) % 600) / 600;
   const sunElev = Math.sin(t * Math.PI * 2);
   if (sunElev > 0.05) {
@@ -2477,6 +2548,10 @@ function loop(now) {
       state.world.time += dt;
       state.world.updateCrops(dt);
       state.world.tickWater(dt);
+      if (state.fishing) {
+        state.fishing.timer -= dt;
+        if (state.fishing.timer <= 0) finishFishing();
+      }
       if (state.tntTimers && state.tntTimers.length) {
         for (let i = state.tntTimers.length - 1; i >= 0; i--) {
           const timer = state.tntTimers[i];
@@ -2771,6 +2846,7 @@ function boot() {
   if (params.get('mansion') === '1') state.tpMansion = true;
   if (params.get('monument') === '1') state.tpMonument = true;
   if (params.get('sign') === '1') state.signDemo = true;
+  if (params.get('fish') === '1') state.fishDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
