@@ -195,7 +195,7 @@ export class ChatUI {
             this.log('成就系统尚未加载', 'err');
             break;
           }
-          const total = 46;
+          const total = 47;
           this.log(`成就进度：${ach.unlocked.size}/${total}`);
           const names = [...ach.unlocked].join(', ') || '（还没有解锁任何成就）';
           this.log(names);
@@ -207,6 +207,10 @@ export class ChatUI {
             const v = this.game.world.findNearestVillage(p.x, p.z);
             if (!v) this.log('附近没有找到村庄', 'err');
             else this.log(`最近的村庄：${v.centerX}, ${v.floorY}, ${v.centerZ}（约 ${Math.round(Math.hypot(v.centerX - p.x, v.centerZ - p.z))} 格）`);
+          } else if (what === 'treasure') {
+            const m = this.game.world.findNearestTreasure(p.x, p.z);
+            if (!m) this.log('附近没有找到埋藏的宝藏', 'err');
+            else this.log(`埋藏宝藏：${m.x}, ${m.y}, ${m.z}（约 ${Math.round(Math.hypot(m.x - p.x, m.z - p.z))} 格）`);
           } else if (what === 'shipwreck') {
             const m = this.game.world.findNearestShipwreck(p.x, p.z);
             if (!m) this.log('附近没有找到沉船', 'err');
@@ -260,7 +264,7 @@ export class ChatUI {
             if (!d) this.log('附近没有找到地牢', 'err');
             else this.log(`最近的地牢：${d.x}, ${d.y}, ${d.z}（约 ${Math.round(Math.hypot(d.x - p.x, d.z - p.z))} 格）`);
           } else {
-            this.log('用法：/locate village|dungeon|mineshaft|temple|igloo|stronghold|mansion|monument|ruin|city|trial|endcity|fortress|shipwreck', 'err');
+            this.log('用法：/locate village|dungeon|mineshaft|temple|igloo|stronghold|mansion|monument|ruin|city|trial|endcity|fortress|shipwreck|treasure', 'err');
           }
           break;
         }

@@ -204,6 +204,7 @@ export const ITEM_ICON_NAMES = [
   'nether_star',
   'shield',
   'heart_of_the_sea',
+  'treasure_map',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3937,6 +3938,18 @@ const ICON_PAINTERS = {
     fillPoly(b, [[16, 12], [20, 15], [18, 19], [16, 21], [14, 19], [12, 15]], C('#c8f0ff'));
     setPx(b, 16, 15, C('#ffffff'));
     for (let i = 0; i < 6; i++) setPx(b, 9 + ((rng() * 14) | 0), 10 + ((rng() * 14) | 0), C('#a8e8ff'));
+  },
+
+  treasure_map(b, rng) {
+    fillPoly(b, [[3, 6], [29, 6], [27, 27], [5, 27]], C('#d8c8a0'));
+    hline(b, 4, 28, 10, C('#a89060'));
+    hline(b, 4, 28, 18, C('#a89060'));
+    vline(b, 4, 26, 12, C('#a89060'));
+    vline(b, 4, 26, 22, C('#a89060'));
+    // 红色标记
+    fillRect(b, 18, 13, 3, 3, C('#c83030'));
+    fillRect(b, 19, 16, 1, 2, C('#c83030'));
+    for (let i = 0; i < 5; i++) setPx(b, 7 + ((rng() * 18) | 0), 20 + ((rng() * 6) | 0), C('#8a7a50'));
   },
 
 };

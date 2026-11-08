@@ -115,6 +115,7 @@ export class World {
     this.endCities = new Map();
     this.fortresses = new Map();
     this.shipwrecks = new Map();
+    this.treasures = new Map();
     this.ruinCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
@@ -663,6 +664,7 @@ export class World {
   generateStructures(chunk) {
     this.stampVillages(chunk);
     this.stampShipwrecks(chunk);
+    this.stampBuriedTreasures(chunk);
     this.stampDesertTemples(chunk);
     this.stampIgloos(chunk);
     this.stampStrongholds(chunk);
@@ -673,6 +675,74 @@ export class World {
     this.stampTrialChambers(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
+  }
+
+  getBuriedTreasure(cx, cz) {
+    const key = 't' + cx + ',' + cz;
+    if (this.villageCache.has(key)) return this.villageCache.get(key);
+    const h = hash2i(cx, cz, this.seed + 6300);
+    if (h > 0.035) {
+      this.villageCache.set(key, null);
+      return null;
+    }
+    const x = cx * CHUNK_SX + 8;
+    const z = cz * CHUNK_SZ + 8;
+    const info = this.columnInfo(x, z);
+    const treasure = info.biome === 'beach' ? { x, z, y: info.height - 2 } : null;
+    this.villageCache.set(key, treasure);
+    return treasure;
+  }
+
+  stampBuriedTreasures(chunk) {
+    const ccx = chunk.cx;
+    const ccz = chunk.cz;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const t = this.getBuriedTreasure(ccx + dx, ccz + dz);
+        if (t) this.stampBuriedTreasure(chunk, t);
+      }
+    }
+  }
+
+  stampBuriedTreasure(chunk, t) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    if (x1 < t.x - 1 || x0 > t.x + 1 || z1 < t.z - 1 || z0 > t.z + 1) return;
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    set(t.x, t.y, t.z, BLOCK.CHEST);
+    set(t.x, t.y + 1, t.z, BLOCK.SAND);
+    set(t.x, t.y + 2, t.z, BLOCK.SAND);
+    const key = t.x + ',' + t.y + ',' + t.z;
+    if (!this.structureChests.has(key)) {
+      this.structureChests.set(key, [
+        { id: 'heart_of_the_sea', count: 1 },
+        { id: 'gold_ingot', count: 3 + Math.floor(hash2i(t.x, t.z, this.seed + 6310) * 4) },
+        { id: 'emerald', count: 2 + Math.floor(hash2i(t.x, t.z, this.seed + 6311) * 4) },
+        { id: 'iron_ingot', count: 2 + Math.floor(hash2i(t.x, t.z, this.seed + 6312) * 3) },
+      ]);
+    }
+    this.treasures.set(t.x + ',' + t.z, { x: t.x, y: t.y, z: t.z });
+  }
+
+  findNearestTreasure(px, pz) {
+    let best = null;
+    let bestD = Infinity;
+    const ccx = Math.floor(px / CHUNK_SX);
+    const ccz = Math.floor(pz / CHUNK_SZ);
+    for (let dx = -16; dx <= 16; dx++) {
+      for (let dz = -16; dz <= 16; dz++) {
+        const t = this.getBuriedTreasure(ccx + dx, ccz + dz);
+        if (!t) continue;
+        const d = Math.hypot(t.x - px, t.z - pz);
+        if (d < bestD) {
+          bestD = d;
+          best = t;
+        }
+      }
+    }
+    return best;
   }
 
   getShipwreck(cx, cz) {
@@ -753,6 +823,7 @@ export class World {
         { id: 'iron_ingot', count: 2 + Math.floor(hash2i(cx, cz, this.seed + 6201) * 3) },
         { id: 'gold_ingot', count: 1 + Math.floor(hash2i(cx, cz, this.seed + 6202) * 2) },
         { id: 'cooked_cod', count: 2 },
+        { id: 'treasure_map', count: 1 },
       ]);
     }
     this.shipwrecks.set(v.x + ',' + v.z, { x: v.x, y, z: v.z });

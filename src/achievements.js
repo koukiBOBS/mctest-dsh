@@ -49,6 +49,7 @@ export const ACHIEVEMENTS = [
   { id: 'shield', name: '坚盾', desc: '举起盾牌格挡' },
   { id: 'shipwreck', name: '沉船宝藏', desc: '发现一艘沉船' },
   { id: 'crit', name: '暴击', desc: '在下落时打出一次暴击' },
+  { id: 'treasure', name: '宝藏猎人', desc: '找到埋藏的宝藏' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -219,6 +220,7 @@ export class Achievements {
         else if (data.kind === 'nether_fortress') this.unlock('nether_fortress');
         else if (data.kind === 'mushroom_fields') this.unlock('mushroom');
         else if (data.kind === 'shipwreck') this.unlock('shipwreck');
+        else if (data.kind === 'treasure') this.unlock('treasure');
         break;
       default:
         break;

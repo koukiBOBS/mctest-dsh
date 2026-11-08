@@ -417,6 +417,19 @@ function closeLectern() {
   if (state.isTouch) hideTouch(false);
 }
 
+function useTreasureMap() {
+  const p = state.player;
+  if (!p || !state.world) return;
+  const t = state.world.findNearestTreasure(p.x, p.z);
+  if (!t) {
+    state.chat?.log('藏宝图上没有新的标记');
+    return;
+  }
+  state.chat?.log('藏宝图指向：' + t.x + ', ' + t.y + ', ' + t.z
+    + '（约 ' + Math.round(Math.hypot(t.x - p.x, t.z - p.z)) + ' 格）');
+  state.sound?.play('craft', { volume: 0.4 });
+}
+
 function openAchievements() {
   if (!state.running || state.loading || !state.player) return;
   if (state.achievementsOpen) return;
@@ -1225,6 +1238,7 @@ function startGame(opts = {}) {
   game.trySummonGolem = (x, y, z) => trySummonGolem(x, y, z);
   game.trySummonWither = (x, y, z) => trySummonWither(x, y, z);
   game.openBeacon = () => openBeacon();
+  game.useTreasureMap = () => useTreasureMap();
   game.onBlockMined = () => { state.stats.blocks += 1; };
   game.onMobKilled = () => { state.stats.mobs += 1; };
   game.onPlayerDeath = () => { state.stats.deaths += 1; };
@@ -1505,6 +1519,27 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.treasureDemo && state.player) {
+        state.treasureDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const t = state.world.findNearestTreasure(p.x, p.z);
+            if (t) {
+              state.world.setBlock(t.x, t.y + 1, t.z, 0);
+              state.world.setBlock(t.x, t.y + 2, t.z, 0);
+              p.setPosition(t.x + 1.5, t.y + 2.2, t.z + 2.5);
+              p.yaw = Math.atan2(-1.5, -2.5);
+              p.pitch = 0.55;
+              state.chat?.log('演示：挖开了埋藏的宝藏');
+            } else {
+              state.chat?.log('演示：附近没有埋藏宝藏');
+            }
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.shipwreckDemo && state.player) {
         state.shipwreckDemo = false;
@@ -2570,6 +2605,15 @@ function checkDiscoveries() {
         const m = w.getIgloo(vcx + dx, vcz + dz);
         if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
           ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
+      }
+    }
+    // 埋藏宝藏
+    if (w.treasures) {
+      for (const t of w.treasures.values()) {
+        if (Math.hypot(t.x - p.x, t.z - p.z) < 12) {
+          ach.onEvent('discover', { kind: 'treasure' });
           break;
         }
       }
@@ -3802,6 +3846,7 @@ function boot() {
   if (params.get('achievements') === '1') state.achievementsDemo = true;
   if (params.get('shield') === '1') state.shieldDemo = true;
   if (params.get('shipwreck') === '1') state.shipwreckDemo = true;
+  if (params.get('treasure') === '1') state.treasureDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
