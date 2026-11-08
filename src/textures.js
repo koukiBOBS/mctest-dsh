@@ -179,6 +179,10 @@ export const ITEM_ICON_NAMES = [
   'potion_fire_resist',
   'potion_night_vision',
   'potion_jump',
+  'pumpkin_pie',
+  'golden_apple',
+  'mutton',
+  'cooked_mutton',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3677,6 +3681,35 @@ const ICON_PAINTERS = {
     fillPoly(b, [[23, 9], [18, 12], [17, 23], [22, 21], [24, 14]], C('#8a7a9a'));
     fillRect(b, 14, 4, 4, 8, C('#4a3a5a'));
     setPx(b, 14, 12, C('#c8b8d8'));
+  },
+
+  pumpkin_pie(b, rng) {
+    fillPoly(b, [[5, 18], [16, 6], [27, 18], [16, 28]], C('#d8a050'));
+    fillPoly(b, [[8, 18], [16, 10], [24, 18], [16, 24]], C('#e8b860'));
+    fillRect(b, 14, 12, 4, 4, C('#c87a1e'));
+    for (let i = 0; i < 6; i++) setPx(b, 9 + ((rng() * 14) | 0), 15 + ((rng() * 8) | 0), C('#f0d080'));
+  },
+
+  golden_apple(b, rng) {
+    fillPoly(b, [[16, 6], [24, 10], [25, 20], [16, 27], [7, 20], [8, 10]], C('#d8b02a'));
+    fillPoly(b, [[16, 9], [22, 12], [22, 19], [16, 24], [10, 19], [10, 12]], C('#f0d04a'));
+    fillRect(b, 15, 3, 2, 6, C('#6a4a20'));
+    fillRect(b, 17, 4, 5, 3, C('#4a8a3a'));
+    setPx(b, 13, 11, C('#fff0a0'));
+  },
+
+  mutton(b, rng) {
+    fillPoly(b, [[7, 14], [13, 8], [22, 8], [26, 14], [22, 23], [11, 24]], C('#c85a5a'));
+    fillPoly(b, [[10, 15], [15, 11], [20, 12], [22, 17], [18, 21], [12, 20]], C('#e07a7a'));
+    fillRect(b, 20, 14, 4, 3, C('#f0e8d0'));
+    setPx(b, 13, 15, C('#f0a0a0'));
+  },
+
+  cooked_mutton(b, rng) {
+    fillPoly(b, [[7, 14], [13, 8], [22, 8], [26, 14], [22, 23], [11, 24]], C('#8a5a32'));
+    fillPoly(b, [[10, 15], [15, 11], [20, 12], [22, 17], [18, 21], [12, 20]], C('#b87a42'));
+    fillRect(b, 20, 14, 4, 3, C('#f0e8d0'));
+    setPx(b, 13, 15, C('#e0a060'));
   },
 
 };

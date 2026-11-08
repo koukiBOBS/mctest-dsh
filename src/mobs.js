@@ -103,7 +103,7 @@ export const MOB_TYPES = {
     height: 1.2,
     health: 8,
     speed: 0.95,
-    drops: [{ id: 'wool_white', min: 1, max: 1 }],
+    drops: [{ id: 'wool_white', min: 1, max: 1 }, { id: 'mutton', min: 1, max: 2 }],
     colors: { wool: 0xf1f1e8, face: 0xe3ddcf, leg: 0xcfcabb, dark: 0xb8b2a4, eye: 0x1d1b19 },
   },
   cow: {
@@ -814,7 +814,8 @@ export class MobManager {
     this._applyPhysics(mob, dt);
     if (mob.removed) return;
 
-    this._animateMob(mob, dt);
+    const playerDist = player ? Math.hypot(mob.x - player.x, mob.z - player.z) : 0;
+    if (playerDist <= 36) this._animateMob(mob, dt);
     this._updateTint(mob);
 
     // 羊被剪毛后会吃草快速长回羊毛
@@ -923,7 +924,8 @@ export class MobManager {
     }
     this._applyPhysics(mob, dt);
     if (mob.removed) return;
-    this._animateMob(mob, dt);
+    const playerDist = player ? Math.hypot(mob.x - player.x, mob.z - player.z) : 0;
+    if (playerDist <= 36) this._animateMob(mob, dt);
     this._updateTint(mob);
   }
 
