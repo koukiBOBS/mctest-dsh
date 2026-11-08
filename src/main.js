@@ -302,6 +302,7 @@ function startGame(opts = {}) {
   game.items = items;
   game.dropItem = (id, x, y, z, count = 1) => items.spawn(id, x, y, z, count);
   game.explode = (x, y, z, power = 3) => explode(x, y, z, power);
+  game.igniteTNT = (x, y, z) => igniteTNT(x, y, z);
 
   const mobs = new MobManager(game, {
     maxMobs: state.isTouch ? 14 : 24,
@@ -558,6 +559,28 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.tntDemo && state.player) {
+        state.tntDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+            const bx = Math.floor(p.x + f.x * 5);
+            const bz = Math.floor(p.z + f.z * 5);
+            const gy0 = state.world.getSurfaceY(bx, bz);
+            for (let i = -1; i <= 1; i++) {
+              const x = bx + Math.round(right.x * i * 2);
+              const z = bz + Math.round(right.z * i * 2);
+              const gy = (x === bx && z === bz) ? gy0 : state.world.getSurfaceY(x, z);
+              state.world.setBlock(x, gy + 1, z, BLOCK.TNT);
+            }
+            igniteTNT(bx, gy0 + 1, bz);
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
       }
       if (state.shearDemo && state.player) {
         state.shearDemo = false;
@@ -1514,10 +1537,25 @@ function updatePackStatus() {
 }
 
 // ---------------- 苦力怕爆炸 ----------------
+function scheduleTNT(x, y, z, delay) {
+  state.tntTimers = state.tntTimers || [];
+  state.tntTimers.push({ x, y, z, t: delay });
+}
+
+function igniteTNT(x, y, z) {
+  const world = state.world;
+  if (!world || world.getBlock(x, y, z) !== BLOCK.TNT) return false;
+  scheduleTNT(x, y, z, 2.6);
+  state.sound?.play('click', { volume: 0.5 });
+  state.chat?.log('TNT 已点燃！');
+  return true;
+}
+
 function explode(cx, cy, cz, power = 3) {
   const world = state.world;
   if (!world) return;
   const r = Math.ceil(power);
+  const chain = [];
   for (let dx = -r; dx <= r; dx++) {
     for (let dy = -r; dy <= r; dy++) {
       for (let dz = -r; dz <= r; dz++) {
@@ -1530,6 +1568,10 @@ function explode(cx, cy, cz, power = 3) {
         if (!id) continue;
         const def = getBlockDef(id);
         if (!isFinite(def.hardness)) continue;
+        if (id === BLOCK.TNT) {
+          chain.push({ x, y, z });
+          continue;
+        }
         if (Math.random() < 1 - dist / (power + 0.4)) world.setBlock(x, y, z, 0);
       }
     }
@@ -1541,6 +1583,9 @@ function explode(cx, cy, cz, power = 3) {
         BLOCK.STONE,
       );
     }
+  }
+  for (const t of chain) {
+    if (world.getBlock(t.x, t.y, t.z) === BLOCK.TNT) scheduleTNT(t.x, t.y, t.z, 0.25 + Math.random() * 0.9);
   }
   state.sound?.play('break_glass', { volume: 0.9 });
   const p = state.player;
@@ -1589,6 +1634,17 @@ function loop(now) {
       state.world.time += dt;
       state.world.updateCrops(dt);
       state.world.tickWater(dt);
+      if (state.tntTimers && state.tntTimers.length) {
+        for (let i = state.tntTimers.length - 1; i >= 0; i--) {
+          const timer = state.tntTimers[i];
+          timer.t -= dt;
+          if (timer.t > 0) continue;
+          state.tntTimers.splice(i, 1);
+          if (state.world.getBlock(timer.x, timer.y, timer.z) !== BLOCK.TNT) continue;
+          state.world.setBlock(timer.x, timer.y, timer.z, 0);
+          explode(timer.x + 0.5, timer.y + 0.5, timer.z + 0.5, 4);
+        }
+      }
       state.achievements?.update(dt);
       if (state.weather && state.weather.isRaining) state.achievements?.onEvent('rain', {});
       state.discoverTimer += dt;
@@ -1789,6 +1845,7 @@ function boot() {
   if (params.get('temple') === '1') state.tpTemple = true;
   if (params.get('bowdemo') === '1') state.bowDemo = true;
   if (params.get('sheardemo') === '1') state.shearDemo = true;
+  if (params.get('tntdemo') === '1') state.tntDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

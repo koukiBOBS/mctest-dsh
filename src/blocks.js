@@ -59,6 +59,7 @@ export const BLOCK = Object.freeze({
   WATER_FLOW_5: 51,
   WATER_FLOW_6: 52,
   WATER_FLOW_7: 53,
+  TNT: 54,
 });
 
 export const BLOCK_DEFS = [];
@@ -220,6 +221,11 @@ def(BLOCK.BED, 'bed', '床', {
 def(BLOCK.FARMLAND, 'farmland', '耕地', {
   tiles: { top: 'farmland_top', bottom: 'dirt', side: 'farmland_side' },
   hardness: 0.6, sound: 'grass', drop: 'dirt',
+});
+def(BLOCK.TNT, 'tnt', 'TNT', {
+  tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },
+  hardness: 0.1,
+  sound: 'grass',
 });
 for (let level = 1; level <= 7; level++) {
   def(BLOCK.WATER_FLOW_1 + level - 1, 'water_flow_' + level, '流动的水', {

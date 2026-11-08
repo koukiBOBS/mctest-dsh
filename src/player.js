@@ -568,6 +568,12 @@ export class Player {
     const heldItem = held ? getItem(held.id) : null;
     const heldId = held ? held.id : null;
 
+    // 燧石点燃 TNT
+    if (heldId === 'flint' && this.target && this.target.id === BLOCK.TNT) {
+      this.game.igniteTNT?.(this.target.x, this.target.y, this.target.z);
+      return;
+    }
+
     // 剪刀剪羊毛
     if (heldId === 'shears' && this.mobTarget && this.mobTarget.type === 'sheep') {
       const wool = this.game.mobs?.shearSheep?.(this.mobTarget) || 0;

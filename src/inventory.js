@@ -599,7 +599,7 @@ function ITEMS_FOR_CREATIVE() {
     'spruce_log', 'spruce_leaves', 'spruce_planks',
     'glass', 'water', 'bedrock', 'clay', 'cactus',
     'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'snow', 'ice',
-    'crafting_table', 'furnace', 'chest', 'bed', 'farmland', 'torch', 'rose', 'dandelion', 'tall_grass',
+    'crafting_table', 'furnace', 'chest', 'bed', 'farmland', 'torch', 'tnt', 'rose', 'dandelion', 'tall_grass',
     'stone_bricks', 'obsidian', 'glowstone', 'lava', 'wool_white', 'brick',
     'stick', 'coal', 'iron_ingot', 'gold_ingot', 'diamond', 'apple', 'clay_ball',
     'beef', 'cooked_beef', 'porkchop', 'cooked_porkchop', 'chicken', 'cooked_chicken', 'wheat_seeds', 'wheat',

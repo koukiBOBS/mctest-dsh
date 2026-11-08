@@ -22,6 +22,7 @@ export const RECIPES = [
   { id: 'torch', pattern: ['C', 'S'], keys: { C: 'coal', S: 'stick' }, result: { id: 'torch', count: 4 } },
   { id: 'bow', pattern: [' SC', 'S C', ' SC'], keys: { S: 'stick', C: 'string' }, result: { id: 'bow', count: 1 } },
   { id: 'arrow', pattern: ['F', 'S', 'E'], keys: { F: 'flint', S: 'stick', E: 'feather' }, result: { id: 'arrow', count: 4 } },
+  { id: 'tnt', pattern: ['GSG', 'SGS', 'GSG'], keys: { G: 'gunpowder', S: 'sand' }, result: { id: 'tnt', count: 1 } },
   { id: 'shears', pattern: [' I', 'I '], keys: { I: 'iron_ingot' }, result: { id: 'shears', count: 1 } },
   { id: 'bucket', pattern: ['I I', ' I '], keys: { I: 'iron_ingot' }, result: { id: 'bucket', count: 1 } },
 

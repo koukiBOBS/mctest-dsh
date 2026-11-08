@@ -76,6 +76,9 @@ export const TILE_NAMES = [
   'wheat_stage1',
   'wheat_stage2',
   'wheat_stage3',
+  'tnt_side',
+  'tnt_top',
+  'tnt_bottom',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -1978,6 +1981,49 @@ const TILE_PAINTERS = {
       setPx(b, x, 1, C('#efd45c'));
       setPx(b, x + 1, 3, C('#c4a232'));
     }
+  },
+
+  tnt_side(b, rng) {
+    noiseFill(b, rng, [
+      ['#b83a2e', 6],
+      ['#a83227', 5],
+      ['#c9483a', 3],
+    ]);
+    fillRect(b, 0, 6, 16, 5, C('#e8e4d8'));
+    // TNT 字样
+    const ink = C('#232323');
+    fillRect(b, 2, 7, 3, 1, ink);
+    fillRect(b, 3, 7, 1, 4, ink);
+    fillRect(b, 6, 7, 1, 4, ink);
+    fillRect(b, 7, 7, 1, 1, ink);
+    fillRect(b, 8, 8, 1, 2, ink);
+    fillRect(b, 9, 7, 1, 4, ink);
+    fillRect(b, 11, 7, 3, 1, ink);
+    fillRect(b, 12, 7, 1, 4, ink);
+    hline(b, 0, 15, 11, C('#7e2319'));
+    hline(b, 0, 15, 12, C('#cf5a48'));
+  },
+
+  tnt_top(b, rng) {
+    noiseFill(b, rng, [
+      ['#b83a2e', 6],
+      ['#a83227', 4],
+      ['#c9483a', 3],
+    ]);
+    fillRect(b, 5, 5, 6, 6, C('#e8e4d8'));
+    fillRect(b, 6, 6, 4, 4, C('#8a8a8a'));
+    fillRect(b, 7, 7, 2, 2, C('#3a3a3a'));
+    setPx(b, 8, 4, C('#d8d8d8'));
+  },
+
+  tnt_bottom(b, rng) {
+    noiseFill(b, rng, [
+      ['#8e2a20', 6],
+      ['#7a231b', 4],
+      ['#9c3227', 3],
+    ]);
+    fillRect(b, 4, 4, 8, 8, C('#6a1c15'));
+    fillRect(b, 6, 6, 4, 4, C('#4a120d'));
   },
 
 };
