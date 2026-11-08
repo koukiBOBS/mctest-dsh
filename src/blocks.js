@@ -76,6 +76,7 @@ export const BLOCK = Object.freeze({
   PRISMARINE: 68,
   SEA_LANTERN: 69,
   BOOKSHELF: 70,
+  SIGN: 71,
 });
 
 export const BLOCK_DEFS = [];
@@ -295,6 +296,10 @@ def(BLOCK.SEA_LANTERN, 'sea_lantern', '海晶灯', {
 });
 def(BLOCK.BOOKSHELF, 'bookshelf', '书架', {
   tiles: { all: 'bookshelf' }, hardness: 1.5, sound: 'wood',
+});
+def(BLOCK.SIGN, 'sign', '告示牌', {
+  tiles: { all: 'sign' }, model: 'sign',
+  solid: false, opaque: false, transparent: true, hardness: 0.5, sound: 'wood', drop: 'sign',
 });
 def(BLOCK.TNT, 'tnt', 'TNT', {
   tiles: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' },

@@ -1516,3 +1516,40 @@ body.touch #xp-bar {
   background: linear-gradient(#c86aff, #7a2ac8);
   transition: width 0.15s linear;
 }
+
+
+/* ---------------- 告示牌 ---------------- */
+#sign-label {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 34px);
+  transform: translateX(-50%);
+  max-width: 70vw;
+  padding: 4px 10px;
+  background: rgba(20, 16, 10, 0.82);
+  border: 1px solid #8a6a3a;
+  border-radius: 3px;
+  color: #f0e2b8;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-line;
+  text-align: center;
+  pointer-events: none;
+}
+
+#sign-input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 8px;
+  background: #1e1e1e;
+  color: #f0e2b8;
+  border: 2px solid #666;
+  border-radius: 3px;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+#sign-save {
+  width: 100%;
+}

@@ -18,6 +18,7 @@
   <div id="crosshair"></div>
   <div id="bow-charge" class="hidden"><i></i></div>
   <div id="effect-timer" class="hidden"></div>
+  <div id="sign-label" class="hidden"></div>
   <div id="boss-bar" class="hidden">
     <div class="boss-name">末影龙</div>
     <div class="boss-track"><i id="boss-fill"></i></div>
@@ -206,6 +207,7 @@
         <p>26. 森林里藏着三层林地府邸，每层都有宝箱（/locate mansion）</p>
         <p>27. 海里藏着海晶石海底遗迹，地表有废弃传送门（/locate monument / ruin）</p>
         <p>28. 村民有农民/图书管理员/铁匠三种职业，交易内容各不相同</p>
+        <p>29. 告示牌放置后右键编辑文字，看它时会显示在屏幕下方</p>
       </div>
     </div>
     <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>
@@ -247,6 +249,15 @@
     <div id="brew-held"></div>
     <div id="brew-offers"></div>
     <div class="trade-hint">需要 1 个水瓶 + 1 个材料（玫瑰 / 牛肉 / 羽毛）</div>
+  </div>
+</div>
+
+<!-- ================= 告示牌编辑 ================= -->
+<div id="screen-sign" class="screen hidden">
+  <div class="trade-panel">
+    <div class="inv-header"><span>编辑告示牌</span><button id="sign-close" class="mc-btn small">关闭</button></div>
+    <textarea id="sign-input" maxlength="120" rows="3" placeholder="输入文字（最多 120 字）"></textarea>
+    <button id="sign-save" class="mc-btn primary">保存</button>
   </div>
 </div>
 

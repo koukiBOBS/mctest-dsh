@@ -310,6 +310,14 @@ export function buildChunkGeometry(world, chunk) {
           continue;
         }
 
+        if (def.model === 'sign') {
+          // 木柱 + 面板
+          pushBoxFaces(plants, lx, y, lz, 0.44, 0, 0.44, 0.56, 0.55, 0.56, 'oak_planks', light, getLightWorld, x0 + lx, z0 + lz);
+          pushBoxFaces(plants, lx, y, lz, 0.12, 0.45, 0.44, 0.88, 0.95, 0.56, def.tiles.all, light, getLightWorld, x0 + lx, z0 + lz);
+          quads += 12;
+          continue;
+        }
+
         if (def.model === 'fence') {
           pushFence(plants, lx, y, lz, def.tiles.all, light, getLightWorld, x0 + lx, z0 + lz);
           quads += 6;

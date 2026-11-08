@@ -47,6 +47,7 @@ const state = {
   tradeMob: null,
   enchantOpen: false,
   brewOpen: false,
+  signEditing: null,
   inNether: false,
   inEnd: false,
   endReturn: null,
@@ -313,6 +314,38 @@ const BREWS = [
   { id: 'potion_strength', name: '力量药水', ingredient: 'beef', desc: '20 秒攻击 +3' },
   { id: 'potion_speed', name: '迅捷药水', ingredient: 'feather', desc: '20 秒移速 +35%' },
 ];
+
+function openSignEditor(x, y, z) {
+  if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
+  state.signEditing = { x, y, z };
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-sign').classList.remove('hidden');
+  const input = $('sign-input');
+  if (input) {
+    input.value = state.world ? state.world.getSign(x, y, z) : '';
+    setTimeout(() => input.focus(), 80);
+  }
+}
+
+function closeSignEditor(save) {
+  if (!state.signEditing) return;
+  const pos = state.signEditing;
+  state.signEditing = null;
+  if (save && state.world) {
+    const text = $('sign-input') ? $('sign-input').value : '';
+    state.world.setSign(pos.x, pos.y, pos.z, text);
+    showToast(text ? '告示牌已保存' : '告示牌已清空');
+  }
+  state.paused = false;
+  $('screen-sign').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+  saveGame();
+}
 
 function openBrew() {
   if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
@@ -659,6 +692,7 @@ function saveGame() {
       weather: state.weather ? state.weather.serialize() : null,
       achievements: state.achievements ? state.achievements.serialize() : [],
       crops: state.world ? state.world.serializeCrops() : [],
+      signs: state.world ? state.world.serializeSigns() : [],
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     return true;
@@ -767,6 +801,7 @@ function startGame(opts = {}) {
   game.openTrade = (mob) => openTrade(mob);
   game.openEnchant = () => openEnchant();
   game.openBrew = () => openBrew();
+  game.openSignEditor = (x, y, z) => openSignEditor(x, y, z);
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
 
   const mobs = new MobManager(game, {
@@ -800,6 +835,7 @@ function startGame(opts = {}) {
   game.sleepInBed = (hit) => sleepInBed(hit);
   if (save && save.containers) containers.load(save.containers);
   if (save && save.crops) world.loadCrops(save.crops);
+  if (save && save.signs) world.loadSigns(save.signs);
   state.invUI = new InventoryUI(inventory, {
     sound: state.sound,
     onClose: onInventoryClosed,
@@ -1038,6 +1074,26 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.signDemo && state.player) {
+        state.signDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 4);
+            const z = Math.floor(p.z + f.z * 4);
+            const gy = state.world.getSurfaceY(x, z);
+            state.world.setBlock(x, gy + 1, z, BLOCK.SIGN);
+            state.world.setSign(x, gy + 1, z, 'Minecraft Web\n右键可以编辑告示牌');
+            state.inventory.setSlot(0, { id: 'sign', count: 8 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            state.chat?.log('演示：已放置告示牌（右键可编辑）');
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
       }
       if (state.dragonDemo && state.player) {
         state.dragonDemo = false;
@@ -1838,6 +1894,10 @@ function handleEscape() {
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
     return;
   }
+  if (state.signEditing) {
+    closeSignEditor(true);
+    return;
+  }
   if (state.brewOpen) {
     closeBrew();
     return;
@@ -2467,6 +2527,17 @@ function loop(now) {
       effEl.classList.add('hidden');
     }
   }
+  const signLabel = $('sign-label');
+  if (signLabel) {
+    const target = state.player && state.player.target;
+    const signText = target && target.id === BLOCK.SIGN && state.world ? state.world.getSign(target.x, target.y, target.z) : '';
+    if (signText) {
+      signLabel.textContent = signText;
+      signLabel.classList.remove('hidden');
+    } else {
+      signLabel.classList.add('hidden');
+    }
+  }
   const bossBar = $('boss-bar');
   if (bossBar) {
     const dragon = state.mobs && state.mobs.mobs ? state.mobs.mobs.find((m) => m.type === 'ender_dragon' && !m.removed) : null;
@@ -2562,6 +2633,8 @@ function bindUI() {
   $('trade-close').addEventListener('click', closeTrade);
   $('enchant-close').addEventListener('click', closeEnchant);
   $('brew-close').addEventListener('click', closeBrew);
+  $('sign-close').addEventListener('click', () => closeSignEditor(false));
+  $('sign-save').addEventListener('click', () => closeSignEditor(true));
   $('brew-offers').addEventListener('click', (e) => {
     const btn = e.target.closest('.trade-offer');
     if (!btn || btn.disabled) return;
@@ -2697,6 +2770,7 @@ function boot() {
   if (params.get('dragon') === '1') state.dragonDemo = true;
   if (params.get('mansion') === '1') state.tpMansion = true;
   if (params.get('monument') === '1') state.tpMonument = true;
+  if (params.get('sign') === '1') state.signDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;

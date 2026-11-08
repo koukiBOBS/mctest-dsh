@@ -106,6 +106,7 @@ export class World {
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.crops = new Map(); // "x,y,z" -> 下次生长时间
+    this.signs = new Map(); // "x,y,z" -> 文本
     this.waterQueue = new Set();
     this.waterTimer = 0;
     this._cropClock = 0;
@@ -1708,6 +1709,30 @@ export class World {
     for (const item of list) {
       if (!Array.isArray(item) || item.length < 4) continue;
       this.crops.set(item[0] + ',' + item[1] + ',' + item[2], item[3]);
+    }
+  }
+
+  setSign(x, y, z, text) {
+    const key = x + ',' + y + ',' + z;
+    if (text && text.trim()) this.signs.set(key, String(text).slice(0, 120));
+    else this.signs.delete(key);
+  }
+
+  getSign(x, y, z) {
+    return this.signs.get(x + ',' + y + ',' + z) || '';
+  }
+
+  serializeSigns() {
+    return [...this.signs.entries()];
+  }
+
+  loadSigns(list) {
+    if (!Array.isArray(list)) return;
+    this.signs.clear();
+    for (const item of list) {
+      if (Array.isArray(item) && item.length >= 2 && typeof item[1] === 'string') {
+        this.signs.set(item[0], item[1]);
+      }
     }
   }
 

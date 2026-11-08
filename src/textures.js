@@ -88,6 +88,7 @@ export const TILE_NAMES = [
   'prismarine',
   'sea_lantern',
   'bookshelf',
+  'sign',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2182,6 +2183,23 @@ const TILE_PAINTERS = {
       x += w + 1;
     }
     hline(b, 0, 15, 6, C('#7d5327'));
+  },
+
+  sign(b, rng) {
+    noiseFill(b, rng, [
+      ['#b9854c', 6],
+      ['#a9743f', 5],
+      ['#c2924f', 3],
+    ]);
+    hline(b, 0, 15, 1, C('#7d5327'));
+    hline(b, 0, 15, 14, C('#7d5327'));
+    vline(b, 0, 15, 1, C('#7d5327'));
+    vline(b, 0, 15, 14, C('#7d5327'));
+    // 文字线条
+    hline(b, 3, 12, 5, C('#4a2f14'));
+    hline(b, 3, 10, 7, C('#4a2f14'));
+    hline(b, 3, 12, 9, C('#4a2f14'));
+    hline(b, 3, 8, 11, C('#4a2f14'));
   },
 
 };

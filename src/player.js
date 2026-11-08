@@ -605,6 +605,12 @@ export class Player {
   secondaryAction() {
     if (this.dead) return;
 
+    // 右键编辑告示牌
+    if (this.target && this.target.id === BLOCK.SIGN) {
+      this.game.openSignEditor?.(this.target.x, this.target.y, this.target.z);
+      return;
+    }
+
     // 右键开关门
     if (this.target) {
       const tdef = getBlockDef(this.target.id);
