@@ -84,6 +84,8 @@ export class World {
     this.lightSources = new Map(); // "x,y,z" -> light level
     this.villageCache = new Map();
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
+    this.crops = new Map(); // "x,y,z" -> 下次生长时间
+    this._cropClock = 0;
     this.time = 0; // 世界时间（秒），用于昼夜
     this.spawn = { x: 0.5, y: 80, z: 0.5 };
     this._infoCache = new Map();
@@ -670,6 +672,55 @@ export class World {
     return null;
   }
 
+  // ---------- 作物生长 ----------
+  plantCrop(x, y, z, time) {
+    this.crops.set(x + ',' + y + ',' + z, time);
+  }
+
+  updateCrops(dt) {
+    if (this.crops.size === 0) return;
+    this._cropClock += dt;
+    if (this._cropClock < 0.5) return;
+    this._cropClock = 0;
+    const now = this.time;
+    for (const [key, due] of this.crops) {
+      if (due > now) continue;
+      const p = key.split(',');
+      const x = +p[0];
+      const y = +p[1];
+      const z = +p[2];
+      const id = this.getBlock(x, y, z);
+      if (id < BLOCK.WHEAT_0 || id > BLOCK.WHEAT_3) {
+        this.crops.delete(key);
+        continue;
+      }
+      if (id === BLOCK.WHEAT_3) {
+        this.crops.delete(key);
+        continue;
+      }
+      const next = id + 1;
+      this.setBlock(x, y, z, next);
+      if (next >= BLOCK.WHEAT_3) this.crops.delete(key);
+      else this.crops.set(key, now + 22 + Math.random() * 20);
+    }
+  }
+
+  serializeCrops() {
+    return [...this.crops.entries()].map(([k, t]) => {
+      const p = k.split(',');
+      return [+p[0], +p[1], +p[2], t];
+    });
+  }
+
+  loadCrops(list) {
+    if (!Array.isArray(list)) return;
+    this.crops.clear();
+    for (const item of list) {
+      if (!Array.isArray(item) || item.length < 4) continue;
+      this.crops.set(item[0] + ',' + item[1] + ',' + item[2], item[3]);
+    }
+  }
+
   // ---------- 方块读写 ----------
   getBlock(x, y, z) {
     if (y < 0 || y >= CHUNK_H) return 0;
@@ -841,6 +892,9 @@ export class World {
     }
     if (oldDef.opaque !== newDef.opaque) lightChanged = true;
     if (lightChanged) this.recomputeLightAroundBlock(x, y, z);
+    if (oldId >= BLOCK.WHEAT_0 && oldId <= BLOCK.WHEAT_3) {
+      this.crops.delete(x + ',' + y + ',' + z);
+    }
   }
 
   getSurfaceY(x, z) {

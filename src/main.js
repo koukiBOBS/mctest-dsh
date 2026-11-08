@@ -191,6 +191,7 @@ function saveGame() {
       inventory: state.inventory.serialize(),
       containers: state.containers ? state.containers.serialize() : null,
       weather: state.weather ? state.weather.serialize() : null,
+      crops: state.world ? state.world.serializeCrops() : [],
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     return true;
@@ -326,6 +327,7 @@ function startGame(opts = {}) {
   game.openContainer = (hit) => openContainer(hit);
   game.sleepInBed = (hit) => sleepInBed(hit);
   if (save && save.containers) containers.load(save.containers);
+  if (save && save.crops) world.loadCrops(save.crops);
   state.invUI = new InventoryUI(inventory, {
     sound: state.sound,
     onClose: onInventoryClosed,
@@ -533,6 +535,27 @@ function updateLoading() {
             state.world.setBlock(x, gy + 1, z, BLOCK.BED);
             state.chat?.log('已放置测试床');
             sleepInBed({ x, y: gy + 1, z, id: BLOCK.BED });
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 700);
+      }
+      if (state.farmDemo && state.player) {
+        state.farmDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const right = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+            for (let i = 0; i < 4; i++) {
+              const x = Math.floor(p.x + f.x * 3 + right.x * (i - 1.5));
+              const z = Math.floor(p.z + f.z * 3 + right.z * (i - 1.5));
+              const gy = state.world.getSurfaceY(x, z);
+              state.world.setBlock(x, gy, z, BLOCK.FARMLAND);
+              state.world.setBlock(x, gy + 1, z, BLOCK.WHEAT_0 + i);
+              if (i >= 1) state.world.setBlock(x, gy + 2, z, 0);
+            }
+            state.chat?.log('已生成测试农田（4 个生长阶段）');
           } catch (e) {
             showError(e && e.stack ? e.stack : String(e));
           }
@@ -1314,6 +1337,7 @@ function loop(now) {
       state.items?.update(dt);
       state.weather?.update(dt);
       state.world.time += dt;
+      state.world.updateCrops(dt);
       state.saveClock += dt;
       if (state.saveClock > 30) {
         state.saveClock = 0;
@@ -1487,6 +1511,7 @@ function boot() {
   if (params.get('dungeon') === '1') state.tpDungeon = true;
   if (params.get('thirdperson') === '1') state.startThirdPerson = true;
   if (params.get('bed') === '1') state.bedDemo = true;
+  if (params.get('farm') === '1') state.farmDemo = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

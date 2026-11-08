@@ -461,6 +461,12 @@ export class Player {
       if (hit.id === BLOCK.LEAVES && Math.random() < 0.06) {
         this._dropItem('apple', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
       }
+      if (hit.id === BLOCK.TALL_GRASS && Math.random() < 0.3) {
+        this._dropItem('wheat_seeds', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+      }
+      if (hit.id === BLOCK.WHEAT_3 && Math.random() < 0.6) {
+        this._dropItem('wheat_seeds', 1, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+      }
       if (tool && def.tool === tool.type) this.inventory.damageHeld(1);
     }
 
@@ -487,6 +493,18 @@ export class Player {
     }
   }
 
+  _useHoe() {
+    const hit = this.target;
+    if (!hit) return false;
+    const def = getBlockDef(hit.id);
+    if (def.name !== 'grass_block' && def.name !== 'dirt') return false;
+    if (this.world.getBlock(hit.x, hit.y + 1, hit.z) !== 0) return false;
+    this.world.setBlock(hit.x, hit.y, hit.z, BLOCK.FARMLAND);
+    this.game.sound?.play('place_grass', { volume: 0.4 });
+    this.inventory.damageHeld(1);
+    return true;
+  }
+
   _intersectsBlock(bx, by, bz) {
     const minX = this.x - PLAYER_W / 2;
     const maxX = this.x + PLAYER_W / 2;
@@ -499,6 +517,11 @@ export class Player {
 
   secondaryAction() {
     if (this.dead) return;
+    const held = this.inventory.held;
+    const heldItem = held ? getItem(held.id) : null;
+    if (heldItem && heldItem.tool && heldItem.tool.type === 'hoe') {
+      if (this._useHoe()) return;
+    }
     if (this.target) {
       const def = getBlockDef(this.target.id);
       if (def.name === 'crafting_table') {
@@ -525,6 +548,20 @@ export class Player {
     if (!item) return;
     if (item.food) {
       this.eat();
+      return;
+    }
+    if (held.id === 'wheat_seeds') {
+      const below = getBlockDef(this.target.id);
+      if (below.name !== 'farmland') return;
+      const px = this.target.x;
+      const py = this.target.y + 1;
+      const pz = this.target.z;
+      if (this.world.getBlock(px, py, pz) !== 0) return;
+      this.world.setBlock(px, py, pz, BLOCK.WHEAT_0);
+      this.world.plantCrop(px, py, pz, this.world.time + 20 + Math.random() * 20);
+      if (this.mode === 'survival') this.inventory.consumeHeld(1);
+      this.game.sound?.play('place_grass', { volume: 0.35 });
+      this.game.onInventoryChange?.();
       return;
     }
     if (item.block == null) return;

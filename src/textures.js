@@ -70,6 +70,12 @@ export const TILE_NAMES = [
   'clay',
   'bed_top',
   'bed_side',
+  'farmland_top',
+  'farmland_side',
+  'wheat_stage0',
+  'wheat_stage1',
+  'wheat_stage2',
+  'wheat_stage3',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -91,6 +97,11 @@ export const ITEM_ICON_NAMES = [
   'wooden_sword',
   'stone_sword',
   'iron_sword',
+  'wooden_hoe',
+  'stone_hoe',
+  'iron_hoe',
+  'wheat_seeds',
+  'wheat',
   'beef',
   'cooked_beef',
   'porkchop',
@@ -1900,6 +1911,68 @@ const TILE_PAINTERS = {
     hline(b, 0, 15, 9, C('#e8e2d8'));
   },
 
+  farmland_top(b, rng) {
+    noiseFill(b, rng, [
+      ['#5a3d25', 6],
+      ['#6b4a2e', 4],
+      ['#4d3420', 3],
+    ]);
+    for (let y = 2; y < 16; y += 5) hline(b, 0, 15, y, C('#7a5738'));
+    for (let x = 1; x < 16; x += 4) vline(b, 0, 15, x, C('#4a3020'));
+  },
+
+  farmland_side(b, rng) {
+    noiseFill(b, rng, [
+      ['#6a4a2f', 5],
+      ['#5a3d25', 4],
+      ['#79553a', 3],
+    ]);
+    // 顶部湿润深色土
+    fillRect(b, 0, 0, 16, 3, C('#4c3421'));
+    hline(b, 0, 15, 3, C('#3d291a'));
+    for (let i = 0; i < 12; i++) {
+      setPx(b, (rng() * 16) | 0, 4 + ((rng() * 12) | 0), C('#7d5a3c'));
+    }
+  },
+
+  wheat_stage0(b, rng) {
+    for (let i = 0; i < 5; i++) {
+      const x = 2 + ((rng() * 12) | 0);
+      vline(b, 11, 14, x, C('#4f8a2f'));
+      setPx(b, x, 10, C('#69a83f'));
+    }
+  },
+
+  wheat_stage1(b, rng) {
+    for (let i = 0; i < 6; i++) {
+      const x = 2 + ((rng() * 12) | 0);
+      vline(b, 8, 14, x, C('#4f8a2f'));
+      setPx(b, x, 7, C('#5f9a37'));
+      setPx(b, x + 1, 9, C('#6faa47'));
+    }
+  },
+
+  wheat_stage2(b, rng) {
+    for (let i = 0; i < 7; i++) {
+      const x = 2 + ((rng() * 12) | 0);
+      vline(b, 4, 14, x, C('#5a8a2f'));
+      setPx(b, x, 3, C('#6fa33c'));
+      setPx(b, x + 1, 6, C('#78a843'));
+      setPx(b, x - 1, 8, C('#7cae45'));
+    }
+  },
+
+  wheat_stage3(b, rng) {
+    for (let i = 0; i < 8; i++) {
+      const x = 1 + ((rng() * 14) | 0);
+      vline(b, 2, 14, x, C('#a08a2e'));
+      // 麦穗
+      fillRect(b, x - 1, 2, 3, 4, C('#d8b83a'));
+      setPx(b, x, 1, C('#efd45c'));
+      setPx(b, x + 1, 3, C('#c4a232'));
+    }
+  },
+
 };
 
 function paintTile(name) {
@@ -2185,6 +2258,18 @@ const SHOVEL_HEAD = [
   [11, 13],
   [10, 8],
 ];
+
+
+/** 锄头图标：木柄 + 弯头。 */
+function paintHoe(b, mat) {
+  thickLine(b, 8, 27, 23, 9, 4, C('#8a5a2e'));
+  thickLine(b, 9, 27, 23, 10, 2, C('#a9743f'));
+  fillRect(b, 18, 7, 9, 4, C('#6b4a24'));
+  fillRect(b, 19, 8, 7, 4, C('#' + ('d8d8d8')));
+  setPx(b, 19, 8, C('#ffffff'));
+  fillRect(b, 24, 10, 3, 5, C('#8f8f8f'));
+  setPx(b, 25, 11, C('#e8e8e8'));
+}
 
 function paintTool(b, mat, kind) {
   if (kind === 'sword') {
@@ -2866,6 +2951,35 @@ const ICON_PAINTERS = {
       setPx(b, 10 + ((rng() * 13) | 0), 10 + ((rng() * 4) | 0), C('#d9a95e'));
     }
   },
+  wooden_hoe(b, rng) {
+    paintHoe(b, MAT.wood);
+  },
+  stone_hoe(b, rng) {
+    paintHoe(b, MAT.stone);
+  },
+  iron_hoe(b, rng) {
+    paintHoe(b, MAT.iron);
+  },
+  wheat_seeds(b, rng) {
+    for (let i = 0; i < 8; i++) {
+      const x = 6 + ((rng() * 20) | 0);
+      const y = 12 + ((rng() * 14) | 0);
+      fillRect(b, x, y, 3, 2, C('#8aa84a'));
+      setPx(b, x, y, C('#a8c468'));
+    }
+  },
+  wheat(b, rng) {
+    thickLine(b, 6, 26, 22, 8, 3, C('#c8a636'));
+    for (let i = 0; i < 5; i++) {
+      const t = i / 4;
+      const x = 6 + (22 - 6) * t;
+      const y = 26 + (8 - 26) * t;
+      fillRect(b, Math.round(x) - 2, Math.round(y) - 3, 5, 3, C('#e0c24e'));
+      setPx(b, Math.round(x), Math.round(y) - 4, C('#f6e27a'));
+    }
+    fillRect(b, 5, 24, 4, 5, C('#9a7c22'));
+  },
+
 };
 
 /** Build every item icon. 32x32 canvases on a transparent background. */

@@ -47,6 +47,11 @@ export const BLOCK = Object.freeze({
   FURNACE: 39,
   CHEST: 40,
   BED: 41,
+  FARMLAND: 42,
+  WHEAT_0: 43,
+  WHEAT_1: 44,
+  WHEAT_2: 45,
+  WHEAT_3: 46,
 });
 
 export const BLOCK_DEFS = [];
@@ -205,6 +210,23 @@ def(BLOCK.BED, 'bed', '床', {
   tiles: { top: 'bed_top', bottom: 'oak_planks', side: 'bed_side' },
   hardness: 0.2, sound: 'wood',
 });
+def(BLOCK.FARMLAND, 'farmland', '耕地', {
+  tiles: { top: 'farmland_top', bottom: 'dirt', side: 'farmland_side' },
+  hardness: 0.6, sound: 'grass', drop: 'dirt',
+});
+for (let stage = 0; stage < 4; stage++) {
+  def(BLOCK.WHEAT_0 + stage, 'wheat_' + stage, '小麦', {
+    tiles: { all: 'wheat_stage' + stage },
+    solid: false,
+    opaque: false,
+    transparent: true,
+    cross: true,
+    hardness: 0.05,
+    sound: 'grass',
+    needsSupport: true,
+    drop: stage === 3 ? { id: 'wheat', count: 1 } : { id: 'wheat_seeds', count: 1 },
+  });
+}
 
 // ---------------- 物品 ----------------
 export const ITEMS = {};
@@ -251,6 +273,8 @@ const EXTRA_ITEMS = {
   arrow: { display: '箭', icon: 'arrow' },
   clay_ball: { display: '黏土球', icon: 'clay_ball' },
   bread: { display: '面包', icon: 'bread', food: 5 },
+  wheat_seeds: { display: '小麦种子', icon: 'wheat_seeds' },
+  wheat: { display: '小麦', icon: 'wheat' },
 };
 for (const [id, m] of Object.entries(EXTRA_ITEMS)) {
   ITEMS[id] = { id, maxStack: 64, ...m };
@@ -267,6 +291,7 @@ export const TOOL_TYPES = {
   axe: { display: '斧', speedTool: true },
   shovel: { display: '锹', speedTool: true },
   sword: { display: '剑', speedTool: false },
+  hoe: { display: '锄', speedTool: false },
 };
 for (const [matName, mat] of Object.entries(TOOL_TIERS)) {
   for (const [typeName, type] of Object.entries(TOOL_TYPES)) {
