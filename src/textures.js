@@ -112,6 +112,10 @@ export const TILE_NAMES = [
   'dark_oak_leaves',
   'dark_oak_planks',
   'bamboo',
+  'mycelium',
+  'mushroom_stem',
+  'mushroom_red',
+  'mushroom_brown',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2516,6 +2520,42 @@ const TILE_PAINTERS = {
     }
     setPx(b, 6, 4, C('#8ac84a'));
     setPx(b, 11, 9, C('#8ac84a'));
+  },
+
+  mycelium(b, rng) {
+    noiseFill(b, rng, [
+      ['#8a7a8a', 6],
+      ['#6a5a6a', 5],
+      ['#a08aa0', 3],
+    ]);
+    for (let i = 0; i < 14; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#c8b8c8'));
+  },
+
+  mushroom_stem(b, rng) {
+    noiseFill(b, rng, [
+      ['#d8d0c0', 6],
+      ['#c0b8a8', 4],
+      ['#e8e0d0', 3],
+    ]);
+    for (let x = 3; x < 16; x += 5) vline(b, 0, 15, x, C('#a8a090'));
+  },
+
+  mushroom_red(b, rng) {
+    fillSolid(b, C('#c83030'));
+    for (let i = 0; i < 10; i++) {
+      const x = (rng() * 14) | 0;
+      const y = (rng() * 14) | 0;
+      fillRect(b, x, y, 2, 2, C('#f0e8e0'));
+    }
+  },
+
+  mushroom_brown(b, rng) {
+    fillSolid(b, C('#8a5a3a'));
+    for (let i = 0; i < 10; i++) {
+      const x = (rng() * 14) | 0;
+      const y = (rng() * 14) | 0;
+      fillRect(b, x, y, 2, 2, C('#b08a6a'));
+    }
   },
 
 };

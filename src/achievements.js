@@ -45,6 +45,7 @@ export const ACHIEVEMENTS = [
   { id: 'wither_boss', name: '凋灵讨伐者', desc: '击败凋灵 Boss' },
   { id: 'beacon', name: '信标之光', desc: '激活一座信标' },
   { id: 'panda', name: '熊猫朋友', desc: '在竹林里遇见一只熊猫' },
+  { id: 'mushroom', name: '蘑菇岛', desc: '发现一座蘑菇岛' },
 ];
 
 const BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -207,6 +208,7 @@ export class Achievements {
         else if (data.kind === 'trial') this.unlock('trial');
         else if (data.kind === 'end_city') this.unlock('end_city');
         else if (data.kind === 'nether_fortress') this.unlock('nether_fortress');
+        else if (data.kind === 'mushroom_fields') this.unlock('mushroom');
         break;
       default:
         break;

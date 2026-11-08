@@ -50,6 +50,7 @@ export const BIOME_NAMES = {
   savanna: '热带草原',
   dark_forest: '黑森林',
   bamboo_jungle: '竹林',
+  mushroom_fields: '蘑菇岛',
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -146,6 +147,7 @@ export class World {
     if (height <= SEA_LEVEL - 1) biome = 'ocean';
     else if (height <= SEA_LEVEL + 1) biome = 'beach';
     else if (height > 92) biome = 'mountain';
+    else if (height > SEA_LEVEL + 1 && height < 88 && hash2i(x >> 6, z >> 6, this.seed + 8080) < 0.03) biome = 'mushroom_fields';
     else if (temp < -0.28) biome = 'snowy';
     else if (temp > 0.26 && humid < 0.06) biome = 'desert';
     else if (temp > 0.18 && humid < -0.04) biome = 'savanna';
@@ -312,6 +314,7 @@ export class World {
                 id = hash3i(wx, 2, wz, this.seed + 9) < 0.15 ? BLOCK.CLAY : BLOCK.SAND;
               } else if (biome === 'desert') id = BLOCK.SAND;
               else if (biome === 'snowy') id = BLOCK.SNOW;
+              else if (biome === 'mushroom_fields') id = BLOCK.MYCELIUM;
               else if (biome === 'mountain' && h > 88) id = BLOCK.SNOW;
               else id = BLOCK.GRASS;
             } else if (y >= h - 3) {
@@ -498,6 +501,14 @@ export class World {
         spruce = 0.0;
         if (hash2i(gx, gz, this.seed + 23) < 0.05) return 'dark_oak';
         break;
+      case 'mushroom_fields':
+        oak = 0.0;
+        birch = 0.0;
+        spruce = 0.0;
+        if (hash2i(gx, gz, this.seed + 25) < 0.03) {
+          return hash2i(gx, gz, this.seed + 26) < 0.5 ? 'giant_red' : 'giant_brown';
+        }
+        return null;
       case 'bamboo_jungle':
         oak = 0.004;
         birch = 0.0;
@@ -566,6 +577,30 @@ export class World {
           if (cur !== BLOCK.AIR && cur !== BLOCK.TALL_GRASS) continue;
           chunk.set(lx, y, lz, BLOCK.BAMBOO);
           chunk.maxY = Math.max(chunk.maxY, y);
+        }
+      }
+      return;
+    }
+
+    if (kind === 'giant_red' || kind === 'giant_brown') {
+      const capId = kind === 'giant_red' ? BLOCK.MUSHROOM_RED : BLOCK.MUSHROOM_BROWN;
+      const stemH = 4 + Math.floor(rand * 3);
+      const baseY = info.height + 1;
+      const setB = (wx, wy, wz, id) => {
+        const lx = wx - x0;
+        const lz = wz - z0;
+        if (lx < 0 || lx >= CHUNK_SX || lz < 0 || lz >= CHUNK_SZ || wy < 0 || wy >= CHUNK_H) return;
+        chunk.set(lx, wy, lz, id);
+        chunk.maxY = Math.max(chunk.maxY, wy);
+      };
+      for (let y = baseY; y < baseY + stemH; y++) setB(gx, y, gz, BLOCK.MUSHROOM_STEM);
+      for (let dy = 0; dy < 3; dy++) {
+        const r = 3 - dy;
+        for (let dx = -r; dx <= r; dx++) {
+          for (let dz = -r; dz <= r; dz++) {
+            if (dx * dx + dz * dz > r * r + 1) continue;
+            setB(gx + dx, baseY + stemH + dy, gz + dz, capId);
+          }
         }
       }
       return;

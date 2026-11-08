@@ -1458,6 +1458,39 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.mushroomDemo && state.player) {
+        state.mushroomDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            let found = null;
+            for (let r = 32; r <= 5200 && !found; r += 32) {
+              for (let a = 0; a < 16 && !found; a++) {
+                const ang = (a / 16) * Math.PI * 2;
+                const x = Math.floor(p.x + Math.cos(ang) * r);
+                const z = Math.floor(p.z + Math.sin(ang) * r);
+                if (state.world.columnInfo(x, z).biome === 'mushroom_fields') found = { x, z };
+              }
+            }
+            if (found) {
+              let tx = (found.x >> 6) * 64 + 32;
+              let tz = (found.z >> 6) * 64 + 32;
+              if (state.world.columnInfo(tx, tz).biome !== 'mushroom_fields') {
+                tx = found.x;
+                tz = found.z;
+              }
+              const y = state.world.getSurfaceY(tx, tz);
+              p.setPosition(tx + 0.5, y + 1.2, tz + 0.5);
+              state.mobs?.spawn('mooshroom', tx + 0.5, y + 1, tz + 5.5);
+              state.chat?.log('演示：已到达蘑菇岛（哞菇在附近）');
+            } else {
+              state.chat?.log('演示：附近没有找到蘑菇岛');
+            }
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.pandaDemo && state.player) {
         state.pandaDemo = false;
         setTimeout(() => {
@@ -1505,7 +1538,7 @@ function updateLoading() {
             if (found) {
               const y = state.world.getSurfaceY(found.x, found.z);
               p.setPosition(found.x + 0.5, y + 1.2, found.z + 0.5);
-              state.chat?.log('演示：已到达 ' + (targetBiome === 'savanna' ? '热带草原' : '黑森林'));
+              state.chat?.log('演示：已到达 ' + (BIOME_NAMES[targetBiome] || targetBiome));
             } else {
               state.chat?.log('演示：附近没有找到目标群系');
             }
@@ -2439,6 +2472,10 @@ function checkDiscoveries() {
           break;
         }
       }
+    }
+    // 蘑菇岛
+    if (w.columnInfo && w.columnInfo(Math.floor(p.x), Math.floor(p.z)).biome === 'mushroom_fields') {
+      ach.onEvent('discover', { kind: 'mushroom_fields' });
     }
     // 下界要塞
     if (state.inNether) {
@@ -3643,6 +3680,7 @@ function boot() {
   if (params.get('beacon') === '1') state.beaconDemo = true;
   if (params.get('biome')) state.biomeDemo = params.get('biome');
   if (params.get('panda') === '1') state.pandaDemo = true;
+  if (params.get('mushroom') === '1') state.mushroomDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

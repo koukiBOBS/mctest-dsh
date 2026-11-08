@@ -99,6 +99,10 @@ export const BLOCK = Object.freeze({
   DARK_OAK_LEAVES: 91,
   DARK_OAK_PLANKS: 92,
   BAMBOO: 93,
+  MYCELIUM: 94,
+  MUSHROOM_STEM: 95,
+  MUSHROOM_RED: 96,
+  MUSHROOM_BROWN: 97,
 });
 
 export const BLOCK_DEFS = [];
@@ -366,6 +370,18 @@ def(BLOCK.DARK_OAK_LEAVES, 'dark_oak_leaves', '深色橡木树叶', {
 });
 def(BLOCK.DARK_OAK_PLANKS, 'dark_oak_planks', '深色橡木木板', {
   tiles: { all: 'dark_oak_planks' }, hardness: 2.0, sound: 'wood',
+});
+def(BLOCK.MYCELIUM, 'mycelium', '菌丝体', {
+  tiles: { all: 'mycelium' }, hardness: 0.6, sound: 'grass',
+});
+def(BLOCK.MUSHROOM_STEM, 'mushroom_stem', '蘑菇柄', {
+  tiles: { all: 'mushroom_stem' }, hardness: 0.4, sound: 'wood',
+});
+def(BLOCK.MUSHROOM_RED, 'mushroom_red', '红色蘑菇块', {
+  tiles: { all: 'mushroom_red' }, hardness: 0.3, sound: 'wood',
+});
+def(BLOCK.MUSHROOM_BROWN, 'mushroom_brown', '棕色蘑菇块', {
+  tiles: { all: 'mushroom_brown' }, hardness: 0.3, sound: 'wood',
 });
 def(BLOCK.BAMBOO, 'bamboo', '竹子', {
   tiles: { all: 'bamboo' }, solid: false, opaque: false, transparent: true,

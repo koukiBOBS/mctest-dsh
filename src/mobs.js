@@ -158,6 +158,20 @@ export const MOB_TYPES = {
     drops: [{ id: 'blaze_rod', min: 1, max: 2 }],
     colors: { body: 0xf0c040, core: 0xffe08a, dark: 0xb87810, eye: 0x2a1a0a },
   },
+  mooshroom: {
+    id: 'mooshroom',
+    name: '哞菇',
+    hostile: false,
+    width: 1.1,
+    height: 1.4,
+    health: 10,
+    speed: 0.9,
+    drops: [
+      { id: 'beef', min: 1, max: 3 },
+      { id: 'mushroom_red', min: 0, max: 1 },
+    ],
+    colors: { body: 0xc83030, white: 0xf0e8e0, dark: 0x8a1a1a, eye: 0x1a1a1a, stem: 0xe0d8c8 },
+  },
   panda: {
     id: 'panda',
     name: '熊猫',
@@ -689,6 +703,9 @@ export class MobManager {
         if (info.biome === 'bamboo_jungle') {
           const pt = this._findSpawnPoint(true);
           if (pt) this.spawn('panda', pt.x, pt.y, pt.z);
+        } else if (info.biome === 'mushroom_fields') {
+          const pt = this._findSpawnPoint(true);
+          if (pt) this.spawn('mooshroom', pt.x, pt.y, pt.z);
         }
       }
       if (hostileCount < HOSTILE_LIMIT && Math.random() < 0.6) {
@@ -1383,7 +1400,7 @@ export class MobManager {
 
   feed(mob, itemId) {
     if (!mob || mob.removed) return null;
-    const foods = { pig: 'apple', cow: 'wheat', sheep: 'wheat', chicken: 'wheat_seeds', panda: 'bamboo' };
+    const foods = { pig: 'apple', cow: 'wheat', sheep: 'wheat', chicken: 'wheat_seeds', panda: 'bamboo', mooshroom: 'wheat' };
     if (foods[mob.type] !== itemId) return null;
     if (mob.isBaby) return 'baby';
     if (mob.loveTimer > 0) return 'already';
@@ -1930,6 +1947,7 @@ export class MobManager {
       case 'wither': this._modelWither(mob, root, c); break;
       case 'wither_skeleton': this._modelWitherSkeleton(mob, root, c); break;
       case 'blaze': this._modelBlaze(mob, root, c); break;
+      case 'mooshroom': this._modelMooshroom(mob, root, c); break;
       case 'panda': this._modelPanda(mob, root, c); break;
       case 'iron_golem': this._modelIronGolem(mob, root, c); break;
       case 'bat': this._modelBat(mob, root, c); break;
@@ -2082,6 +2100,25 @@ export class MobManager {
       this._addBox(mob, root, c.body, 0.12, 0.9, 0.12, px, 1.0, pz);
       this._addBox(mob, root, c.core, 0.08, 0.25, 0.08, px, 1.55, pz);
     }
+  }
+
+  _modelMooshroom(mob, root, c) {
+    this._addBox(mob, root, c.body, 1.0, 0.7, 1.4, 0, 0.95, 0);
+    this._addBox(mob, root, c.white, 1.02, 0.12, 1.42, 0, 0.6, 0);
+    for (let i = 0; i < 3; i++) {
+      this._addBox(mob, root, c.white, 0.16, 0.12, 0.16, -0.3 + i * 0.3, 1.25, -0.4 + i * 0.35);
+    }
+    const head = this._makeHead(mob, root, c.body, 0.75, 0.6, 0.65, 0, 1.2, 0.85);
+    this._addBox(mob, head, c.white, 0.55, 0.25, 0.2, 0, -0.2, 0.3);
+    this._addBox(mob, head, c.eye, 0.1, 0.08, 0.03, -0.2, 0.08, 0.34);
+    this._addBox(mob, head, c.eye, 0.1, 0.08, 0.03, 0.2, 0.08, 0.34);
+    this._addLimb(mob, root, c.dark, 0.26, 0.6, 0.3, -0.32, 0.45, -0.4, mob.legs);
+    this._addLimb(mob, root, c.dark, 0.26, 0.6, 0.3, 0.32, 0.45, -0.4, mob.legs);
+    this._addLimb(mob, root, c.dark, 0.26, 0.6, 0.3, -0.32, 0.45, 0.5, mob.legs);
+    this._addLimb(mob, root, c.dark, 0.26, 0.6, 0.3, 0.32, 0.45, 0.5, mob.legs);
+    // 背上的蘑菇
+    this._addBox(mob, root, c.stem, 0.16, 0.3, 0.16, 0, 1.5, 0);
+    this._addBox(mob, root, c.body, 0.5, 0.18, 0.5, 0, 1.68, 0);
   }
 
   _modelPanda(mob, root, c) {

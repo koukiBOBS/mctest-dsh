@@ -661,7 +661,7 @@ function ITEMS_FOR_CREATIVE() {
   const ids = [];
   for (const id of [
     'grass_block', 'dirt', 'stone', 'cobblestone', 'sand', 'sandstone', 'gravel',
-    'oak_log', 'oak_leaves', 'oak_planks', 'birch_log', 'birch_leaves', 'birch_planks', 'acacia_log', 'acacia_leaves', 'acacia_planks', 'dark_oak_log', 'dark_oak_leaves', 'dark_oak_planks', 'bamboo',
+    'oak_log', 'oak_leaves', 'oak_planks', 'birch_log', 'birch_leaves', 'birch_planks', 'acacia_log', 'acacia_leaves', 'acacia_planks', 'dark_oak_log', 'dark_oak_leaves', 'dark_oak_planks', 'bamboo', 'mycelium', 'mushroom_stem', 'mushroom_red', 'mushroom_brown',
     'spruce_log', 'spruce_leaves', 'spruce_planks',
     'glass', 'water', 'bedrock', 'clay', 'cactus',
     'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'snow', 'ice',
