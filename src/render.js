@@ -449,7 +449,7 @@ export class Renderer {
     }
 
     // 2) 构建/重建网格（每帧最多 4 个）
-    let budget = 4;
+    let budget = this.qualityScale < 0.7 ? 2 : 4;
     for (const k of this.world.dirtyChunks) {
       if (budget <= 0) break;
       const comma = k.indexOf(',');

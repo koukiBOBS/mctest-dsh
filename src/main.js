@@ -1506,6 +1506,23 @@ function updateLoading() {
           }
         }, 700);
       }
+      if (state.shieldDemo && state.player) {
+        state.shieldDemo = false;
+        setTimeout(() => {
+          try {
+            state.inventory.setSlot(0, { id: 'shield', count: 1 });
+            state.inventory.selectSlot(0);
+            state.inventory.notify();
+            state.player.blockingTimer = 3;
+            state.player.blockCd = 6;
+            state.achievements?.onEvent('shield', {});
+            state.chat?.log('演示：举起盾牌（3 秒内受到伤害 -70%）');
+            updateHUD();
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
+      }
       if (state.achievementsDemo && state.player) {
         state.achievementsDemo = false;
         setTimeout(() => {
@@ -3454,6 +3471,7 @@ function loop(now) {
       if (state.player.regenTimer > 0) eff.push('再生 ' + Math.ceil(state.player.regenTimer) + 's');
       if (state.player.witherTimer > 0) eff.push('凋零 ' + Math.ceil(state.player.witherTimer) + 's');
       if (state.player.hasteTimer > 0) eff.push('急迫 ' + Math.ceil(state.player.hasteTimer) + 's');
+      if (state.player.blockingTimer > 0) eff.push('格挡 ' + Math.ceil(state.player.blockingTimer) + 's');
     }
     if (eff.length) {
       effEl.textContent = eff.join(' · ');
@@ -3754,6 +3772,7 @@ function boot() {
   if (params.get('panda') === '1') state.pandaDemo = true;
   if (params.get('mushroom') === '1') state.mushroomDemo = true;
   if (params.get('achievements') === '1') state.achievementsDemo = true;
+  if (params.get('shield') === '1') state.shieldDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;

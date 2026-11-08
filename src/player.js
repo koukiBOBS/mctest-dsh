@@ -75,6 +75,8 @@ export class Player {
     this.regenTick = 0;
     this.hasteTimer = 0;
     this.gliding = false;
+    this.blockingTimer = 0;
+    this.blockCd = 0;
     this.kills = 0;
     this.breakTarget = null;
     this.breakProgress = 0;
@@ -162,6 +164,8 @@ export class Player {
       this.witherDmgTimer = 0;
     }
     if (this.hasteTimer > 0) this.hasteTimer = Math.max(0, this.hasteTimer - dt);
+    if (this.blockingTimer > 0) this.blockingTimer = Math.max(0, this.blockingTimer - dt);
+    if (this.blockCd > 0) this.blockCd = Math.max(0, this.blockCd - dt);
     if (this.regenTimer > 0) {
       this.regenTimer = Math.max(0, this.regenTimer - dt);
       this.regenTick += dt;
@@ -996,6 +1000,10 @@ export class Player {
       }
     }
     if (protection > 0) amount = Math.max(1, amount * (1 - Math.min(0.4, protection * 0.03)));
+    const heldItem = this.inventory && this.inventory.held;
+    if (heldItem && heldItem.id === 'shield' && this.blockingTimer > 0) {
+      amount = Math.max(1, amount * 0.3);
+    }
     this.health -= amount;
     this.hurtFlash = 0.45;
     this.game.sound?.play('hurt', { volume: 0.5 });

@@ -202,6 +202,7 @@ export const ITEM_ICON_NAMES = [
   'blaze_rod',
   'potion_regen',
   'nether_star',
+  'shield',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3919,6 +3920,14 @@ const ICON_PAINTERS = {
     fillPoly(b, [[16, 2], [19, 11], [28, 13], [20, 17], [22, 28], [16, 21], [10, 28], [12, 17], [4, 13], [13, 11]], C('#f0f0e0'));
     fillPoly(b, [[16, 6], [18, 12], [24, 13], [18, 16], [19, 22], [16, 18], [13, 22], [14, 16], [8, 13], [14, 12]], C('#ffffff'));
     setPx(b, 16, 12, C('#fff8c0'));
+  },
+
+  shield(b, rng) {
+    fillPoly(b, [[7, 4], [25, 4], [25, 16], [16, 28], [7, 16]], C('#8a5a2e'));
+    fillPoly(b, [[9, 6], [23, 6], [23, 15], [16, 25], [9, 15]], C('#b07a42'));
+    fillRect(b, 15, 7, 2, 14, C('#c8c8c8'));
+    fillRect(b, 11, 12, 10, 2, C('#c8c8c8'));
+    fillPoly(b, [[13, 14], [19, 14], [18, 19], [16, 22], [14, 19]], C('#e0e0e0'));
   },
 
 };

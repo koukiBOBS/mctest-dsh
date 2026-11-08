@@ -24,6 +24,7 @@ export const RECIPES = [
   { id: 'arrow', pattern: ['F', 'S', 'E'], keys: { F: 'flint', S: 'stick', E: 'feather' }, result: { id: 'arrow', count: 4 } },
   { id: 'fence', pattern: ['PSP', 'PSP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'], S: 'stick' }, result: { id: 'fence', count: 3 } },
   { id: 'door', pattern: ['PP', 'PP', 'PP'], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'] }, result: { id: 'door', count: 3 } },
+  { id: 'shield', pattern: ['PPP', 'PIP', ' P '], keys: { P: ['oak_planks', 'birch_planks', 'spruce_planks'], I: 'iron_ingot' }, result: { id: 'shield', count: 1 } },
   { id: 'beacon', pattern: ['GGG', 'GNG', 'OOO'], keys: { G: 'glass', N: 'nether_star', O: 'obsidian' }, result: { id: 'beacon', count: 1 } },
   { id: 'golden_apple', pattern: ['GGG', 'GAG', 'GGG'], keys: { G: 'gold_ingot', A: 'apple' }, result: { id: 'golden_apple', count: 1 } },
   { id: 'pumpkin_pie', pattern: ['P', 'W', 'E'], keys: { P: 'pumpkin', W: 'wheat', E: 'egg' }, result: { id: 'pumpkin_pie', count: 1 } },
