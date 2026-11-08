@@ -672,7 +672,7 @@ export class Renderer {
   // ---------- 粒子 ----------
   spawnBreakParticles(x, y, z, blockId) {
     const col = this.blockColor(blockId);
-    const n = 10;
+    const n = Math.max(3, Math.round(10 * (this.qualityScale || 1)));
     for (let i = 0; i < n; i++) {
       if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
       const p = {

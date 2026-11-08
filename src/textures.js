@@ -161,6 +161,7 @@ export const ITEM_ICON_NAMES = [
   'cod',
   'cooked_cod',
   'firework_rocket',
+  'name_tag',
 ];
 export const ATLAS_ROWS = Math.ceil(TILE_NAMES.length / ATLAS_COLS);
 export const ATLAS_W = TILE_PX * ATLAS_COLS;
@@ -3455,6 +3456,15 @@ const ICON_PAINTERS = {
     fillRect(b, 11, 25, 3, 4, C('#8a5a2e'));
     fillRect(b, 18, 25, 3, 4, C('#8a5a2e'));
     setPx(b, 15, 10, C('#ff9a9a'));
+  },
+
+  name_tag(b, rng) {
+    fillPoly(b, [[5, 9], [22, 6], [27, 13], [23, 20], [8, 22]], C('#e8d8a8'));
+    fillPoly(b, [[7, 11], [21, 8], [24, 13], [21, 18], [9, 19]], C('#f4e8c0'));
+    fillRect(b, 9, 12, 10, 2, C('#8a6a3a'));
+    fillRect(b, 9, 15, 7, 1, C('#8a6a3a'));
+    thickLine(b, 6, 8, 2, 4, 1, C('#c8b898'));
+    setPx(b, 3, 4, C('#8a5a2e'));
   },
 
 };

@@ -1553,3 +1553,40 @@ body.touch #xp-bar {
 #sign-save {
   width: 100%;
 }
+
+
+/* ---------------- 生物命名牌标签 ---------------- */
+#mob-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mob-label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.42);
+  border-radius: 2px;
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 #000;
+}
+
+#name-input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 8px;
+  background: #1e1e1e;
+  color: #f0e2b8;
+  border: 2px solid #666;
+  border-radius: 3px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+#name-save {
+  width: 100%;
+}

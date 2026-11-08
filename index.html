@@ -19,6 +19,7 @@
   <div id="bow-charge" class="hidden"><i></i></div>
   <div id="effect-timer" class="hidden"></div>
   <div id="sign-label" class="hidden"></div>
+  <div id="mob-labels"></div>
   <div id="boss-bar" class="hidden">
     <div class="boss-name">末影龙</div>
     <div class="boss-track"><i id="boss-fill"></i></div>
@@ -210,6 +211,7 @@
         <p>29. 告示牌放置后右键编辑文字，看它时会显示在屏幕下方</p>
         <p>30. 钓竿对水面右键可钓鱼；床在下界/末地会爆炸</p>
         <p>31. 用对应食物喂两只同类动物会生幼崽；烟花火箭右键可放烟花</p>
+        <p>32. 命名牌可给生物起名并显示在头顶；附魔台周围放书架可降低附魔消耗</p>
       </div>
     </div>
     <div class="title-buttons"><button id="btn-help-close" class="mc-btn primary">返回</button></div>
@@ -260,6 +262,15 @@
     <div class="inv-header"><span>编辑告示牌</span><button id="sign-close" class="mc-btn small">关闭</button></div>
     <textarea id="sign-input" maxlength="120" rows="3" placeholder="输入文字（最多 120 字）"></textarea>
     <button id="sign-save" class="mc-btn primary">保存</button>
+  </div>
+</div>
+
+<!-- ================= 命名牌 ================= -->
+<div id="screen-name" class="screen hidden">
+  <div class="trade-panel">
+    <div class="inv-header"><span>命名牌</span><button id="name-close" class="mc-btn small">关闭</button></div>
+    <input id="name-input" maxlength="32" placeholder="给生物起个名字">
+    <button id="name-save" class="mc-btn primary">确定</button>
   </div>
 </div>
 

@@ -605,6 +605,12 @@ export class Player {
   secondaryAction() {
     if (this.dead) return;
 
+    // 命名牌
+    if (this.inventory.held && this.inventory.held.id === 'name_tag' && this.mobTarget) {
+      this.game.openNameTag?.(this.mobTarget);
+      return;
+    }
+
     // 喂食动物
     if (this.mobTarget && this.inventory.held) {
       const result = this.game.mobs?.feed?.(this.mobTarget, this.inventory.held.id);
@@ -660,7 +666,7 @@ export class Player {
     }
 
     if (this.target && this.target.id === BLOCK.ENCHANTING_TABLE) {
-      this.game.openEnchant?.();
+      this.game.openEnchant?.(this.target.x, this.target.y, this.target.z);
       return;
     }
 

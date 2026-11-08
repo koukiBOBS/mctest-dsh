@@ -2,6 +2,7 @@
 // main.js — 游戏入口：界面状态机、输入、循环、存档、资源包
 // ============================================================
 
+import * as THREE from 'three';
 import { World, BIOME_NAMES, CHUNK_H, NETHER_ORIGIN, NETHER_DEST, END_ORIGIN, END_DEST } from './world.js';
 import { Renderer } from './render.js';
 import { Player } from './player.js';
@@ -49,6 +50,8 @@ const state = {
   brewOpen: false,
   signEditing: null,
   fishing: null,
+  nameMob: null,
+  enchantTable: null,
   inNether: false,
   inEnd: false,
   endReturn: null,
@@ -383,6 +386,69 @@ function finishFishing() {
   updateHUD();
 }
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function openNameTagEditor(mob) {
+  if (!state.running || state.loading || state.paused || !state.player || !mob) return;
+  state.nameMob = mob;
+  state.paused = true;
+  resetControls();
+  releasePointerLock();
+  hideTouch(true);
+  $('hud').classList.add('hidden');
+  $('screen-name').classList.remove('hidden');
+  const input = $('name-input');
+  if (input) {
+    input.value = mob.customName || '';
+    setTimeout(() => input.focus(), 80);
+  }
+}
+
+function closeNameTagEditor(save) {
+  const mob = state.nameMob;
+  if (!mob) return;
+  if (save) {
+    const input = $('name-input');
+    const text = input ? input.value.trim() : '';
+    if (text) {
+      mob.customName = text.slice(0, 32);
+      if (state.player.mode === 'survival') state.player.inventory.consumeHeld(1);
+      state.chat?.log('已将该生物命名为：' + mob.customName);
+    }
+  }
+  state.nameMob = null;
+  state.paused = false;
+  $('screen-name').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  if (state.isTouch) hideTouch(false);
+  saveGame();
+}
+
+function renderMobLabels() {
+  const box = $('mob-labels');
+  const p = state.player;
+  const camera = state.renderer && state.renderer.camera;
+  if (!box || !p || !camera) return;
+  if (!state.mobs || !state.mobs.mobs) {
+    box.innerHTML = '';
+    return;
+  }
+  const out = [];
+  for (const mob of state.mobs.mobs) {
+    if (!mob || mob.removed || !mob.customName) continue;
+    const dist = Math.hypot(mob.x - p.x, mob.z - p.z);
+    if (dist > 24) continue;
+    const v = new THREE.Vector3(mob.x, mob.y + mob.height + 0.4, mob.z).project(camera);
+    if (v.z > 1 || v.z < -1) continue;
+    const sx = (v.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+    out.push(`<div class="mob-label" style="left:${sx.toFixed(1)}px;top:${sy.toFixed(1)}px">${escapeHtml(mob.customName)}</div>`);
+  }
+  box.innerHTML = out.join('');
+}
+
 function openSignEditor(x, y, z) {
   if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
   state.signEditing = { x, y, z };
@@ -489,9 +555,25 @@ function enchantName(enchant) {
   return (ENCHANT_NAMES[enchant.id] || enchant.id) + ' ' + (['', 'I', 'II', 'III'][enchant.level] || enchant.level);
 }
 
-function openEnchant() {
+function shelfBonus() {
+  const pos = state.enchantTable;
+  const w = state.world;
+  if (!pos || !w) return 0;
+  let shelves = 0;
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        if (w.getBlock(pos.x + dx, pos.y + dy, pos.z + dz) === BLOCK.BOOKSHELF) shelves++;
+      }
+    }
+  }
+  return Math.min(3, Math.floor(shelves / 2));
+}
+
+function openEnchant(x, y, z) {
   if (!state.running || state.loading || state.paused || !state.player || state.player.dead) return;
   if (state.enchantOpen) return;
+  state.enchantTable = (typeof x === 'number') ? { x, y, z } : null;
   state.enchantOpen = true;
   state.paused = true;
   resetControls();
@@ -505,6 +587,7 @@ function openEnchant() {
 function closeEnchant() {
   if (!state.enchantOpen) return;
   state.enchantOpen = false;
+  state.enchantTable = null;
   state.paused = false;
   $('screen-enchant').classList.add('hidden');
   $('hud').classList.remove('hidden');
@@ -518,13 +601,14 @@ function renderEnchantOffers() {
   const h = state.inventory && state.inventory.held;
   const item = h ? getItem(h.id) : null;
   const tool = item && item.tool;
+  const bonus = shelfBonus();
   heldBox.textContent = h
-    ? `手持：${itemDisplay(h.id)}${h.enchant ? '（' + enchantName(h.enchant) + '）' : ''} · 经验等级 ${state.player ? state.player.xpLevel : 0}`
+    ? `手持：${itemDisplay(h.id)}${h.enchant ? '（' + enchantName(h.enchant) + '）' : ''} · 经验等级 ${state.player ? state.player.xpLevel : 0}${bonus > 0 ? ' · 书架加成 -' + bonus : ''}`
     : '请手持工具或武器';
   box.innerHTML = ENCHANTS.map((e, i) => {
     const compatible = !!tool && (e.kind === 'weapon' ? (tool.type === 'sword' || tool.type === 'axe') : tool.type !== 'sword');
     const current = h && h.enchant && h.enchant.id === e.id ? h.enchant.level : 0;
-    const cost = e.cost + current * 2;
+    const cost = Math.max(1, e.cost + current * 2 - bonus);
     const maxed = current >= 3;
     return `<button class="trade-offer" data-enchant="${i}" ${compatible && !maxed ? '' : 'disabled'}>`
       + `<span class="enchant-name">${e.name} ${maxed ? 'MAX' : ['I', 'II', 'III'][current]}</span>`
@@ -555,7 +639,7 @@ function applyEnchant(index) {
     showToast('该附魔已经满级');
     return;
   }
-  const cost = offer.cost + current * 2;
+  const cost = Math.max(1, offer.cost + current * 2 - shelfBonus());
   if (!state.player || state.player.xpLevel < cost) {
     showToast('经验等级不足：需要 ' + cost + ' 级');
     return;
@@ -870,6 +954,7 @@ function startGame(opts = {}) {
   game.openEnchant = () => openEnchant();
   game.openBrew = () => openBrew();
   game.openSignEditor = (x, y, z) => openSignEditor(x, y, z);
+  game.openNameTag = (mob) => openNameTagEditor(mob);
   game.startFishing = () => startFishing();
   game.launchFirework = () => launchFirework();
   game.lightPortal = (x, y, z) => tryLightPortal(x, y, z);
@@ -1144,6 +1229,25 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.nameTagDemo && state.player) {
+        state.nameTagDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const tx = p.x + f.x * 4;
+            const tz = p.z + f.z * 4;
+            const ty = state.world.getSurfaceY(Math.floor(tx), Math.floor(tz));
+            const cow = state.mobs?.spawn('cow', tx, ty + 1, tz);
+            if (cow) cow.customName = '牛牛';
+            state.inventory.add('name_tag', 4);
+            state.onInventoryChange?.();
+            state.chat?.log('演示：给牛命名为「牛牛」');
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 900);
       }
       if (state.breedDemo && state.player) {
         state.breedDemo = false;
@@ -2029,6 +2133,10 @@ function handleEscape() {
     else if (!$('screen-help').classList.contains('hidden')) closeHelp();
     return;
   }
+  if (state.nameMob) {
+    closeNameTagEditor(true);
+    return;
+  }
   if (state.signEditing) {
     closeSignEditor(true);
     return;
@@ -2677,6 +2785,11 @@ function loop(now) {
       signLabel.classList.add('hidden');
     }
   }
+  state.labelClock = (state.labelClock || 0) + 0.016;
+  if (state.labelClock > 0.2) {
+    state.labelClock = 0;
+    renderMobLabels();
+  }
   const bossBar = $('boss-bar');
   if (bossBar) {
     const dragon = state.mobs && state.mobs.mobs ? state.mobs.mobs.find((m) => m.type === 'ender_dragon' && !m.removed) : null;
@@ -2773,6 +2886,8 @@ function bindUI() {
   $('enchant-close').addEventListener('click', closeEnchant);
   $('brew-close').addEventListener('click', closeBrew);
   $('sign-close').addEventListener('click', () => closeSignEditor(false));
+  $('name-close').addEventListener('click', () => closeNameTagEditor(false));
+  $('name-save').addEventListener('click', () => closeNameTagEditor(true));
   $('sign-save').addEventListener('click', () => closeSignEditor(true));
   $('brew-offers').addEventListener('click', (e) => {
     const btn = e.target.closest('.trade-offer');
@@ -2912,6 +3027,7 @@ function boot() {
   if (params.get('sign') === '1') state.signDemo = true;
   if (params.get('fish') === '1') state.fishDemo = true;
   if (params.get('breed') === '1') state.breedDemo = true;
+  if (params.get('nametag') === '1') state.nameTagDemo = true;
   if (params.get('firework') === '1') state.fireworkDemo = true;
   if (params.get('ruin') === '1') state.tpRuin = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
