@@ -1305,7 +1305,7 @@ function updateLoading() {
           }
         }, 700);
       }
-      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold) {
+      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold || state.tpMansion) {
         setTimeout(() => {
           try {
             const p = state.player;
@@ -1328,6 +1328,14 @@ function updateLoading() {
                 const tz = m.centerZ + 18;
                 const gy = state.world.getSurfaceY(m.centerX, tz);
                 target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `沙漠神殿 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
+              }
+            }
+            if (state.tpMansion) {
+              const m = state.world.findNearestMansion(p.x, p.z);
+              if (m) {
+                const tz = m.centerZ + 18;
+                const gy = state.world.getSurfaceY(m.centerX, tz);
+                target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `林地府邸 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
               }
             }
             if (state.tpStronghold) {
@@ -1359,6 +1367,7 @@ function updateLoading() {
           state.tpTemple = false;
           state.tpIgloo = false;
           state.tpStronghold = false;
+          state.tpMansion = false;
         }, 900);
       }
       if (state.spawnTorches && state.player) {
@@ -1622,6 +1631,16 @@ function checkDiscoveries() {
         const m = w.getIgloo(vcx + dx, vcz + dz);
         if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
           ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
+      }
+    }
+    // 林地府邸
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getMansion(Math.floor(p.x / 384) + dx, Math.floor(p.z / 384) + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 30) {
+          ach.onEvent('discover', { kind: 'mansion' });
           break;
         }
       }
@@ -2618,6 +2637,7 @@ function boot() {
   if (params.get('lightning') === '1') state.lightningDemo = true;
   if (params.get('end') === '1') state.endDemo = true;
   if (params.get('dragon') === '1') state.dragonDemo = true;
+  if (params.get('mansion') === '1') state.tpMansion = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

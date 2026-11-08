@@ -100,6 +100,7 @@ export class World {
     this.templeCache = new Map();
     this.iglooCache = new Map();
     this.strongholdCache = new Map();
+    this.mansionCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.crops = new Map(); // "x,y,z" -> 下次生长时间
@@ -538,6 +539,7 @@ export class World {
     this.stampDesertTemples(chunk);
     this.stampIgloos(chunk);
     this.stampStrongholds(chunk);
+    this.stampMansions(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
   }
@@ -1211,6 +1213,170 @@ export class World {
     for (let dx = -6; dx <= 6; dx++) {
       for (let dz = -6; dz <= 6; dz++) {
         const m = this.getStronghold(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 林地府邸 ----------------
+  getMansion(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.mansionCache.has(key)) return this.mansionCache.get(key);
+    if (this.mansionCache.size > 600) this.mansionCache.clear();
+    const h = (n) => hash2i(cx * 47 + n, cz * 29 - n, this.seed + 1900 + n);
+    let m = null;
+    if (h(1) < 0.22) {
+      const centerX = Math.round(cx * 384 + 40 + h(2) * 300);
+      const centerZ = Math.round(cz * 384 + 40 + h(3) * 300);
+      const info = this.columnInfo(centerX, centerZ);
+      if (info.biome === 'forest' && info.height > SEA_LEVEL + 2) {
+        m = {
+          centerX,
+          centerZ,
+          floorY: info.height,
+          minX: centerX - 16,
+          maxX: centerX + 16,
+          minZ: centerZ - 13,
+          maxZ: centerZ + 13,
+        };
+      }
+    }
+    this.mansionCache.set(key, m);
+    return m;
+  }
+
+  stampMansions(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 384);
+    const ccz = Math.floor(z0 / 384);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getMansion(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampMansion(chunk, m);
+      }
+    }
+  }
+
+  stampMansion(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const baseY = m.floorY;
+    const x0 = m.centerX - 10;
+    const x1 = m.centerX + 10;
+    const z0 = m.centerZ - 7;
+    const z1 = m.centerZ + 7;
+    const P = BLOCK.SPRUCE_PLANKS;
+    const L = BLOCK.SPRUCE_LOG;
+    const G = BLOCK.GLASS;
+
+    // 地基 + 清理上方
+    for (let x = x0 - 1; x <= x1 + 1; x++) {
+      for (let z = z0 - 1; z <= z1 + 1; z++) {
+        for (let y = baseY - 4; y < baseY; y++) set(x, y, z, P);
+        set(x, baseY, z, P);
+        for (let y = baseY + 1; y <= baseY + 16; y++) set(x, y, z, BLOCK.AIR);
+      }
+    }
+
+    // 三层楼
+    for (let f = 0; f < 3; f++) {
+      const fy = baseY + 1 + f * 4;
+      // 楼板
+      for (let x = x0; x <= x1; x++) {
+        for (let z = z0; z <= z1; z++) set(x, fy - 1, z, P);
+      }
+      // 外墙 + 窗户
+      for (let x = x0; x <= x1; x++) {
+        for (let z = z0; z <= z1; z++) {
+          const edge = x === x0 || x === x1 || z === z0 || z === z1;
+          if (!edge) continue;
+          const corner = (x === x0 || x === x1) && (z === z0 || z === z1);
+          for (let y = fy; y <= fy + 2; y++) {
+            if (corner) set(x, y, z, L);
+            else if (y === fy + 1 && (x - x0) % 3 === 0 && (z - z0) % 3 === 0) set(x, y, z, G);
+            else set(x, y, z, P);
+          }
+        }
+      }
+      // 房间隔断 + 门洞
+      for (let z = z0 + 1; z <= z1 - 1; z++) {
+        for (let y = fy; y <= fy + 2; y++) {
+          if (z === m.centerZ) continue;
+          set(m.centerX, y, z, P);
+        }
+      }
+      // 楼板上的门洞
+      // 楼梯：从本层东南角上到下一层
+      const sx = x1 - 3;
+      const sz = z1 - 2;
+      for (let step = 0; step < 4; step++) {
+        set(sx, fy + step, sz - step, P);
+        set(sx + 1, fy + step, sz - step, P);
+      }
+      // 宝箱
+      const chests = [
+        [x0 + 2, fy, z0 + 2],
+        [x1 - 2, fy, z1 - 2],
+      ];
+      for (const [cx, cy, cz] of chests) {
+        set(cx, cy, cz, BLOCK.CHEST);
+        const key = cx + ',' + cy + ',' + cz;
+        if (!this.structureChests.has(key)) this.structureChests.set(key, this._mansionLoot(cx, cz));
+      }
+    }
+
+    // 屋顶
+    const roofY = baseY + 13;
+    for (let x = x0 - 1; x <= x1 + 1; x++) {
+      for (let z = z0 - 1; z <= z1 + 1; z++) {
+        set(x, roofY - 1, z, P);
+      }
+    }
+    for (let layer = 0; layer < 3; layer++) {
+      const shrink = layer;
+      for (let x = x0 - 1 + shrink; x <= x1 + 1 - shrink; x++) {
+        for (let z = z0 - 1 + shrink; z <= z1 + 1 - shrink; z++) {
+          set(x, roofY + layer, z, layer === 2 ? L : P);
+        }
+      }
+    }
+
+    // 正门（南侧，打通两层）
+    for (let dx = -1; dx <= 1; dx++) {
+      set(m.centerX + dx, baseY + 1, z1, BLOCK.AIR);
+      set(m.centerX + dx, baseY + 2, z1, BLOCK.AIR);
+    }
+  }
+
+  _mansionLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 7 + n, cz * 11 - n, this.seed + 2000 + n);
+    const loot = [];
+    loot.push({ id: 'emerald', count: 1 + Math.floor(r(1) * 4) });
+    if (r(2) < 0.8) loot.push({ id: 'iron_ingot', count: 2 + Math.floor(r(3) * 4) });
+    if (r(4) < 0.5) loot.push({ id: 'diamond', count: 1 });
+    if (r(5) < 0.7) loot.push({ id: 'gold_ingot', count: 1 + Math.floor(r(6) * 3) });
+    if (r(7) < 0.6) loot.push({ id: 'bread', count: 1 + Math.floor(r(8) * 3) });
+    return loot;
+  }
+
+  findNearestMansion(x, z) {
+    const ccx = Math.floor(x / 384);
+    const ccz = Math.floor(z / 384);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -6; dx <= 6; dx++) {
+      for (let dz = -6; dz <= 6; dz++) {
+        const m = this.getMansion(ccx + dx, ccz + dz);
         if (!m) continue;
         const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
         if (d < bestD) {
