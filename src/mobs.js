@@ -1103,6 +1103,7 @@ export class MobManager {
     }
     this._applyPhysics(mob, dt);
     if (mob.removed) return;
+    const player = this.player;
     const playerDist = player ? Math.hypot(mob.x - player.x, mob.z - player.z) : 0;
     if (playerDist <= 36) this._animateMob(mob, dt);
     this._updateTint(mob);
