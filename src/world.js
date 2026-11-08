@@ -47,6 +47,7 @@ class Chunk {
     this.cx = cx;
     this.cz = cz;
     this.blocks = new Uint8Array(CHUNK_SX * CHUNK_SZ * CHUNK_H);
+    this.light = new Uint8Array(CHUNK_SX * CHUNK_SZ * CHUNK_H); // 方块光 0..15
     this.heightMap = new Uint8Array(CHUNK_AREA); // 每列最高不透明方块
     this.maxY = 0;
     this.empty = true;
@@ -80,6 +81,7 @@ export class World {
     this.chunks = new Map();
     this.dirtyChunks = new Set();
     this.modsByChunk = new Map(); // chunkKey -> Map("x,y,z" -> id)
+    this.lightSources = new Map(); // "x,y,z" -> light level
     this.time = 0; // 世界时间（秒），用于昼夜
     this.spawn = { x: 0.5, y: 80, z: 0.5 };
     this._infoCache = new Map();
@@ -130,6 +132,7 @@ export class World {
     c = this.generateChunk(cx, cz);
     this.chunks.set(k, c);
     this.dirtyChunks.add(k);
+    if (this.lightSources.size > 0) this._seedLightForChunk(cx, cz);
     return c;
   }
 
@@ -212,8 +215,15 @@ export class World {
       if (modsOnly) {
         for (const [k, id] of modsOnly) {
           const p = k.split(',');
-          chunk.set(+p[0] - x0, +p[1], +p[2] - z0, id);
-          if (id !== 0) chunk.maxY = Math.max(chunk.maxY, +p[1]);
+          const wx = +p[0];
+          const wy = +p[1];
+          const wz = +p[2];
+          chunk.set(wx - x0, wy, wz - z0, id);
+          if (id !== 0) {
+            chunk.maxY = Math.max(chunk.maxY, wy);
+            const mdef = getBlockDef(id);
+            if (mdef.light > 0) this.lightSources.set(wx + ',' + wy + ',' + wz, mdef.light);
+          }
         }
       }
       return chunk;
@@ -279,7 +289,11 @@ export class World {
         const wy = +p[1];
         const wz = +p[2];
         chunk.set(wx - x0, wy, wz - z0, id);
-        if (id !== 0) chunk.maxY = Math.max(chunk.maxY, wy);
+        if (id !== 0) {
+          chunk.maxY = Math.max(chunk.maxY, wy);
+          const mdef = getBlockDef(id);
+          if (mdef.light > 0) this.lightSources.set(wx + ',' + wy + ',' + wz, mdef.light);
+        }
       }
     }
     return chunk;
@@ -397,6 +411,105 @@ export class World {
     return this.chunks.has(chunkKey(x >> 4, z >> 4));
   }
 
+  // ---------- 方块光 ----------
+  getLight(x, y, z) {
+    if (y < 0 || y >= CHUNK_H) return 0;
+    const c = this.chunks.get(chunkKey(x >> 4, z >> 4));
+    if (!c) return 0;
+    return c.light[blockIndex(x & 15, y, z & 15)];
+  }
+
+  // 区块生成后，如果附近有光源，就重新算一次该区域的方块光
+  _seedLightForChunk(cx, cz) {
+    const x0 = cx * CHUNK_SX;
+    const z0 = cz * CHUNK_SZ;
+    for (const key of this.lightSources.keys()) {
+      const p = key.split(',');
+      const lx = +p[0];
+      const lz = +p[2];
+      if (Math.abs(lx - x0) <= 48 && Math.abs(lz - z0) <= 48) {
+        this.recomputeLightAroundBlock(x0 + 8, CHUNK_H >> 1, z0 + 8);
+        return;
+      }
+    }
+  }
+
+  // 重新计算以 (bx, by, bz) 为中心的 3x3 区块方块光（只在有光源时调用）
+  recomputeLightAroundBlock(bx, by, bz) {
+    const ccx = bx >> 4;
+    const ccz = bz >> 4;
+    const affected = new Map();
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const c = this.getChunk(ccx + dx, ccz + dz);
+        if (!c) continue;
+        affected.set(chunkKey(ccx + dx, ccz + dz), c);
+      }
+    }
+    if (affected.size === 0) return;
+
+    const before = new Map();
+    for (const [k, c] of affected) before.set(k, c.light.slice());
+    for (const c of affected.values()) c.light.fill(0);
+
+    const buckets = [];
+    for (let i = 0; i < 16; i++) buckets.push([]);
+    const DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+
+    const seed = (x, y, z, level) => {
+      if (level <= 0 || y < 0 || y >= CHUNK_H) return;
+      const c = this.getChunk(x >> 4, z >> 4);
+      if (!c) return;
+      const idx = blockIndex(x & 15, y, z & 15);
+      if (c.light[idx] >= level) return;
+      c.light[idx] = level;
+      buckets[level].push(x, y, z);
+    };
+
+    for (const [key, level] of this.lightSources) {
+      const p = key.split(',');
+      const x = +p[0];
+      const y = +p[1];
+      const z = +p[2];
+      if (Math.abs(x - bx) > 44 || Math.abs(z - bz) > 44) continue;
+      seed(x, y, z, level);
+    }
+
+    for (let level = 15; level > 1; level--) {
+      const arr = buckets[level];
+      for (let i = 0; i < arr.length; i += 3) {
+        const x = arr[i];
+        const y = arr[i + 1];
+        const z = arr[i + 2];
+        for (let d = 0; d < 6; d++) {
+          const dir = DIRS[d];
+          const nx = x + dir[0];
+          const ny = y + dir[1];
+          const nz = z + dir[2];
+          if (ny < 0 || ny >= CHUNK_H) continue;
+          const nc = this.getChunk(nx >> 4, nz >> 4);
+          if (!nc) continue;
+          const nb = nc.get(nx & 15, ny, nz & 15);
+          if (nb !== 0 && getBlockDef(nb).opaque) continue;
+          seed(nx, ny, nz, level - 1);
+        }
+      }
+    }
+
+    // 对比前后数组，只把真正发生变化的区块标脏
+    for (const [k, c] of affected) {
+      const oldArr = before.get(k);
+      let changed = false;
+      for (let i = 0; i < c.light.length; i++) {
+        if (c.light[i] !== oldArr[i]) {
+          changed = true;
+          break;
+        }
+      }
+      if (changed) this.dirtyChunks.add(k);
+    }
+  }
+
   setBlock(x, y, z, id) {
     if (y < 0 || y >= CHUNK_H) return;
     const cx = x >> 4;
@@ -408,6 +521,7 @@ export class World {
     }
     const lx = x & 15;
     const lz = z & 15;
+    const oldId = c.get(lx, y, lz);
     c.set(lx, y, lz, id);
     if (id !== 0) {
       c.empty = false;
@@ -438,6 +552,22 @@ export class World {
     if (lx === 15) this.dirtyChunks.add(chunkKey(cx + 1, cz));
     if (lz === 0) this.dirtyChunks.add(chunkKey(cx, cz - 1));
     if (lz === 15) this.dirtyChunks.add(chunkKey(cx, cz + 1));
+
+    // 方块光：光源增减或透明度变化时重算局部光照
+    const oldDef = getBlockDef(oldId);
+    const newDef = getBlockDef(id);
+    const lk = x + ',' + y + ',' + z;
+    let lightChanged = false;
+    if (oldDef.light > 0) {
+      this.lightSources.delete(lk);
+      lightChanged = true;
+    }
+    if (newDef.light > 0) {
+      this.lightSources.set(lk, newDef.light);
+      lightChanged = true;
+    }
+    if (oldDef.opaque !== newDef.opaque) lightChanged = true;
+    if (lightChanged) this.recomputeLightAroundBlock(x, y, z);
   }
 
   getSurfaceY(x, z) {

@@ -8,6 +8,51 @@ import { buildChunkGeometry } from './mesher.js';
 import { CHUNK_SX, CHUNK_SZ, CHUNK_H, chunkKey } from './world.js';
 import { BLOCK, getBlockDef } from './blocks.js';
 
+
+// ---------------- 区块自定义着色器：方块光 + 天空光 ----------------
+const CHUNK_VERT = `
+attribute vec3 aLight;
+varying vec3 vLight;
+varying vec2 vUv;
+varying vec3 vWorldPos;
+void main() {
+  vUv = uv;
+  vLight = aLight;
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vWorldPos = wp.xyz;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+
+const CHUNK_FRAG = `
+uniform sampler2D uMap;
+uniform float uDayLight;
+uniform vec3 uFogColor;
+uniform float uFogNear;
+uniform float uFogFar;
+uniform vec3 uCamPos;
+uniform float uOpacity;
+uniform float uAlphaTest;
+varying vec3 vLight;
+varying vec2 vUv;
+varying vec3 vWorldPos;
+void main() {
+  vec4 tex = texture2D(uMap, vUv);
+  if (tex.a < uAlphaTest) discard;
+  float block = clamp(vLight.x, 0.0, 1.0);
+  float sky = clamp(vLight.y, 0.0, 1.0) * uDayLight;
+  float shade = clamp(vLight.z, 0.0, 1.0);
+  float lum = max(block, sky) * shade;
+  lum = max(lum, 0.02);
+  vec3 tint = mix(vec3(1.0), vec3(1.22, 0.9, 0.6), block * 0.55);
+  vec3 col = tex.rgb * lum * tint;
+  float dist = length(vWorldPos - uCamPos);
+  float fogF = smoothstep(uFogNear, uFogFar, dist);
+  col = mix(col, uFogColor, fogF);
+  gl_FragColor = vec4(col, tex.a * uOpacity);
+}
+`;
+
 const ATLAS_COLS = 8;
 const MAX_PARTICLES = 320;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -113,36 +158,19 @@ export class Renderer {
     this.atlasTexture.magFilter = THREE.NearestFilter;
     this.atlasTexture.minFilter = THREE.NearestFilter;
     this.atlasTexture.generateMipmaps = false;
-    this.atlasTexture.colorSpace = THREE.SRGBColorSpace;
+    this.atlasTexture.colorSpace = THREE.NoColorSpace;
 
-    this.matOpaque = new THREE.MeshBasicMaterial({
-      map: this.atlasTexture,
-      vertexColors: true,
-      alphaTest: 0.5,
-      side: THREE.FrontSide,
-    });
-    this.matAlpha = new THREE.MeshBasicMaterial({
-      map: this.atlasTexture,
-      vertexColors: true,
-      transparent: true,
-      alphaTest: 0.04,
-      depthWrite: true,
-      side: THREE.FrontSide,
-    });
-    this.matWater = new THREE.MeshBasicMaterial({
-      map: this.atlasTexture,
-      vertexColors: true,
+    this.matOpaque = this._makeChunkMaterial({ alphaTest: 0.5 });
+    this.matAlpha = this._makeChunkMaterial({ transparent: true, alphaTest: 0.04, depthWrite: true });
+    this.matWater = this._makeChunkMaterial({
       transparent: true,
       opacity: 0.82,
       depthWrite: false,
       side: THREE.DoubleSide,
+      alphaTest: 0.01,
     });
-    this.matPlants = new THREE.MeshBasicMaterial({
-      map: this.atlasTexture,
-      vertexColors: true,
-      alphaTest: 0.5,
-      side: THREE.DoubleSide,
-    });
+    this.matPlants = this._makeChunkMaterial({ alphaTest: 0.5, side: THREE.DoubleSide });
+    this.chunkMaterials = [this.matOpaque, this.matAlpha, this.matWater, this.matPlants];
 
     this.scene.fog = new THREE.Fog(0x9ecfff, 30, 70);
 
@@ -308,6 +336,27 @@ export class Renderer {
     this.breakMesh = new THREE.Mesh(new THREE.BoxGeometry(1.008, 1.008, 1.008), this.breakMat);
     this.breakMesh.visible = false;
     this.scene.add(this.breakMesh);
+  }
+
+  _makeChunkMaterial(opts = {}) {
+    const uniforms = {
+      uMap: { value: this.atlasTexture },
+      uDayLight: { value: 1 },
+      uFogColor: { value: new THREE.Color(0x9ecfff) },
+      uFogNear: { value: 30 },
+      uFogFar: { value: 80 },
+      uCamPos: { value: new THREE.Vector3() },
+      uOpacity: { value: opts.opacity !== undefined ? opts.opacity : 1 },
+      uAlphaTest: { value: opts.alphaTest !== undefined ? opts.alphaTest : 0.01 },
+    };
+    return new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: CHUNK_VERT,
+      fragmentShader: CHUNK_FRAG,
+      transparent: !!opts.transparent,
+      depthWrite: opts.depthWrite !== false,
+      side: opts.side !== undefined ? opts.side : THREE.FrontSide,
+    });
   }
 
   // ---------- 尺寸 ----------
@@ -516,10 +565,14 @@ export class Renderer {
 
     const lightMul = 0.3 + 0.7 * dayF;
     this.dayLight = lightMul;
-    this.matOpaque.color.setScalar(lightMul);
-    this.matAlpha.color.setScalar(lightMul);
-    this.matWater.color.setScalar(lightMul);
-    this.matPlants.color.setScalar(lightMul);
+    for (const mat of this.chunkMaterials) {
+      const u = mat.uniforms;
+      u.uDayLight.value = lightMul;
+      u.uFogColor.value.copy(this.scene.fog.color);
+      u.uFogNear.value = this.scene.fog.near;
+      u.uFogFar.value = this.scene.fog.far;
+      u.uCamPos.value.copy(this.camera.position);
+    }
     this.particleMat.color.setScalar(lightMul);
 
     this.skyGroup.position.copy(this.camera.position);

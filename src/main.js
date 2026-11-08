@@ -479,6 +479,23 @@ function updateLoading() {
         }, 500);
         state.spawnDemoItems = false;
       }
+      if (state.spawnTorches && state.player) {
+        setTimeout(() => {
+          const p = state.player;
+          const spots = [
+            [3, 0], [0, 3], [-3, 0], [0, -3],
+            [6, 6], [-6, 6], [6, -6], [-6, -6],
+          ];
+          for (const [dx, dz] of spots) {
+            const x = Math.floor(p.x) + dx;
+            const z = Math.floor(p.z) + dz;
+            const gy = state.world.getSurfaceY(x, z);
+            state.world.setBlock(x, gy + 1, z, BLOCK.TORCH);
+          }
+          state.chat?.log('已放置测试火把');
+        }, 600);
+        state.spawnTorches = false;
+      }
       if (state.guiDemo && state.player) {
         const guiType = state.guiDemo;
         state.guiDemo = null;
@@ -1340,6 +1357,7 @@ function boot() {
   if (params.get('mobs') === '1') state.spawnDemoMobs = true;
   if (params.get('items') === '1') state.spawnDemoItems = true;
   if (params.get('gui') === 'chest' || params.get('gui') === 'furnace') state.guiDemo = params.get('gui');
+  if (params.get('torches') === '1') state.spawnTorches = true;
   if (params.get('time') !== null) {
     const tv = params.get('time');
     state.startTime = tv === 'day' ? 60 : tv === 'noon' ? 150 : tv === 'night' ? 450 : Number(tv);

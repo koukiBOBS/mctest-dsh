@@ -92,7 +92,7 @@ const TANGENTS = [[1, 2], [1, 2], [0, 2], [0, 2], [0, 1], [0, 1]];
 const AO_LEVELS = [0.42, 0.6, 0.78, 1.0];
 
 function newBuffer() {
-  return { positions: [], colors: [], uvs: [], indices: [], count: 0 };
+  return { positions: [], lights: [], uvs: [], indices: [], count: 0 };
 }
 
 function faceVisible(selfId, nbId) {
@@ -115,7 +115,7 @@ function columnLight(chunk, lx, lz, y) {
   return Math.max(0.4, 1 - depth * 0.043);
 }
 
-function pushFace(buf, lx, ly, lz, face, tangents, tileName, light, emissive, liquid, getB, selfId) {
+function pushFace(buf, lx, ly, lz, wxp, wzp, face, tangents, tileName, sky, emissive, liquid, getB, selfId, getLightWorld) {
   const uv = tileUV(tileName);
   const base = buf.count;
   const dir = face.dir;
@@ -124,6 +124,7 @@ function pushFace(buf, lx, ly, lz, face, tangents, tileName, light, emissive, li
   const az = lz + dir[2];
   const lowered = liquid && dir[1] === 1 && getB(lx, ly + 1, lz) !== selfId;
   const [t1, t2] = tangents;
+  const blockLight = emissive ? 1 : Math.min(1, getLightWorld(wxp + dir[0], ly + dir[1], wzp + dir[2]) / 15);
 
   for (let i = 0; i < 4; i++) {
     const c = face.corners[i];
@@ -152,32 +153,34 @@ function pushFace(buf, lx, ly, lz, face, tangents, tileName, light, emissive, li
     else ao = 3 - (a1 + a2 + ac);
     const aoF = AO_LEVELS[ao < 0 ? 0 : ao > 3 ? 3 : ao];
 
-    let k;
-    if (emissive) k = 0.92 + 0.08 * face.shade;
-    else k = face.shade * aoF * light;
-    if (k > 1) k = 1;
-    else if (k < 0.26) k = 0.26;
-    buf.colors.push(k, k, k);
+    let shade = emissive ? 0.92 + 0.08 * face.shade : face.shade * aoF;
+    if (shade > 1) shade = 1;
+    else if (shade < 0.18) shade = 0.18;
+    buf.lights.push(blockLight, Math.min(1, Math.max(0, sky)), shade);
     buf.uvs.push(uv.u0 + c.uv[0] * (uv.u1 - uv.u0), uv.v0 + c.uv[1] * (uv.v1 - uv.v0));
   }
   buf.indices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
   buf.count += 4;
 }
 
-function pushCross(buf, lx, ly, lz, tileName, light) {
+function pushCross(buf, lx, ly, lz, wxp, wzp, tileName, light, getLightWorld) {
   const uv = tileUV(tileName);
   const quads = [
     [[0.08, 0, 0.08], [0.92, 0, 0.92], [0.08, 1, 0.08], [0.92, 1, 0.92]],
     [[0.92, 0, 0.08], [0.08, 0, 0.92], [0.92, 1, 0.08], [0.08, 1, 0.92]],
   ];
   const cornerUV = [[0, 0], [1, 0], [0, 1], [1, 1]];
-  const k = Math.max(0.55, Math.min(1, light));
+  const sky = Math.max(0.4, Math.min(1, light));
+  const blockLight = Math.min(
+    1,
+    Math.max(getLightWorld(wxp, ly, wzp), getLightWorld(wxp, ly + 1, wzp)) / 15,
+  );
   for (const quad of quads) {
     const base = buf.count;
     for (let i = 0; i < 4; i++) {
       const p = quad[i];
       buf.positions.push(lx + p[0], ly + p[1], lz + p[2]);
-      buf.colors.push(k, k, k);
+      buf.lights.push(blockLight, sky, 0.9);
       buf.uvs.push(uv.u0 + cornerUV[i][0] * (uv.u1 - uv.u0), uv.v0 + cornerUV[i][1] * (uv.v1 - uv.v0));
     }
     buf.indices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
@@ -189,7 +192,7 @@ function toGeometry(buf) {
   if (buf.count === 0) return null;
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(buf.positions, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(buf.colors, 3));
+  g.setAttribute('aLight', new THREE.Float32BufferAttribute(buf.lights, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(buf.uvs, 2));
   g.setIndex(buf.indices);
   g.computeBoundingSphere();
@@ -223,6 +226,7 @@ export function buildChunkGeometry(world, chunk) {
     if (px < -1 || px > CHUNK_SX || pz < -1 || pz > CHUNK_SZ || py < -1 || py > maxY + 1) return 0;
     return pad[idxOf(px, py, pz)];
   };
+  const getLightWorld = (x, y, z) => world.getLight(x, y, z);
 
   let quads = 0;
   for (let y = 0; y <= maxY; y++) {
@@ -234,7 +238,7 @@ export function buildChunkGeometry(world, chunk) {
         const light = columnLight(chunk, lx, lz, y);
 
         if (def.cross) {
-          pushCross(plants, lx, y, lz, def.tiles.all, light);
+          pushCross(plants, lx, y, lz, x0 + lx, z0 + lz, def.tiles.all, light, getLightWorld);
           quads += 2;
           continue;
         }
@@ -252,7 +256,10 @@ export function buildChunkGeometry(world, chunk) {
           if (face.dir[1] === 1) tileName = def.tiles.top || def.tiles.all;
           else if (face.dir[1] === -1) tileName = def.tiles.bottom || def.tiles.all;
           else tileName = def.tiles.side || def.tiles.all;
-          pushFace(target, lx, y, lz, face, TANGENTS[fi], tileName, light, def.emissive, def.liquid, getB, id);
+          pushFace(
+            target, lx, y, lz, x0 + lx, z0 + lz, face, TANGENTS[fi], tileName,
+            light, def.emissive, def.liquid, getB, id, getLightWorld,
+          );
           quads++;
         }
       }
