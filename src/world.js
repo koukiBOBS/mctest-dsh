@@ -87,6 +87,7 @@ export class World {
     this.mineshaftCache = new Map();
     this.templeCache = new Map();
     this.iglooCache = new Map();
+    this.strongholdCache = new Map();
     this.dungeons = new Map(); // chunkKey -> {x, y, z} 地牢房间中心
     this.structureChests = new Map(); // "x,y,z" -> 箱子战利品
     this.crops = new Map(); // "x,y,z" -> 下次生长时间
@@ -425,6 +426,7 @@ export class World {
     this.stampVillages(chunk);
     this.stampDesertTemples(chunk);
     this.stampIgloos(chunk);
+    this.stampStrongholds(chunk);
     this.stampMineshafts(chunk);
     this.stampDungeon(chunk);
   }
@@ -949,6 +951,159 @@ export class World {
     for (let dx = -10; dx <= 10; dx++) {
       for (let dz = -10; dz <= 10; dz++) {
         const m = this.getIgloo(ccx + dx, ccz + dz);
+        if (!m) continue;
+        const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------------- 地下要塞 ----------------
+  getStronghold(cx, cz) {
+    const key = cx + ',' + cz;
+    if (this.strongholdCache.has(key)) return this.strongholdCache.get(key);
+    if (this.strongholdCache.size > 600) this.strongholdCache.clear();
+    const h = (n) => hash2i(cx * 53 + n, cz * 31 - n, this.seed + 1700 + n);
+    let m = null;
+    if (h(1) < 0.42) {
+      const centerX = Math.round(cx * 512 + 50 + h(2) * 410);
+      const centerZ = Math.round(cz * 512 + 50 + h(3) * 410);
+      const y = 17 + Math.floor(h(4) * 12);
+      m = {
+        centerX,
+        centerZ,
+        y,
+        minX: centerX - 44,
+        maxX: centerX + 44,
+        minZ: centerZ - 44,
+        maxZ: centerZ + 44,
+      };
+    }
+    this.strongholdCache.set(key, m);
+    return m;
+  }
+
+  stampStrongholds(chunk) {
+    const x0 = chunk.cx * CHUNK_SX;
+    const z0 = chunk.cz * CHUNK_SZ;
+    const x1 = x0 + CHUNK_SX - 1;
+    const z1 = z0 + CHUNK_SZ - 1;
+    const ccx = Math.floor(x0 / 512);
+    const ccz = Math.floor(z0 / 512);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = this.getStronghold(ccx + dx, ccz + dz);
+        if (!m) continue;
+        if (x1 < m.minX || x0 > m.maxX || z1 < m.minZ || z0 > m.maxZ) continue;
+        this.stampStronghold(chunk, m);
+      }
+    }
+  }
+
+  stampStronghold(chunk, m) {
+    const set = (x, y, z, id) => this.chunkSet(chunk, x, y, z, id);
+    const B = BLOCK.STONE_BRICKS;
+    const baseY = m.y;
+    const room = (cx, cz, halfX, halfZ, height) => {
+      for (let dx = -halfX; dx <= halfX; dx++) {
+        for (let dz = -halfZ; dz <= halfZ; dz++) {
+          const x = cx + dx;
+          const z = cz + dz;
+          set(x, baseY - 1, z, B);
+          for (let dy = 0; dy < height; dy++) {
+            const edge = Math.abs(dx) === halfX || Math.abs(dz) === halfZ;
+            set(x, baseY + dy, z, edge ? B : BLOCK.AIR);
+          }
+          set(x, baseY + height, z, B);
+        }
+      }
+    };
+    // 中央大厅
+    room(m.centerX, m.centerZ, 6, 6, 6);
+    // 东西向走廊
+    for (let x = m.centerX - 32; x <= m.centerX + 32; x++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const z = m.centerZ + dz;
+        set(x, baseY - 1, z, B);
+        for (let dy = 0; dy < 4; dy++) set(x, baseY + dy, z, BLOCK.AIR);
+        set(x, baseY + 4, z, B);
+      }
+      for (const dz of [-2, 2]) {
+        for (let dy = 0; dy < 4; dy++) set(x, baseY + dy, m.centerZ + dz, B);
+        set(x, baseY + 4, m.centerZ + dz, B);
+      }
+    }
+    // 南北向走廊
+    for (let z = m.centerZ - 32; z <= m.centerZ + 32; z++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = m.centerX + dx;
+        set(x, baseY - 1, z, B);
+        for (let dy = 0; dy < 4; dy++) set(x, baseY + dy, z, BLOCK.AIR);
+        set(x, baseY + 4, z, B);
+      }
+      for (const dx of [-2, 2]) {
+        for (let dy = 0; dy < 4; dy++) set(m.centerX + dx, baseY + dy, z, B);
+        set(m.centerX + dx, baseY + 4, z, B);
+      }
+    }
+    // 四个端厅
+    const rooms = [
+      [m.centerX - 34, m.centerZ, 4, 4, 5],
+      [m.centerX + 34, m.centerZ, 4, 4, 5],
+      [m.centerX, m.centerZ - 34, 4, 4, 5],
+      [m.centerX, m.centerZ + 34, 4, 4, 5],
+    ];
+    for (const [cx, cz, hx, hz, hh] of rooms) room(cx, cz, hx, hz, hh);
+    // 末地传送门框架
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (dx === 0 && dz === 0) {
+          set(m.centerX, baseY + 1, m.centerZ - 3 + dz, BLOCK.GLOWSTONE);
+        } else {
+          set(m.centerX + dx, baseY + 1, m.centerZ - 3 + dz, BLOCK.STONE_BRICKS);
+        }
+      }
+    }
+    set(m.centerX, baseY + 2, m.centerZ - 3, BLOCK.GLOWSTONE);
+    // 宝箱
+    const chests = [
+      [m.centerX - 3, baseY + 1, m.centerZ + 3],
+      [m.centerX - 34, baseY + 1, m.centerZ],
+      [m.centerX + 34, baseY + 1, m.centerZ],
+      [m.centerX, baseY + 1, m.centerZ + 34],
+    ];
+    for (const [cx, cy, cz] of chests) {
+      if (this.getBlock(cx, cy, cz) !== BLOCK.AIR) continue;
+      set(cx, cy, cz, BLOCK.CHEST);
+      const key = cx + ',' + cy + ',' + cz;
+      if (!this.structureChests.has(key)) this.structureChests.set(key, this._strongholdLoot(cx, cz));
+    }
+  }
+
+  _strongholdLoot(cx, cz) {
+    const r = (n) => hash2i(cx * 13 + n, cz * 17 - n, this.seed + 1800 + n);
+    const loot = [];
+    loot.push({ id: 'iron_ingot', count: 2 + Math.floor(r(1) * 4) });
+    if (r(2) < 0.8) loot.push({ id: 'gold_ingot', count: 1 + Math.floor(r(3) * 2) });
+    if (r(4) < 0.5) loot.push({ id: 'diamond', count: 1 });
+    if (r(5) < 0.7) loot.push({ id: 'bread', count: 2 + Math.floor(r(6) * 2) });
+    if (r(7) < 0.6) loot.push({ id: 'arrow', count: 4 + Math.floor(r(8) * 8) });
+    if (r(9) < 0.5) loot.push({ id: 'apple', count: 1 + Math.floor(r(10) * 2) });
+    return loot;
+  }
+
+  findNearestStronghold(x, z) {
+    const ccx = Math.floor(x / 512);
+    const ccz = Math.floor(z / 512);
+    let best = null;
+    let bestD = Infinity;
+    for (let dx = -6; dx <= 6; dx++) {
+      for (let dz = -6; dz <= 6; dz++) {
+        const m = this.getStronghold(ccx + dx, ccz + dz);
         if (!m) continue;
         const d = (m.centerX - x) ** 2 + (m.centerZ - z) ** 2;
         if (d < bestD) {

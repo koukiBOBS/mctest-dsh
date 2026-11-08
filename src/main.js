@@ -730,7 +730,7 @@ function updateLoading() {
           }
         }, 700);
       }
-      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo) {
+      if (state.tpVillage || state.tpDungeon || state.tpMineshaft || state.tpTemple || state.tpIgloo || state.tpStronghold) {
         setTimeout(() => {
           try {
             const p = state.player;
@@ -754,6 +754,10 @@ function updateLoading() {
                 const gy = state.world.getSurfaceY(m.centerX, tz);
                 target = { x: m.centerX + 0.5, y: gy + 1.3, z: tz + 0.5, label: `沙漠神殿 ${m.centerX}, ${m.floorY}, ${m.centerZ}` };
               }
+            }
+            if (state.tpStronghold) {
+              const m = state.world.findNearestStronghold(p.x, p.z);
+              if (m) target = { x: m.centerX + 0.5, y: m.y + 1.2, z: m.centerZ + 5.5, label: `地下要塞 ${m.centerX}, ${m.y}, ${m.centerZ}` };
             }
             if (state.tpIgloo) {
               const m = state.world.findNearestIgloo(p.x, p.z);
@@ -779,6 +783,7 @@ function updateLoading() {
           state.tpMineshaft = false;
           state.tpTemple = false;
           state.tpIgloo = false;
+          state.tpStronghold = false;
         }, 900);
       }
       if (state.spawnTorches && state.player) {
@@ -1008,6 +1013,16 @@ function checkDiscoveries() {
         const m = w.getIgloo(vcx + dx, vcz + dz);
         if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 28) {
           ach.onEvent('discover', { kind: 'igloo' });
+          break;
+        }
+      }
+    }
+    // 地下要塞
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const m = w.getStronghold(Math.floor(p.x / 512) + dx, Math.floor(p.z / 512) + dz);
+        if (m && Math.hypot(m.centerX - p.x, m.centerZ - p.z) < 42 && Math.abs(m.y - p.y) < 24) {
+          ach.onEvent('discover', { kind: 'stronghold' });
           break;
         }
       }
@@ -1895,6 +1910,7 @@ function boot() {
   if (params.get('tntdemo') === '1') state.tntDemo = true;
   if (params.get('doordemo') === '1') state.doorDemo = true;
   if (params.get('fencedemo') === '1') state.fenceDemo = true;
+  if (params.get('stronghold') === '1') state.tpStronghold = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {
