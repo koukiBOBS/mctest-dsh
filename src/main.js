@@ -717,6 +717,12 @@ function startGame(opts = {}) {
     chat: state.chat,
   });
   state.weather = weather;
+  weather.setDensity(state.qualityScale);
+  if (state.lightningDemo) {
+    weather.setType('thunder');
+    weather.thunderTimer = 0.5;
+    state.lightningDemo = false;
+  }
   game.weather = weather;
   if (save && save.weather) weather.load(save.weather);
   else if (state.weatherDemo && ['clear', 'rain', 'thunder', 'snow'].includes(state.weatherDemo)) {
@@ -914,6 +920,22 @@ function updateLoading() {
             showError(e && e.stack ? e.stack : String(e));
           }
         }, 700);
+      }
+      if (state.fireDemo && state.player) {
+        state.fireDemo = false;
+        setTimeout(() => {
+          try {
+            const p = state.player;
+            const f = p.forwardVector();
+            const x = Math.floor(p.x + f.x * 4);
+            const z = Math.floor(p.z + f.z * 4);
+            const gy = state.world.getSurfaceY(x, z);
+            state.world.setBlock(x, gy + 1, z, BLOCK.FIRE);
+            state.chat?.log('演示：已放置火焰（闪电也会点燃）');
+          } catch (e) {
+            showError(e && e.stack ? e.stack : String(e));
+          }
+        }, 800);
       }
       if (state.netherDemo && state.player) {
         state.netherDemo = false;
@@ -2191,10 +2213,12 @@ function loop(now) {
           if (state.fps > 0 && state.fps < 38 && state.qualityScale > 0.55) {
             state.qualityScale = Math.max(0.55, state.qualityScale - 0.15);
             state.renderer.setQualityScale(state.qualityScale);
+            state.weather?.setDensity(state.qualityScale);
             showToast('性能不足：已自动降低渲染分辨率');
           } else if (state.fps > 56 && state.qualityScale < 1) {
             state.qualityScale = Math.min(1, state.qualityScale + 0.05);
             state.renderer.setQualityScale(state.qualityScale);
+            state.weather?.setDensity(state.qualityScale);
           }
         }
       }
@@ -2456,6 +2480,8 @@ function boot() {
   if (params.get('brew') === '1') state.brewDemo = true;
   if (params.get('armor') === '1') state.armorDemo = true;
   if (params.get('nether') === '1') state.netherDemo = true;
+  if (params.get('fire') === '1') state.fireDemo = true;
+  if (params.get('lightning') === '1') state.lightningDemo = true;
   if (params.get('igloo') === '1') state.tpIgloo = true;
   if (params.get('achdemo') === '1') state.achDemo = true;
   if (params.get('time') !== null) {

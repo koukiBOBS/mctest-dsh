@@ -3,6 +3,7 @@
 // ============================================================
 
 import * as THREE from 'three';
+import { BLOCK } from './blocks.js';
 
 const RAIN_COUNT = 650;
 const SNOW_COUNT = 650;
@@ -16,6 +17,9 @@ export class WeatherManager {
     this.timer = 150 + Math.random() * 180;
     this.flash = 0;
     this.thunderTimer = 8 + Math.random() * 12;
+    this.fires = [];
+    this.fireDamageTimer = 0;
+    this.rainDensity = 1;
 
     this._buildRain();
     this._buildSnow();
@@ -99,6 +103,55 @@ export class WeatherManager {
     }
   }
 
+  setDensity(density) {
+    this.rainDensity = Math.max(0.15, Math.min(1, density));
+  }
+
+  _strikeNear(player, world) {
+    if (!player || !world) return;
+    if (player.x >= 100000) return; // 下界没有雷暴
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 4 + Math.random() * 16;
+    const x = Math.floor(player.x + Math.sin(angle) * dist);
+    const z = Math.floor(player.z + Math.cos(angle) * dist);
+    if (typeof world.isLoaded === 'function' && !world.isLoaded(x, z)) return;
+    const top = world.getSurfaceY(x, z);
+    if (!Number.isFinite(top)) return;
+    const ground = world.getBlock(x, top, z);
+    if (!ground || ground === BLOCK.WATER || ground === BLOCK.LAVA) return;
+    if (world.getBlock(x, top + 1, z) !== 0) return;
+    const flammable = new Set([
+      BLOCK.GRASS, BLOCK.PLANKS, BLOCK.LOG, BLOCK.BIRCH_LOG, BLOCK.SPRUCE_LOG,
+      BLOCK.LEAVES, BLOCK.BIRCH_LEAVES, BLOCK.SPRUCE_LEAVES, BLOCK.BIRCH_PLANKS, BLOCK.SPRUCE_PLANKS,
+    ]);
+    if (flammable.has(ground)) {
+      world.setBlock(x, top + 1, z, BLOCK.FIRE);
+      this.fires.push({ x, y: top + 1, z, t: 8 + Math.random() * 8 });
+    }
+    // 闪电点燃附近 TNT
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dz = -2; dz <= 2; dz++) {
+          if (world.getBlock(x + dx, top + 1 + dy, z + dz) === BLOCK.TNT) {
+            this.game.igniteTNT?.(x + dx, top + 1 + dy, z + dz);
+          }
+        }
+      }
+    }
+    if (Math.hypot(player.x - x, player.z - z) < 4) {
+      player.damage(5, '被闪电劈死了');
+    }
+    if (this.game.mobs && this.game.mobs.mobs) {
+      for (const mob of this.game.mobs.mobs) {
+        if (!mob || mob.removed) continue;
+        if (Math.hypot(mob.x - x, mob.z - z) < 3.5) {
+          this.game.mobs.hit(mob, 6, 0, 0);
+        }
+      }
+    }
+    this.game.chat?.log('⚡ 闪电击中了地面！');
+  }
+
   update(dt) {
     const player = this.game.player;
     const world = this.game.world;
@@ -132,9 +185,32 @@ export class WeatherManager {
         this.thunderTimer = 7 + Math.random() * 14;
         this.flash = 1;
         this.game.sound?.play('thunder', { volume: 0.7 });
+        this._strikeNear(player, world);
       }
     }
     this.flash = Math.max(0, this.flash - dt * 2.4);
+
+    // 火焰寿命与伤害
+    for (let i = this.fires.length - 1; i >= 0; i--) {
+      const f = this.fires[i];
+      f.t -= dt;
+      if (f.t <= 0) {
+        if (world.getBlock(f.x, f.y, f.z) === BLOCK.FIRE) world.setBlock(f.x, f.y, f.z, 0);
+        this.fires.splice(i, 1);
+      }
+    }
+    const px = Math.floor(player.x);
+    const pz = Math.floor(player.z);
+    const py = Math.floor(player.y + 0.1);
+    if (world.getBlock(px, py, pz) === BLOCK.FIRE || world.getBlock(px, py + 1, pz) === BLOCK.FIRE) {
+      this.fireDamageTimer += dt;
+      if (this.fireDamageTimer >= 1) {
+        this.fireDamageTimer = 0;
+        player.damage(1, '被烧死了');
+      }
+    } else {
+      this.fireDamageTimer = 0;
+    }
 
     if (this.game.renderer) {
       this.game.renderer.weatherFactor = this.isRaining || this.type === 'snow' ? 1 : 0;
@@ -149,7 +225,9 @@ export class WeatherManager {
     const cx = player.x;
     const cy = player.y;
     const cz = player.z;
-    for (let i = 0; i < RAIN_COUNT; i++) {
+    const rainCount = Math.max(60, Math.floor(RAIN_COUNT * this.rainDensity));
+    this.rain.geometry.setDrawRange(0, rainCount * 2);
+    for (let i = 0; i < rainCount; i++) {
       const d = this.rainDrops[i];
       d.y -= 26 * dt;
       if (d.y < -8) {
@@ -174,7 +252,9 @@ export class WeatherManager {
   _updateSnow(dt, player) {
     const arr = this.snow.geometry.attributes.position.array;
     const t = performance.now() * 0.001;
-    for (let i = 0; i < SNOW_COUNT; i++) {
+    const snowCount = Math.max(40, Math.floor(SNOW_COUNT * this.rainDensity));
+    this.snow.geometry.setDrawRange(0, snowCount);
+    for (let i = 0; i < snowCount; i++) {
       const f = this.snowFlakes[i];
       f.y -= 2.2 * dt;
       f.x += Math.sin(t * 0.8 + f.phase) * 0.35 * dt;

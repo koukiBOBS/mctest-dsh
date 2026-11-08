@@ -82,6 +82,7 @@ export const TILE_NAMES = [
   'door',
   'netherrack',
   'nether_portal',
+  'fire',
 ];
 
 export const ITEM_ICON_NAMES = [
@@ -2100,6 +2101,18 @@ const TILE_PAINTERS = {
       }
     }
     for (let i = 0; i < 6; i++) setPx(b, (rng() * 16) | 0, (rng() * 16) | 0, C('#e0c4ff'));
+  },
+
+  fire(b, rng) {
+    for (let x = 0; x < 16; x++) {
+      const h = 6 + Math.floor(Math.abs(Math.sin(x * 0.8)) * 8);
+      for (let y = 16 - h; y < 16; y++) {
+        const t = (y - (16 - h)) / h;
+        const c = t < 0.35 ? '#ffe08a' : t < 0.7 ? '#ff9a2a' : '#e04a12';
+        setPx(b, x, y, C(c));
+      }
+    }
+    for (let i = 0; i < 10; i++) setPx(b, (rng() * 16) | 0, 8 + ((rng() * 8) | 0), C('#fff2b0'));
   },
 
 };
